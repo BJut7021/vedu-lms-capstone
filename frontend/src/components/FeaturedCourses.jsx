@@ -34,25 +34,26 @@ const COURSES = [
   }
 ];
 
-export default function FeaturedCourses() {
+export default function FeaturedCourses({ onSelectCourse }) {
   return (
     <section id="courses" className="py-16 bg-gray-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Khóa học nổi bật</h2>
-            <p className="text-gray-500 text-sm mt-1">Được thiết kế kèm chuỗi bài kiểm tra đánh giá năng lực</p>
+            <p className="text-gray-500 text-sm mt-1">Bấm vào khóa học để xem đề cương và bắt đầu học</p>
           </div>
-          <button className="text-blue-600 hover:text-blue-700 font-semibold text-sm mt-4 md:mt-0">
-            Xem tất cả khóa học →
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {COURSES.map(course => (
-            <div key={course.id} className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col">
+            <div 
+              key={course.id} 
+              onClick={() => onSelectCourse && onSelectCourse(course)}
+              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col cursor-pointer"
+            >
               <img src={course.image} alt={course.title} className="w-full h-44 object-cover" />
-
+              
               <div className="p-6 flex-1 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-1 text-amber-500 text-xs font-bold mb-2">
@@ -60,7 +61,7 @@ export default function FeaturedCourses() {
                     <span>{course.rating}</span>
                     <span className="text-gray-400 font-normal">({course.students} học viên)</span>
                   </div>
-                  <h3 className="font-bold text-gray-900 text-base leading-snug hover:text-blue-600 cursor-pointer transition line-clamp-2">
+                  <h3 className="font-bold text-gray-900 text-base leading-snug hover:text-blue-600 transition line-clamp-2">
                     {course.title}
                   </h3>
                   <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
