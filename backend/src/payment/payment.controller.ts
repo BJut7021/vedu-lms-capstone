@@ -10,19 +10,51 @@ import {
 
 import { PaymentService } from './payment.service';
 
-@Controller('api/payments')
+@Controller('api')
 export class PaymentController {
     constructor(
-        private readonly paymentService:
-            PaymentService,
+        private readonly paymentService: PaymentService,
     ) { }
 
-    @Get()
+    // ============================================================
+    // ORDERS
+    // ============================================================
+
+    @Get('orders')
+    findAllOrders() {
+        return this.paymentService.findAllOrders();
+    }
+
+    @Get('orders/:id')
+    findOrder(
+        @Param('id', ParseIntPipe)
+        id: number,
+    ) {
+        return this.paymentService.findOrder(id);
+    }
+
+    @Post('orders')
+    createOrder(
+        @Body()
+        body: {
+            enrollmentId: number;
+        },
+    ) {
+        return this.paymentService.createOrder(
+            body.enrollmentId,
+        );
+    }
+
+    // ============================================================
+    // PAYMENTS
+    // ============================================================
+
+    @Get('payments')
     findAll() {
         return this.paymentService.findAll();
     }
 
-    @Get('enrollment/:enrollmentId')
+    @Get('payments/enrollment/:enrollmentId')
     findByEnrollment(
         @Param(
             'enrollmentId',
@@ -34,7 +66,7 @@ export class PaymentController {
             .findByEnrollment(enrollmentId);
     }
 
-    @Get(':id')
+    @Get('payments/:id')
     findOne(
         @Param('id', ParseIntPipe)
         id: number,
@@ -42,34 +74,39 @@ export class PaymentController {
         return this.paymentService.findOne(id);
     }
 
-    @Post()
+    @Post('payments')
     create(
         @Body()
         body: {
-            enrollmentId: number;
+            orderId: number;
             amount: number;
+            currency?: string;
             paymentMethod: string;
+            provider?: string;
             transactionCode?: string;
+            idempotencyKey?: string;
             status?: string;
+            providerPayload?: Record<string, unknown>;
         },
     ) {
         return this.paymentService.create({
-            enrollmentId:
-                body.enrollmentId,
-
+            orderId: body.orderId,
             amount: body.amount,
-
+            currency: body.currency,
             paymentMethod:
                 body.paymentMethod,
-
+            provider: body.provider,
             transactionCode:
                 body.transactionCode,
-
+            idempotencyKey:
+                body.idempotencyKey,
             status: body.status,
+            providerPayload:
+                body.providerPayload,
         });
     }
 
-    @Patch(':id')
+    @Patch('payments/:id')
     update(
         @Param('id', ParseIntPipe)
         id: number,
@@ -78,6 +115,8 @@ export class PaymentController {
         body: {
             status?: string;
             transactionCode?: string;
+            provider?: string;
+            providerPayload?: Record<string, unknown>;
         },
     ) {
         return this.paymentService.update(

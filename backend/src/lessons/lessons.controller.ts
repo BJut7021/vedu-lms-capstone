@@ -22,6 +22,30 @@ export class LessonsController {
         return this.lessonsService.findAll();
     }
 
+    @Get(':id/resources')
+    findResources(
+        @Param('id', ParseIntPipe)
+        id: number,
+    ) {
+        return this.lessonsService.findResources(id);
+    }
+
+    @Post(':id/resources')
+    createResource(
+        @Param('id', ParseIntPipe)
+        id: number,
+
+        @Body()
+        body: {
+            resourceType: string;
+            title?: string;
+            resourceUrl: string;
+            displayOrder?: number;
+        },
+    ) {
+        return this.lessonsService.createResource(id, body);
+    }
+
     @Get(':id')
     findOne(
         @Param('id', ParseIntPipe)
@@ -37,9 +61,8 @@ export class LessonsController {
             courseId: number;
             title: string;
             content?: string;
-            videoUrl?: string;
-            pdfUrl?: string;
             lessonOrder: number;
+            estimatedDurationSeconds?: number;
             isPublished?: boolean;
         },
     ) {
@@ -47,10 +70,11 @@ export class LessonsController {
             courseId: body.courseId,
             title: body.title,
             content: body.content,
-            videoUrl: body.videoUrl,
-            pdfUrl: body.pdfUrl,
             lessonOrder: body.lessonOrder,
-            isPublished: body.isPublished ?? false,
+            estimatedDurationSeconds:
+                body.estimatedDurationSeconds ?? null,
+            isPublished:
+                body.isPublished ?? true,
         });
     }
 
@@ -64,13 +88,39 @@ export class LessonsController {
             courseId: number;
             title: string;
             content: string;
-            videoUrl: string;
-            pdfUrl: string;
             lessonOrder: number;
+            estimatedDurationSeconds: number;
             isPublished: boolean;
         }>,
     ) {
         return this.lessonsService.update(id, body);
+    }
+
+    @Patch('resources/:resourceId')
+    updateResource(
+        @Param('resourceId', ParseIntPipe)
+        resourceId: number,
+
+        @Body()
+        body: Partial<{
+            resourceType: string;
+            title: string;
+            resourceUrl: string;
+            displayOrder: number;
+        }>,
+    ) {
+        return this.lessonsService.updateResource(
+            resourceId,
+            body,
+        );
+    }
+
+    @Delete('resources/:resourceId')
+    removeResource(
+        @Param('resourceId', ParseIntPipe)
+        resourceId: number,
+    ) {
+        return this.lessonsService.removeResource(resourceId);
     }
 
     @Delete(':id')

@@ -1,8 +1,8 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
     Column,
     CreateDateColumn,
+    Entity,
+    PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 
@@ -11,39 +11,75 @@ import {
     name: 'lessons',
 })
 export class Lesson {
-    @PrimaryGeneratedColumn({ name: 'lesson_id' })
+    @PrimaryGeneratedColumn({
+        name: 'lesson_id',
+        type: 'bigint',
+    })
     lessonId: number;
 
-    @Column({ name: 'course_id' })
+    @Column({
+        name: 'course_id',
+        type: 'bigint',
+    })
     courseId: number;
 
-    @Column({ length: 255 })
+    @Column({
+        name: 'title',
+        type: 'varchar',
+        length: 220,
+    })
     title: string;
 
-    @Column({ type: 'text', nullable: true })
-    content: string;
+    @Column({
+        name: 'content',
+        type: 'text',
+        nullable: true,
+    })
+    content: string | null;
 
-    @Column({ name: 'video_url', type: 'text', nullable: true })
-    videoUrl: string;
-
-    @Column({ name: 'pdf_url', type: 'text', nullable: true })
-    pdfUrl: string;
-
-    @Column({ name: 'lesson_order' })
+    @Column({
+        name: 'lesson_order',
+        type: 'integer',
+    })
     lessonOrder: number;
 
-    @Column({ name: 'is_published', default: false })
+    @Column({
+        name: 'estimated_duration_seconds',
+        type: 'integer',
+        nullable: true,
+    })
+    estimatedDurationSeconds: number | null;
+
+    @Column({
+        name: 'is_published',
+        type: 'boolean',
+        default: true,
+    })
     isPublished: boolean;
 
-    @Column({ name: 'is_deleted', default: false })
+    @Column({
+        name: 'is_deleted',
+        type: 'boolean',
+        default: false,
+    })
     isDeleted: boolean;
 
-    @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
-    deletedAt: Date;
+    @Column({
+        name: 'deleted_at',
+        type: 'timestamptz',
+        nullable: true,
+    })
+    deletedAt: Date | null;
 
-    @CreateDateColumn({ name: 'created_at' })
+    @CreateDateColumn({
+        name: 'created_at',
+        type: 'timestamptz',
+    })
     createdAt: Date;
 
-    @UpdateDateColumn({ name: 'updated_at' })
+    @UpdateDateColumn({
+        name: 'updated_at',
+        type: 'timestamptz',
+    })
     updatedAt: Date;
 }

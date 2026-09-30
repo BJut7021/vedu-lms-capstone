@@ -82,11 +82,17 @@ export class AssessmentController {
     @Post(':quizId/attempts')
     createAttempt(
         @Param('quizId', ParseIntPipe) quizId: number,
-        @Body() body: { studentId: number },
+        @Body() body: {
+            studentId: number;
+            courseId: number;
+            attemptNo: number;
+        }
     ): Promise<QuizAttempt> {
         return this.assessmentService.createAttempt(
-            quizId,
-            body.studentId,
+            Number(quizId),
+            Number(body.studentId),
+            Number(body.courseId),
+            Number(body.attemptNo),
         );
     }
 

@@ -165,6 +165,8 @@ export class AssessmentService {
     async createAttempt(
         quizId: number,
         studentId: number,
+        courseId: number,
+        attemptNo: number,
     ): Promise<QuizAttempt> {
         const quiz = await this.quizRepository.findOne({
             where: { quizId },
@@ -176,8 +178,11 @@ export class AssessmentService {
 
         const attempt = this.quizAttemptRepository.create({
             quizId,
+            courseId,
             studentId,
+            attemptNo,
             score: null,
+            durationSeconds: null,
             startedAt: new Date(),
             submittedAt: null,
             status: 'IN_PROGRESS',
@@ -233,6 +238,8 @@ export class AssessmentService {
             totalPoints += Number(question.points);
         }
 
+        const answeredAt = new Date();
+
         for (const item of answers) {
             const question = questions.find(
                 (q) => q.questionId === item.questionId,
@@ -257,15 +264,24 @@ export class AssessmentService {
                 );
             }
 
-            if (answer.isCorrect) {
+            const isCorrect = answer.isCorrect;
+            const scoreAwarded = isCorrect
+                ? Number(question.points)
+                : 0;
+
+            if (isCorrect) {
                 earnedPoints += Number(question.points);
             }
 
             await this.quizAttemptAnswerRepository.save(
                 this.quizAttemptAnswerRepository.create({
                     attemptId,
+                    quizId: attempt.quizId,
                     questionId: item.questionId,
                     answerId: item.answerId,
+                    isCorrect,
+                    scoreAwarded,
+                    answeredAt,
                 }),
             );
         }
@@ -275,8 +291,18 @@ export class AssessmentService {
                 ? Number(((earnedPoints / totalPoints) * 10).toFixed(2))
                 : 0;
 
+        const submittedAt = new Date();
+
+        const durationSeconds = Math.max(
+            0,
+            Math.floor(
+                (submittedAt.getTime() - attempt.startedAt.getTime()) / 1000,
+            ),
+        );
+
         attempt.score = score;
-        attempt.submittedAt = new Date();
+        attempt.durationSeconds = durationSeconds;
+        attempt.submittedAt = submittedAt;
         attempt.status = 'SUBMITTED';
 
         return this.quizAttemptRepository.save(attempt);
