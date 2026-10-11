@@ -7,12 +7,25 @@ import {
     Param,
     Body,
     ParseIntPipe,
+    Req,
+    UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { AssessmentService } from './assessment.service';
 import { Quiz } from '../entities/quiz.entity';
 import { Question } from '../entities/question.entity';
 import { Answer } from '../entities/answer.entity';
 import { QuizAttempt } from '../entities/quiz-attempt.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { UserRole } from '../entities/user.entity';
+
+type AuthenticatedRequest = Request & {
+    user: {
+        userId: number;
+        email: string;
+        role: UserRole;
+    };
+};
 
 @Controller('api/quizzes')
 export class AssessmentController {
@@ -30,6 +43,13 @@ export class AssessmentController {
         @Param('courseId', ParseIntPipe) courseId: number,
     ): Promise<Quiz[]> {
         return this.assessmentService.findByCourse(courseId);
+    }
+
+    @Get(':id/play')
+    getPlayableQuiz(
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.assessmentService.getPlayableQuiz(id);
     }
 
     @Get('quiz/:quizId/questions')
@@ -79,20 +99,15 @@ export class AssessmentController {
         return this.assessmentService.create(data);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Post(':quizId/attempts')
     createAttempt(
         @Param('quizId', ParseIntPipe) quizId: number,
-        @Body() body: {
-            studentId: number;
-            courseId: number;
-            attemptNo: number;
-        }
-    ): Promise<QuizAttempt> {
+        @Req() request: AuthenticatedRequest,
+    ) {
         return this.assessmentService.createAttempt(
-            Number(quizId),
-            Number(body.studentId),
-            Number(body.courseId),
-            Number(body.attemptNo),
+            quizId,
+            request.user.userId,
         );
     }
 
@@ -103,9 +118,11 @@ export class AssessmentController {
         return this.assessmentService.findAttempt(attemptId);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Post('attempts/:attemptId/submit')
     submitAttempt(
         @Param('attemptId', ParseIntPipe) attemptId: number,
+        @Req() request: AuthenticatedRequest,
         @Body()
         body: {
             answers: {
@@ -113,9 +130,10 @@ export class AssessmentController {
                 answerId: number;
             }[];
         },
-    ): Promise<QuizAttempt> {
+    ) {
         return this.assessmentService.submitAttempt(
             attemptId,
+            request.user.userId,
             body.answers,
         );
     }

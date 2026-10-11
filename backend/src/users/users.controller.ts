@@ -91,14 +91,18 @@ export class UsersController {
         @Body()
         body: {
             fullName: string;
+            username: string;
             email: string;
+            phone: string;
             password: string;
             role?: UserRole;
         },
     ) {
         return this.usersService.create(
             body.fullName,
+            body.username,
             body.email,
+            body.phone,
             body.password,
             body.role ?? 'STUDENT',
         );

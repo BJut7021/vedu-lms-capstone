@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function Banner({ onOpenAuth }) {

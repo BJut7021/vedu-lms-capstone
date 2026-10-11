@@ -14,7 +14,8 @@ obj/
 .env.local
 
 # IDE & OS specific files
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
 .DS_Store
 Thumbs.db

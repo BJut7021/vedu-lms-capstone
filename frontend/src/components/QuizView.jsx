@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle2, XCircle, ArrowLeft, Award, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Clock, CheckCircle2, ArrowLeft, Award, Sparkles } from 'lucide-react';
 
-export default function QuizView({ quizData, onBack, onComplete }) {
-  const [timeLeft, setTimeLeft] = useState(quizData.durationMinutes * 60);
+export default function QuizView({ quizData, onBack, onSubmit }) {
+  const [timeLeft, setTimeLeft] = useState(quizData.durationSeconds);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [result, setResult] = useState(null);
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isSubmitted || timeLeft <= 0) return;
@@ -13,7 +15,7 @@ export default function QuizView({ quizData, onBack, onComplete }) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit();
+          setSubmitError('Đã hết thời gian. Hãy nộp các đáp án đã chọn.');
           return 0;
         }
         return prev - 1;
@@ -22,44 +24,36 @@ export default function QuizView({ quizData, onBack, onComplete }) {
     return () => clearInterval(timer);
   }, [isSubmitted, timeLeft]);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const handleSelectOption = (questionId, optionIndex) => {
     if (isSubmitted) return;
     setSelectedAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isSubmitted) return;
+    if (Object.keys(selectedAnswers).length !== quizData.questions.length) {
+      setSubmitError('Vui lòng chọn đáp án cho tất cả câu hỏi.');
+      return;
+    }
 
-    let correctCount = 0;
-    quizData.questions.forEach(q => {
-      if (selectedAnswers[q.id] === q.correctAnswer) {
-        correctCount++;
-      }
-    });
-
-    const score = Number(((correctCount / quizData.questions.length) * 10).toFixed(1));
-    const passed = score >= quizData.passingScore;
-    const timeSpent = (quizData.durationMinutes * 60) - timeLeft;
-
-    const res = {
-      score,
-      correctCount,
-      totalQuestions: quizData.questions.length,
-      passed,
-      timeSpent: `${Math.floor(timeSpent / 60)} phút ${timeSpent % 60} giây`
-    };
-
-    setResult(res);
-    setIsSubmitted(true);
-
-    if (onComplete) {
-      onComplete(res);
+    setSubmitError('');
+    setSubmitting(true);
+    try {
+      const answers = Object.entries(selectedAnswers).map(([questionId, answerId]) => ({
+        questionId: Number(questionId),
+        answerId: Number(answerId),
+      }));
+      const response = await onSubmit(answers);
+      const timeSpent = quizData.durationSeconds - timeLeft;
+      setResult({
+        ...response,
+        timeSpent: `${timeSpent} giây`,
+      });
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(error.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -85,7 +79,7 @@ export default function QuizView({ quizData, onBack, onComplete }) {
             timeLeft < 120 ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse' : 'bg-blue-50 text-blue-700'
           }`}>
             <Clock size={18} />
-            <span>{formatTime(timeLeft)}</span>
+            <span>{timeLeft} giây</span>
           </div>
         </div>
 
@@ -121,33 +115,22 @@ export default function QuizView({ quizData, onBack, onComplete }) {
                 </div>
 
                 <div className="space-y-2.5 pt-2">
-                  {q.options.map((opt, optIndex) => {
-                    const isSelected = selectedAnswers[q.id] === optIndex;
+                  {q.options.map((opt) => {
+                    const isSelected = selectedAnswers[q.id] === opt.id;
                     let optionStyle = 'border-gray-200 hover:border-blue-400 bg-gray-50/50';
 
-                    if (isSubmitted) {
-                      if (optIndex === q.correctAnswer) {
-                        optionStyle = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold';
-                      } else if (isSelected && optIndex !== q.correctAnswer) {
-                        optionStyle = 'border-red-500 bg-red-50 text-red-900';
-                      }
-                    } else if (isSelected) {
+                    if (isSelected) {
                       optionStyle = 'border-blue-600 bg-blue-50/70 text-blue-900 font-semibold ring-2 ring-blue-500/20';
                     }
 
                     return (
                       <div
-                        key={optIndex}
-                        onClick={() => handleSelectOption(q.id, optIndex)}
+                        key={opt.id}
+                        onClick={() => handleSelectOption(q.id, opt.id)}
                         className={`p-3.5 rounded-xl border text-sm flex items-center justify-between cursor-pointer transition ${optionStyle}`}
                       >
-                        <span>{opt}</span>
-                        {isSubmitted && optIndex === q.correctAnswer && (
-                          <CheckCircle2 size={18} className="text-emerald-600" />
-                        )}
-                        {isSubmitted && isSelected && optIndex !== q.correctAnswer && (
-                          <XCircle size={18} className="text-red-500" />
-                        )}
+                        <span>{opt.text}</span>
+                        {isSelected && <CheckCircle2 size={18} className="text-blue-600" />}
                       </div>
                     );
                   })}
@@ -159,11 +142,13 @@ export default function QuizView({ quizData, onBack, onComplete }) {
 
         {!isSubmitted ? (
           <div className="text-center pt-4">
+            {submitError && <p className="mb-3 text-sm font-semibold text-red-600">{submitError}</p>}
             <button
               onClick={handleSubmit}
-              className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 text-sm transition"
+              disabled={submitting}
+              className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 text-sm transition"
             >
-              Nộp bài kiểm tra
+              {submitting ? 'Đang chấm bài...' : 'Nộp bài kiểm tra'}
             </button>
           </div>
         ) : (

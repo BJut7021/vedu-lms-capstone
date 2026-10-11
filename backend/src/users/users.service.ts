@@ -6,10 +6,7 @@ import {
 
 import { InjectRepository } from '@nestjs/typeorm';
 
-import {
-    IsNull,
-    Repository,
-} from 'typeorm';
+import { Repository } from 'typeorm';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -34,7 +31,9 @@ export class UsersService {
         return {
             userId: user.userId,
             fullName: user.fullName,
+            username: user.username,
             email: user.email,
+            phone: user.phone,
             role: user.role,
             avatarUrl: user.avatarUrl,
             isActive: user.isActive,
@@ -77,7 +76,9 @@ export class UsersService {
 
     async create(
         fullName: string,
+        username: string,
         email: string,
+        phone: string,
         password: string,
         role: UserRole = 'STUDENT',
     ) {
@@ -86,14 +87,18 @@ export class UsersService {
 
         const normalizedEmail =
             email?.trim().toLowerCase();
+        const normalizedUsername = username?.trim().toLowerCase();
+        const normalizedPhone = phone?.replace(/[\s.-]/g, '');
 
         if (
             !normalizedName ||
+            !normalizedUsername ||
             !normalizedEmail ||
+            !normalizedPhone ||
             !password
         ) {
             throw new BadRequestException(
-                'Vui lòng nhập đầy đủ họ tên, email và mật khẩu',
+                'Vui lòng nhập đầy đủ họ tên, username, email, số điện thoại và mật khẩu',
             );
         }
 
@@ -101,14 +106,14 @@ export class UsersService {
             await this.userRepository
                 .createQueryBuilder('u')
                 .where(
-                    'LOWER(u.email) = LOWER(:email)',
-                    { email: normalizedEmail },
+                    'LOWER(u.email) = LOWER(:email) OR LOWER(u.username) = LOWER(:username)',
+                    { email: normalizedEmail, username: normalizedUsername },
                 )
                 .getOne();
 
         if (existingUser) {
             throw new BadRequestException(
-                'Email đã được sử dụng',
+                'Email hoặc username đã được sử dụng',
             );
         }
 
@@ -121,7 +126,9 @@ export class UsersService {
         const user =
             this.userRepository.create({
                 fullName: normalizedName,
+                username: normalizedUsername,
                 email: normalizedEmail,
+                phone: normalizedPhone,
                 passwordHash,
                 role,
                 isActive: true,

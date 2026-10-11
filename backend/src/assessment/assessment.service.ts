@@ -1,7 +1,6 @@
 import {
     Injectable,
     NotFoundException,
-    ConflictException,
     BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -63,6 +62,54 @@ export class AssessmentService {
                 quizId: 'ASC',
             },
         });
+    }
+
+    async getPlayableQuiz(id: number) {
+        const quiz = await this.quizRepository.findOne({
+            where: {
+                quizId: id,
+                isPublished: true,
+                isDeleted: false,
+            },
+        });
+
+        if (!quiz) {
+            throw new NotFoundException(`Quiz ${id} không tồn tại`);
+        }
+
+        const questions = await this.questionRepository.find({
+            where: { quizId: id },
+            order: { questionOrder: 'ASC' },
+        });
+
+        const playableQuestions = await Promise.all(
+            questions.map(async (question) => {
+                const answers = await this.answerRepository.find({
+                    where: { questionId: question.questionId },
+                    order: { answerOrder: 'ASC' },
+                });
+
+                return {
+                    id: Number(question.questionId),
+                    question: question.questionText,
+                    points: Number(question.points),
+                    options: answers.map((answer) => ({
+                        id: Number(answer.answerId),
+                        text: answer.answerText,
+                    })),
+                };
+            }),
+        );
+
+        return {
+            id: Number(quiz.quizId),
+            courseId: Number(quiz.courseId),
+            title: quiz.title,
+            description: quiz.description,
+            durationSeconds: Math.max(1, Number(quiz.timeLimitSeconds ?? 600)),
+            passingScore: Number(quiz.passingScore),
+            questions: playableQuestions,
+        };
     }
 
     async create(data: Partial<Quiz>): Promise<Quiz> {
@@ -165,8 +212,6 @@ export class AssessmentService {
     async createAttempt(
         quizId: number,
         studentId: number,
-        courseId: number,
-        attemptNo: number,
     ): Promise<QuizAttempt> {
         const quiz = await this.quizRepository.findOne({
             where: { quizId },
@@ -176,9 +221,32 @@ export class AssessmentService {
             throw new NotFoundException(`Quiz ${quizId} không tồn tại`);
         }
 
+        const existingAttempt = await this.quizAttemptRepository.findOne({
+            where: {
+                quizId,
+                studentId,
+                status: 'IN_PROGRESS',
+            },
+        });
+
+        if (existingAttempt) {
+            return existingAttempt;
+        }
+
+        const previousAttempts = await this.quizAttemptRepository.count({
+            where: { quizId, studentId },
+        });
+
+        const attemptNo = previousAttempts + 1;
+        if (attemptNo > Number(quiz.maxAttempts)) {
+            throw new BadRequestException(
+                `Bạn đã sử dụng hết ${quiz.maxAttempts} lượt làm bài`,
+            );
+        }
+
         const attempt = this.quizAttemptRepository.create({
             quizId,
-            courseId,
+            courseId: quiz.courseId,
             studentId,
             attemptNo,
             score: null,
@@ -193,11 +261,12 @@ export class AssessmentService {
 
     async submitAttempt(
         attemptId: number,
+        studentId: number,
         answers: {
             questionId: number;
             answerId: number;
         }[],
-    ): Promise<QuizAttempt> {
+    ) {
         const attempt = await this.quizAttemptRepository.findOne({
             where: {
                 attemptId,
@@ -207,6 +276,12 @@ export class AssessmentService {
         if (!attempt) {
             throw new NotFoundException(
                 `Attempt ${attemptId} không tồn tại`,
+            );
+        }
+
+        if (Number(attempt.studentId) !== Number(studentId)) {
+            throw new BadRequestException(
+                'Bạn không có quyền nộp bài làm này',
             );
         }
 
@@ -231,8 +306,20 @@ export class AssessmentService {
             );
         }
 
+
+        if (!Array.isArray(answers) || answers.length !== questions.length) {
+            throw new BadRequestException(
+                'Vui lòng trả lời đầy đủ tất cả câu hỏi',
+            );
+        }
+
+        if (new Set(answers.map((item) => item.questionId)).size !== answers.length) {
+            throw new BadRequestException('Mỗi câu hỏi chỉ được gửi một đáp án');
+        }
+
         let totalPoints = 0;
         let earnedPoints = 0;
+        let correctCount = 0;
 
         for (const question of questions) {
             totalPoints += Number(question.points);
@@ -271,6 +358,7 @@ export class AssessmentService {
 
             if (isCorrect) {
                 earnedPoints += Number(question.points);
+                correctCount += 1;
             }
 
             await this.quizAttemptAnswerRepository.save(
@@ -305,6 +393,23 @@ export class AssessmentService {
         attempt.submittedAt = submittedAt;
         attempt.status = 'SUBMITTED';
 
-        return this.quizAttemptRepository.save(attempt);
+        const savedAttempt = await this.quizAttemptRepository.save(attempt);
+        const quiz = await this.findOne(Number(attempt.quizId));
+
+        return {
+            attemptId: Number(savedAttempt.attemptId),
+            quizId: Number(savedAttempt.quizId),
+            courseId: Number(savedAttempt.courseId),
+            studentId: Number(savedAttempt.studentId),
+            attemptNo: savedAttempt.attemptNo,
+            score: Number(savedAttempt.score),
+            durationSeconds: savedAttempt.durationSeconds,
+            startedAt: savedAttempt.startedAt,
+            submittedAt: savedAttempt.submittedAt,
+            status: savedAttempt.status,
+            correctCount,
+            totalQuestions: questions.length,
+            passed: score >= Number(quiz.passingScore),
+        };
     }
 }

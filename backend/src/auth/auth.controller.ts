@@ -35,15 +35,19 @@ export class AuthController {
         @Body()
         body: {
             fullName: string;
+            username: string;
             email: string;
+            phone: string;
             password: string;
+            confirmPassword: string;
         },
     ) {
-        return this.authService.register(
-            body.fullName,
-            body.email,
-            body.password,
-        );
+        return this.authService.register(body);
+    }
+
+    @Get('username-availability/:username')
+    usernameAvailability(@Param('username') username: string) {
+        return this.authService.usernameAvailability(username);
     }
 
     @Post('login')
@@ -51,17 +55,44 @@ export class AuthController {
         @Req() request: Request,
         @Body()
         body: {
-            email: string;
+            username: string;
             password: string;
+            expectedRole: UserRole;
             deviceInfo?: string;
         },
     ) {
         return this.authService.login(
-            body.email,
+            body.username,
             body.password,
+            body.expectedRole,
             body.deviceInfo,
             request.ip,
             request.headers['user-agent'],
+        );
+    }
+
+    @Post('forgot-password')
+    forgotPassword(
+        @Body() body: { email: string; expectedRole: UserRole },
+    ) {
+        return this.authService.forgotPassword(body.email, body.expectedRole);
+    }
+
+    @Post('reset-password')
+    resetPassword(
+        @Body()
+        body: {
+            email: string;
+            pin: string;
+            newPassword: string;
+            expectedRole: UserRole;
+        },
+    ) {
+        return this.authService.resetPassword(
+            body.email,
+            body.pin,
+            body.newPassword,
+            body.expectedRole,
         );
     }
 
