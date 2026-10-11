@@ -99,6 +99,29 @@ export class EnrollmentService {
         );
     }
 
+    async enrollOrGet(studentId: number, courseId: number) {
+        const existing = await this.enrollmentRepository.findOne({
+            where: { studentId, courseId },
+        });
+
+        if (existing?.status === 'ACTIVE' || existing?.status === 'COMPLETED') {
+            return existing;
+        }
+
+        if (existing) {
+            existing.status = 'ACTIVE';
+            return this.enrollmentRepository.save(existing);
+        }
+
+        return this.enrollmentRepository.save(
+            this.enrollmentRepository.create({
+                studentId,
+                courseId,
+                status: 'ACTIVE',
+            }),
+        );
+    }
+
     async update(
         enrollmentId: number,
         data: {

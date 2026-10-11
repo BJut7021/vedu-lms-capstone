@@ -18,16 +18,18 @@ Chia làm 4 cụm:
 - **Người dùng thấy gì:** 
   - Header (logo, menu, thanh search khóa học, nút đăng nhập/đăng ký).
   - Banner giới thiệu web.
-  - Danh sách "Khóa học nổi bật" (card hiển thị thumbnail, tên khóa, tên giảng viên, số sao, số bài học, tổng thời lượng).
+  - Slider khóa học thịnh hành, bán chạy và từng chủ đề (không hiển thị thời lượng ở trang giới thiệu).
   - Footer thông tin nhóm và bản quyền.
 - **Backend cần:**
   - API lấy danh sách khóa học nổi bật (`GET /api/courses/featured`).
   - DB cần bảng: `courses`, `users` (để lấy tên giảng viên).
 
-### 1.2. Popup Đăng nhập / Đăng ký (Auth Modal) - [Giao diện đã làm xong]
+### 1.2. Các route Đăng nhập / Đăng ký - [Giao diện đã làm xong]
 - **Người dùng thao tác:**
-  - Tab Đăng nhập: nhập email, mật khẩu -> bấm Đăng nhập.
-  - Tab Đăng ký: nhập họ tên, email, mật khẩu, chọn vai trò (Học viên hoặc Giảng viên) -> bấm Đăng ký.
+  - `/student/login`, `/teacher/login`, `/admin/login` chỉ chấp nhận đúng role của cổng tương ứng.
+  - Đăng nhập bằng username và mật khẩu; học viên đăng ký tại `/student/register` với họ tên, username, email cá nhân, số điện thoại và nhập lại mật khẩu.
+  - Username được kiểm tra trùng; từng trường được validate ở cả frontend và backend.
+  - Học viên/giảng viên nhận PIN quên mật khẩu qua email; quản trị viên không có chức năng này.
 - **Backend cần:**
   - API login: kiểm tra pass hash, trả về JWT token + role của user (`POST /api/auth/login`).
   - API register: tạo tài khoản mới trong DB (`POST /api/auth/register`).
@@ -68,7 +70,7 @@ Chia làm 4 cụm:
 
 ### 2.3. Màn hình Làm bài Quiz trắc nghiệm - [Giao diện đã làm xong]
 - **Người dùng thao tác:**
-  - Đồng hồ đếm ngược (ví dụ 10 phút), hết giờ tự động khóa và thu bài.
+  - Đồng hồ đếm ngược bằng giây, hết giờ yêu cầu nộp các đáp án đã chọn.
   - Chọn đáp án trắc nghiệm A, B, C, D cho từng câu hỏi.
   - Bấm "Nộp bài": hệ thống tự chấm điểm (thang điểm 10), báo Đạt/Không đạt, hiện đáp án đúng (xanh) và sai (đỏ).
 - **Backend cần:**
@@ -80,7 +82,7 @@ Chia làm 4 cụm:
 - **Người dùng thấy gì:**
   - Danh sách các khóa học mình đang học kèm thanh % tiến độ đã hoàn thành.
   - **Khối quan trọng của đề tài (Lộ trình AI gợi ý):** Hiển thị danh sách các bài học gợi ý tiếp theo dựa trên lịch sử xem video và điểm thi quiz vừa qua.
-  - Thống kê nhanh: tổng số giờ học, số bài kiểm tra đã làm.
+  - Thống kê nhanh: tổng số giây học, số bài kiểm tra đã làm.
 - **Backend cần:**
   - API lấy danh sách khóa đang học của user (`GET /api/student/my-courses`).
   - API trả về kết quả gợi ý từ model AI (`GET /api/student/recommendations`).

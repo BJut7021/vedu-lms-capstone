@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { ArrowLeft, PlayCircle, FileText, HelpCircle, CheckCircle, Clock, Star, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, PlayCircle, FileText, HelpCircle, CheckCircle, Star, Users, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function CourseDetail({ course, onBack, onStartLearning, onStartQuiz }) {
-  const [openSections, setOpenSections] = useState({ 'sec-1': true, 'sec-2': true });
+  const [openSections, setOpenSections] = useState({ 'course-content': true });
+
+  const allLessons = course.sections.flatMap((section) => section.lessons);
+  const firstLearningLesson = allLessons.find((lesson) => lesson.type !== 'quiz');
 
   const toggleSection = (secId) => {
     setOpenSections(prev => ({ ...prev, [secId]: !prev[secId] }));
@@ -42,10 +45,6 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
                 <Users size={16} />
                 <span>Giảng viên: <strong className="text-gray-800">{course.instructor}</strong></span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Clock size={16} />
-                <span>Thời lượng: {course.duration}</span>
-              </div>
             </div>
           </div>
 
@@ -57,7 +56,7 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
             </div>
 
             <button 
-              onClick={() => onStartLearning('lsn-1-1')}
+              onClick={() => firstLearningLesson && onStartLearning(firstLearningLesson.id)}
               className="w-full py-3.5 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"
             >
               <PlayCircle size={20} />
@@ -73,7 +72,7 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
               <p className="text-xs text-gray-500 mt-1">Bao gồm chuỗi bài giảng video, tài liệu và bài quiz đánh giá</p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-lg text-gray-600">
-              2 Chương • 6 Bài học
+              {course.sections.length} chương • {allLessons.length} bài học
             </span>
           </div>
 
@@ -95,7 +94,7 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
                         key={lesson.id} 
                         className="p-4 flex items-center justify-between hover:bg-blue-50/40 transition cursor-pointer"
                         onClick={() => {
-                          if (lesson.type === 'quiz') onStartQuiz();
+                          if (lesson.type === 'quiz') onStartQuiz(lesson.quizId);
                           else onStartLearning(lesson.id);
                         }}
                       >
@@ -108,7 +107,7 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
                             <p className="text-sm font-semibold text-gray-800 hover:text-blue-600 transition">
                               {lesson.title}
                             </p>
-                            <span className="text-xs text-gray-400 capitalize">{lesson.type} • {lesson.duration}</span>
+                            <span className="text-xs text-gray-400 capitalize">{lesson.type}</span>
                           </div>
                         </div>
 

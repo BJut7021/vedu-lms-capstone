@@ -1,11 +1,10 @@
-import React from 'react';
-import { Search, BookOpen, LogIn } from 'lucide-react';
+import { Search, BookOpen, LayoutDashboard, LogIn } from 'lucide-react';
 
-export default function Header({ onOpenAuth }) {
+export default function Header({ onOpenAuth, onRoleLogin, user, onLogout, onDashboard, onHome }) {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 cursor-pointer">
+        <button onClick={onHome} className="flex items-center gap-2 text-left">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
             V
           </div>
@@ -13,7 +12,7 @@ export default function Header({ onOpenAuth }) {
             <span className="text-xl font-black text-gray-900 tracking-tight">Vedu</span>
             <span className="text-xs block text-blue-600 font-semibold -mt-1">LMS Platform</span>
           </div>
-        </div>
+        </button>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
           <button className="flex items-center gap-1.5 hover:text-blue-600 transition">
@@ -36,19 +35,30 @@ export default function Header({ onOpenAuth }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => onOpenAuth('login')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition"
-          >
-            Đăng nhập
-          </button>
-          <button 
-            onClick={() => onOpenAuth('register')}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full shadow-sm hover:shadow transition flex items-center gap-1.5"
-          >
-            <LogIn size={16} />
-            <span>Đăng ký</span>
-          </button>
+          {user ? (
+            <>
+              <span className="hidden sm:inline text-sm font-semibold text-gray-700">{user.fullName}</span>
+              <button onClick={onDashboard} className="px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full transition flex items-center gap-1.5">
+                <LayoutDashboard size={16} />
+                <span className="hidden lg:inline">Bảng điều khiển</span>
+              </button>
+              <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-full transition">
+                Đăng xuất
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => onRoleLogin('TEACHER')} className="hidden lg:block text-xs font-bold text-violet-700 hover:text-violet-900">Giảng viên</button>
+              <button onClick={() => onRoleLogin('ADMIN')} className="hidden lg:block text-xs font-bold text-amber-700 hover:text-amber-900">Quản trị</button>
+              <button onClick={() => onOpenAuth('login')} className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition">
+                Đăng nhập
+              </button>
+              <button onClick={() => onOpenAuth('register')} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full shadow-sm hover:shadow transition flex items-center gap-1.5">
+                <LogIn size={16} />
+                <span>Đăng ký</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

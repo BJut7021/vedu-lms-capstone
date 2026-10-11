@@ -26,9 +26,21 @@ export class User {
     fullName: string;
 
     @Column({
+        length: 40,
+    })
+    username: string;
+
+    @Column({
         length: 180,
     })
     email: string;
+
+    @Column({
+        type: 'varchar',
+        length: 20,
+        nullable: true,
+    })
+    phone: string | null;
 
     @Column({
         name: 'password_hash',

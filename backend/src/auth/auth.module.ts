@@ -25,7 +25,7 @@ import { RolesGuard } from './roles.guard';
                 'vedu-demo-secret-2026',
 
             signOptions: {
-                expiresIn: '15m',
+                expiresIn: '3d',
             },
         }),
     ],

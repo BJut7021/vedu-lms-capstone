@@ -9,6 +9,7 @@ import { Question } from '../entities/question.entity';
 import { Answer } from '../entities/answer.entity';
 import { QuizAttempt } from '../entities/quiz-attempt.entity';
 import { QuizAttemptAnswer } from '../entities/quiz-attempt-answer.entity';
+import { User } from '../entities/user.entity';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { QuizAttemptAnswer } from '../entities/quiz-attempt-answer.entity';
             Answer,
             QuizAttempt,
             QuizAttemptAnswer,
+            User,
         ]),
     ],
     controllers: [AssessmentController],
