@@ -1,0 +1,66 @@
+{
+  "version": "office-v1",
+  "courses": [
+    {
+      "courseId": 64,
+      "key": "word",
+      "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
+      "lessons": 7,
+      "lessonIds": [
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ]
+    },
+    {
+      "courseId": 65,
+      "key": "excel",
+      "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
+      "lessons": 7,
+      "lessonIds": [
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162
+      ]
+    },
+    {
+      "courseId": 66,
+      "key": "powerpoint",
+      "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
+      "lessons": 7,
+      "lessonIds": [
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169
+      ]
+    },
+    {
+      "courseId": 67,
+      "key": "digital",
+      "title": "Kỹ năng số thực hành — Tệp, cộng tác và an toàn email",
+      "lessons": 7,
+      "lessonIds": [
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176
+      ]
+    }
+  ],
+  "provenance": "Original VEDU exercises + linked primary documentation/video. No learner interactions generated."
+}

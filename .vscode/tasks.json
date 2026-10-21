@@ -2,6 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Vedu: Full Docker demo (with ML)",
+      "type": "shell",
+      "command": "docker compose up --build -d",
+      "options": {"cwd":"${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "Vedu: ML worker (Python)",
+      "type": "shell",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ..\\scripts\\start-ml-dev.ps1",
+      "options": {"cwd":"${workspaceFolder}/ml-core"},
+      "problemMatcher": []
+    },
+    {
       "label": "Vedu: Install dependencies",
       "type": "shell",
       "command": "npm ci; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location ../frontend; npm ci",
@@ -22,7 +36,7 @@
     {
       "label": "Vedu: Backend",
       "type": "shell",
-      "command": "npm run start:dev",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ..\\scripts\\start-backend-dev.ps1",
       "options": {
         "cwd": "${workspaceFolder}/backend"
       },

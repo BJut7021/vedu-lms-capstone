@@ -27,7 +27,8 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../services/api";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import Operations from "./Operations";
 
 const roleLabels = {
   STUDENT: "Học viên",
@@ -45,6 +46,9 @@ const menus = {
     ["certificates", "Chứng chỉ", Award],
     ["support", "Hỗ trợ", CircleHelp],
     ["profile", "Hồ sơ cá nhân", Settings],
+    ["security", "Mật khẩu & phiên", ShieldCheck],
+    ["discussions", "Hỏi đáp khóa học", CircleHelp],
+    ["ticket-chat", "Hội thoại hỗ trợ", CircleHelp],
   ],
   TEACHER: [
     ["dashboard", "Tổng quan", LayoutDashboard],
@@ -54,6 +58,11 @@ const menus = {
     ["learners", "Danh sách học viên", Users],
     ["gradebook", "Sổ điểm", ClipboardCheck],
     ["analytics", "Phân tích học tập", BarChart3],
+    ["content", "Tài liệu & video", FileClock],
+    ["discussions", "Hỏi đáp khóa học", CircleHelp],
+    ["ticket-chat", "Ticket được phân công", CircleHelp],
+    ["reports", "Báo cáo & xuất file", BarChart3],
+    ["security", "Mật khẩu & phiên", ShieldCheck],
   ],
   ADMIN: [
     ["dashboard", "Tổng quan hệ thống", LayoutDashboard],
@@ -64,6 +73,10 @@ const menus = {
     ["recommendations", "Mẫu & khuyến nghị", Bot],
     ["support", "Trung tâm hỗ trợ", CircleHelp],
     ["settings", "Cấu hình & nhật ký", Settings],
+    ["assignments", "Phân công giảng viên", Users],
+    ["ticket-chat", "Xử lý ticket", CircleHelp],
+    ["reports", "Báo cáo & xuất file", BarChart3],
+    ["security", "Mật khẩu & phiên", ShieldCheck],
   ],
 };
 
@@ -200,10 +213,18 @@ export default function Portal({
   onOpenCourse,
 }) {
   const role = auth.user.role;
+  const roleMenu = useMemo(
+    () =>
+      auth.user.isGuest
+        ? menus[role].filter(([id]) => ["dashboard", "courses"].includes(id))
+        : menus[role],
+    [auth.user.isGuest, role],
+  );
   const location = useLocation();
   const navigate = useNavigate();
-  const routePage = location.pathname.split("/").filter(Boolean)[1] || "dashboard";
-  const activePage = menus[role].some(([id]) => id === routePage)
+  const routePage =
+    location.pathname.split("/").filter(Boolean)[1] || "dashboard";
+  const activePage = roleMenu.some(([id]) => id === routePage)
     ? routePage
     : "dashboard";
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -215,6 +236,7 @@ export default function Portal({
   const [courseForm, setCourseForm] = useState({
     name: "",
     description: "",
+    topic: "",
     price: 0,
   });
   const [lessonForm, setLessonForm] = useState({
@@ -269,8 +291,8 @@ export default function Portal({
   }, [location.pathname, navigate, role, routePage]);
 
   const activeMenu = useMemo(
-    () => menus[role].find(([id]) => id === activePage) || menus[role][0],
-    [activePage, role],
+    () => roleMenu.find(([id]) => id === activePage) || roleMenu[0],
+    [activePage, roleMenu],
   );
 
   const runAction = async (action, successMessage) => {
@@ -332,28 +354,28 @@ export default function Portal({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 transform bg-slate-950 text-white transition lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 transform flex-col border-r border-slate-800 bg-slate-950 text-slate-100 transition lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 px-6">
           <button
             onClick={onHome}
             className="flex items-center gap-3 text-left"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-xl font-black">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-xl font-black text-white">
               V
             </span>
             <span>
               <strong className="block text-lg">Vedu LMS</strong>
-              <small className="text-slate-400">Learning intelligence</small>
+              <small className="text-slate-500">Cùng bạn tiến bộ</small>
             </span>
           </button>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden">
             <X />
           </button>
         </div>
-        <div className="mx-4 mt-5 rounded-xl border border-white/10 bg-white/5 p-3">
+        <div className="mx-4 mt-5 rounded-xl border border-slate-700 bg-slate-900 p-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500 font-black">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500 font-black text-white">
               {auth.user.fullName?.charAt(0)}
             </div>
             <div className="min-w-0">
@@ -362,22 +384,22 @@ export default function Portal({
             </div>
           </div>
         </div>
-        <nav className="mt-5 space-y-1 px-3">
-          {menus[role].map(([id, label, Icon]) => (
+        <nav className="mt-5 flex-1 space-y-1 overflow-y-auto px-3 pb-3">
+          {roleMenu.map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => selectPage(id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${activePage === id ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40" : "text-slate-300 hover:bg-white/10 hover:text-white"}`}
+              className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${activePage === id ? "bg-blue-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}
             >
               <Icon size={18} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
+        <div className="shrink-0 border-t border-slate-800 bg-slate-950 p-4">
           <button
             onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-red-500/10 hover:text-red-300"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-500 hover:bg-red-50 hover:text-red-600"
           >
             <LogOut size={18} /> Đăng xuất
           </button>
@@ -428,6 +450,33 @@ export default function Portal({
         </header>
 
         <main className="mx-auto max-w-7xl p-4 sm:p-8">
+          {auth.user.isGuest && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <div>
+                <p className="font-bold text-blue-900">
+                  Chào bạn, cùng khám phá Vedu nhé!
+                </p>
+                <p className="mt-1 text-sm text-blue-700">
+                  Học thử tối đa 2 khóa miễn phí, 2 bài đầu mỗi khóa. Khách
+                  không thi lấy điểm, nhận chứng nhận, thanh toán, tạo gợi ý cá
+                  nhân hay gửi Q&A/ticket. Tiến độ khách không dùng huấn luyện
+                  mô hình.
+                </p>
+              </div>
+              <Link
+                to="/courses"
+                className="rounded-full bg-blue-600 px-4 py-2.5 text-sm font-bold text-white"
+              >
+                Khám phá khóa học
+              </Link>
+              <Link
+                to="/student/register"
+                className="text-sm font-bold text-blue-700"
+              >
+                Đăng ký để học đầy đủ
+              </Link>
+            </div>
+          )}
           {error && (
             <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               {error}
@@ -438,37 +487,61 @@ export default function Portal({
               {notice}
             </div>
           )}
-          {role === "STUDENT" &&
-            renderStudentPage({
-              activePage,
-              data,
-              auth,
-              ticketForm,
-              setTicketForm,
-              busy,
-              runAction,
-              onOpenCourse,
-            })}
-          {role === "TEACHER" &&
-            renderTeacherPage({
-              activePage,
-              data,
-              courseForm,
-              setCourseForm,
-              lessonForm,
-              setLessonForm,
-              busy,
-              runAction,
-            })}
-          {role === "ADMIN" &&
-            renderAdminPage({
-              activePage,
-              data,
-              catalog,
-              auth,
-              busy,
-              runAction,
-            })}
+          {[
+            "security",
+            "discussions",
+            "ticket-chat",
+            "reports",
+            "content",
+            "assignments",
+            "mining",
+            "quiz-bank",
+            "certificates",
+            "learning-path",
+          ].includes(activePage) ? (
+            <Operations
+              key={`${role}-${activePage}`}
+              page={activePage}
+              auth={auth}
+              data={data}
+              catalog={catalog}
+              onLogout={onLogout}
+            />
+          ) : (
+            <>
+              {role === "STUDENT" &&
+                renderStudentPage({
+                  activePage,
+                  data,
+                  auth,
+                  ticketForm,
+                  setTicketForm,
+                  busy,
+                  runAction,
+                  onOpenCourse,
+                })}
+              {role === "TEACHER" &&
+                renderTeacherPage({
+                  activePage,
+                  data,
+                  courseForm,
+                  setCourseForm,
+                  lessonForm,
+                  setLessonForm,
+                  busy,
+                  runAction,
+                })}
+              {role === "ADMIN" &&
+                renderAdminPage({
+                  activePage,
+                  data,
+                  catalog,
+                  auth,
+                  busy,
+                  runAction,
+                })}
+            </>
+          )}
         </main>
       </div>
     </div>
@@ -1075,7 +1148,13 @@ function renderTeacherPage({
                 () => api.createTeacherCourse(courseForm, token),
                 "Đã tạo khóa học nháp.",
               );
-              if (ok) setCourseForm({ name: "", description: "", price: 0 });
+              if (ok)
+                setCourseForm({
+                  name: "",
+                  description: "",
+                  topic: "",
+                  price: 0,
+                });
             }}
           >
             <label className="block text-sm font-bold">
@@ -1086,6 +1165,18 @@ function renderTeacherPage({
                 onChange={(event) =>
                   setCourseForm({ ...courseForm, name: event.target.value })
                 }
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
+              />
+            </label>
+            <label className="block text-sm font-bold">
+              Chủ đề
+              <input
+                maxLength={80}
+                value={courseForm.topic}
+                onChange={(event) =>
+                  setCourseForm({ ...courseForm, topic: event.target.value })
+                }
+                placeholder="Ví dụ: Thiết kế, Ngoại ngữ, Lập trình..."
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
               />
             </label>
@@ -1432,7 +1523,7 @@ function renderAdminPage({ activePage, data, catalog, auth, busy, runAction }) {
                 <span className="font-bold text-amber-900">
                   Python mining service
                 </span>
-                <Badge tone="amber">DEMO MODE</Badge>
+                <Badge tone="blue">{data.miningRuns.some(r=>r.algorithm==='VEDU-PrefixProjection-HUSPM')?'ĐÃ CHẠY THẬT':'CHƯA HUẤN LUYỆN'}</Badge>
               </div>
             </div>
           </Panel>

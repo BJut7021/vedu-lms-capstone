@@ -38,7 +38,7 @@ export default function CourseDetail({ course, onBack, onStartLearning, onStartQ
             <div className="flex flex-wrap items-center gap-6 pt-2 text-sm text-gray-500">
               <div className="flex items-center gap-1.5 text-amber-500 font-bold">
                 <Star size={18} fill="currentColor" />
-                <span>{course.rating}</span>
+                <span>{course.rating ?? 'Chưa có đánh giá'}</span>
                 <span className="text-gray-400 font-normal">({course.students} học viên)</span>
               </div>
               <div className="flex items-center gap-1.5">

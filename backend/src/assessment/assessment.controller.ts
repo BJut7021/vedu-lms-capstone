@@ -18,6 +18,7 @@ import { Answer } from '../entities/answer.entity';
 import { QuizAttempt } from '../entities/quiz-attempt.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRole } from '../entities/user.entity';
+import { ExamService } from '../platform/exam.service';
 
 type AuthenticatedRequest = Request & {
     user: {
@@ -31,6 +32,7 @@ type AuthenticatedRequest = Request & {
 export class AssessmentController {
     constructor(
         private readonly assessmentService: AssessmentService,
+        private readonly exams: ExamService,
     ) { }
 
     @Get()
@@ -105,10 +107,7 @@ export class AssessmentController {
         @Param('quizId', ParseIntPipe) quizId: number,
         @Req() request: AuthenticatedRequest,
     ) {
-        return this.assessmentService.createAttempt(
-            quizId,
-            request.user.userId,
-        );
+        return this.exams.start(quizId, request.user);
     }
 
     @Get('attempts/:attemptId')
@@ -131,11 +130,7 @@ export class AssessmentController {
             }[];
         },
     ) {
-        return this.assessmentService.submitAttempt(
-            attemptId,
-            request.user.userId,
-            body.answers,
-        );
+        return this.exams.submit(attemptId, request.user, body.answers);
     }
 
     @Post('questions')

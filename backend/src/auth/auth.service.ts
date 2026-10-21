@@ -12,7 +12,7 @@ import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 
-import { createHash, randomInt, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomInt, randomUUID } from 'crypto';
 import * as nodemailer from 'nodemailer';
 
 import { User, UserRole } from '../entities/user.entity';
@@ -44,6 +44,7 @@ export class AuthService {
             email: user.email,
             phone: user.phone,
             role: user.role,
+            isGuest: user.username.startsWith('guest_'),
             avatarUrl: user.avatarUrl,
             isActive: user.isActive,
             createdAt: user.createdAt,
@@ -84,6 +85,9 @@ export class AuthService {
             throw new BadRequestException(
                 'Username gồm 4-30 ký tự chữ thường, số, dấu chấm hoặc gạch dưới',
             );
+        }
+        if (normalizedUsername.startsWith('guest_')) {
+            throw new BadRequestException('Username này được dành cho tài khoản khách');
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
             throw new BadRequestException('Email không đúng định dạng');
@@ -142,7 +146,7 @@ export class AuthService {
 
     async usernameAvailability(username: string) {
         const normalized = username?.trim().toLowerCase();
-        const valid = /^[a-z0-9._]{4,30}$/.test(normalized);
+        const valid = /^[a-z0-9._]{4,30}$/.test(normalized) && !normalized.startsWith('guest_');
         if (!valid) return { username: normalized, available: false, valid: false };
 
         const count = await this.userRepository
@@ -150,6 +154,22 @@ export class AuthService {
             .where('LOWER(u.username) = :username', { username: normalized })
             .getCount();
         return { username: normalized, available: count === 0, valid: true };
+    }
+
+    async guestLogin(expectedRole: UserRole, ipAddress?: string, userAgent?: string) {
+        if (expectedRole !== 'STUDENT') {
+            throw new BadRequestException('Đăng nhập khách chỉ dành cho học viên');
+        }
+        const username = `guest_${randomBytes(10).toString('hex')}`;
+        const password = randomBytes(32).toString('base64url');
+        const user = this.userRepository.create({
+            fullName: 'Học viên khách', username,
+            email: `${username}@guest.vedu.local`, phone: null,
+            passwordHash: await bcrypt.hash(password, 10),
+            role: 'STUDENT', isActive: true,
+        });
+        await this.userRepository.save(user);
+        return this.login(username, password, 'STUDENT', 'Phiên học viên khách', ipAddress, userAgent);
     }
 
     async login(
@@ -222,6 +242,7 @@ export class AuthService {
                     email: user.email,
                     role: user.role,
                     type: 'refresh',
+                    jti: randomUUID(),
                     sessionId,
                 },
                 {
@@ -231,7 +252,7 @@ export class AuthService {
 
         const refreshTokenHash =
             await bcrypt.hash(
-                refreshToken,
+                createHash('sha256').update(refreshToken).digest('hex'),
                 10,
             );
 
@@ -272,6 +293,7 @@ export class AuthService {
                     email: user.email,
                     role: user.role,
                     type: 'access',
+                    sessionId,
                 },
                 {
                     expiresIn: '3d',
@@ -357,13 +379,13 @@ export class AuthService {
                 text: `Mã PIN của bạn là ${resetPin}. Mã có hiệu lực 900 giây. Không chia sẻ mã này.`,
                 html: `<p>Mã PIN đặt lại mật khẩu Vedu LMS:</p><p style="font-size:28px;font-weight:bold;letter-spacing:6px">${resetPin}</p><p>Mã có hiệu lực 900 giây. Không chia sẻ mã này.</p>`,
             });
-        } else if (process.env.PASSWORD_RESET_DEMO_MODE !== 'true') {
+        } else if (process.env.PASSWORD_RESET_DEMO_MODE !== 'true' || process.env.NODE_ENV==='production') {
             throw new BadRequestException(
                 'Dịch vụ email chưa được cấu hình. Hãy cấu hình SMTP_HOST, SMTP_USER và SMTP_PASS.',
             );
         }
 
-        if (process.env.PASSWORD_RESET_DEMO_MODE === 'true') {
+        if (process.env.PASSWORD_RESET_DEMO_MODE === 'true' && process.env.NODE_ENV!=='production') {
             response.demoResetPin = resetPin;
         }
 
@@ -499,7 +521,7 @@ export class AuthService {
 
         const validToken =
             await bcrypt.compare(
-                refreshToken,
+                createHash('sha256').update(refreshToken).digest('hex'),
                 session.refreshTokenHash,
             );
 
@@ -529,6 +551,7 @@ export class AuthService {
                     email: user.email,
                     role: user.role,
                     type: 'refresh',
+                    jti: randomUUID(),
                     sessionId: session.sessionId,
                 },
                 {
@@ -538,7 +561,7 @@ export class AuthService {
 
         session.refreshTokenHash =
             await bcrypt.hash(
-                newRefreshToken,
+                createHash('sha256').update(newRefreshToken).digest('hex'),
                 10,
             );
 
@@ -566,6 +589,7 @@ export class AuthService {
                     email: user.email,
                     role: user.role,
                     type: 'access',
+                    sessionId: session.sessionId,
                 },
                 {
                     expiresIn: '3d',
@@ -580,6 +604,20 @@ export class AuthService {
             sessionId: session.sessionId,
             user: this.publicUser(user),
         };
+    }
+
+    async changePassword(userId: number, oldPassword: string, newPassword: string, confirmPassword: string) {
+        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(newPassword ?? '') || newPassword !== confirmPassword) {
+            throw new BadRequestException('Mật khẩu mới phải có 8-72 ký tự, chữ hoa, chữ thường, số và nhập lại khớp');
+        }
+        const user = await this.userRepository.findOneBy({ userId });
+        if (!user || !await bcrypt.compare(oldPassword ?? '', user.passwordHash)) throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
+        const hash = await bcrypt.hash(newPassword, 12);
+        await this.dataSource.transaction(async manager => {
+            await manager.query('UPDATE auth.users SET password_hash=$1 WHERE user_id=$2', [hash, userId]);
+            await manager.query('UPDATE auth.user_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id=$1 AND revoked_at IS NULL', [userId]);
+        });
+        return { message: 'Đã đổi mật khẩu và thu hồi tất cả phiên. Vui lòng đăng nhập lại.' };
     }
 
     async revokeByRefreshToken(
@@ -619,7 +657,7 @@ export class AuthService {
 
         const validToken =
             await bcrypt.compare(
-                refreshToken,
+                createHash('sha256').update(refreshToken).digest('hex'),
                 session.refreshTokenHash,
             );
 

@@ -10,41 +10,41 @@ import { UserSession } from '../entities/user-session.entity';
 
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessService } from './access.service';
+import { ApiPolicyGuard } from './api-policy.guard';
+import { AuthRateGuard } from './auth-rate.guard';
+import { ConfigService } from '@nestjs/config';
 
 @Global()
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            User,
-            UserSession,
-        ]),
+  imports: [
+    TypeOrmModule.forFeature([User, UserSession]),
 
-        JwtModule.register({
-            secret:
-                process.env.JWT_SECRET ||
-                'vedu-demo-secret-2026',
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET');
+        if (!secret || secret.length < 32)
+          throw new Error('JWT_SECRET cần tối thiểu 32 ký tự trong .env');
+        return { secret, signOptions: { expiresIn: 259200 } };
+      },
+    }),
+  ],
 
-            signOptions: {
-                expiresIn: '3d',
-            },
-        }),
-    ],
+  controllers: [AuthController],
 
-    controllers: [
-        AuthController,
-    ],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    AccessService,
+    { provide: APP_GUARD, useClass: AuthRateGuard },
+    { provide: APP_GUARD, useExisting: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: ApiPolicyGuard },
+    { provide: APP_GUARD, useExisting: RolesGuard },
+  ],
 
-    providers: [
-        AuthService,
-        JwtAuthGuard,
-        RolesGuard,
-    ],
-
-    exports: [
-        AuthService,
-        JwtModule,
-        JwtAuthGuard,
-        RolesGuard,
-    ],
+  exports: [AuthService, JwtModule, JwtAuthGuard, RolesGuard, AccessService],
 })
-export class AuthModule { }
+export class AuthModule {}

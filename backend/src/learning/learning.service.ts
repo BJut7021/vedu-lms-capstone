@@ -40,7 +40,17 @@ export class LearningService {
       );
     }
 
-    const durationSeconds = data.durationSeconds ?? null;
+    if (data.lessonId) {
+      const [lesson] = await this.dataSource.query(`SELECT l.lesson_id,
+        EXISTS(SELECT 1 FROM lms.lesson_resources r WHERE r.lesson_id=l.lesson_id AND r.resource_type='VIDEO') AS video
+        FROM lms.lessons l WHERE lesson_id=$1 AND course_id=$2 AND is_published AND NOT is_deleted`,[data.lessonId,data.courseId]);
+      if(!lesson) throw new BadRequestException('Bài học không thuộc khóa học');
+      if(lesson.video && (action==='COMPLETE_LESSON' || Number(data.durationSeconds)>0)) throw new BadRequestException('Tiến độ video chỉ ghi nhận qua heartbeat máy chủ');
+    }
+    if (['START_QUIZ','SUBMIT_QUIZ'].includes(action)) throw new BadRequestException('Sự kiện quiz do máy chủ chấm bài ghi nhận, không nhận điểm từ client');
+
+    if(!/^[a-f0-9-]{36}$/i.test(data.eventUuid) || !/^[a-f0-9-]{36}$/i.test(data.learningSessionId)) throw new BadRequestException('UUID không hợp lệ');
+    const durationSeconds = 0;
     if (
       durationSeconds !== null &&
       (!Number.isInteger(durationSeconds) ||
@@ -67,10 +77,10 @@ export class LearningService {
         data.quizAttemptId ?? null,
         data.learningSessionId,
         action,
-        data.quizScore ?? null,
+        null,
         durationSeconds,
         data.completionStatus ?? null,
-        JSON.stringify(data.metadata ?? {}),
+        JSON.stringify({client:'vedu-web',manualDocumentComplete:action==='COMPLETE_LESSON'}),
       ],
     );
 

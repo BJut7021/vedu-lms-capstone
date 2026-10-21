@@ -89,6 +89,7 @@ export class UsersService {
             email?.trim().toLowerCase();
         const normalizedUsername = username?.trim().toLowerCase();
         const normalizedPhone = phone?.replace(/[\s.-]/g, '');
+        if (!['STUDENT','TEACHER','ADMIN'].includes(role) || !/^[a-z0-9._]{4,30}$/.test(normalizedUsername ?? '') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail ?? '') || !/^(?:0|\+84)\d{9}$/.test(normalizedPhone ?? '') || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,72}$/.test(password ?? '')) throw new BadRequestException('Username, email, điện thoại, mật khẩu hoặc vai trò không hợp lệ');
 
         if (
             !normalizedName ||
@@ -288,6 +289,13 @@ export class UsersService {
                 data.avatarUrl?.trim() || null;
         }
 
+        if(data.role!==undefined && !['STUDENT','TEACHER','ADMIN'].includes(data.role)) throw new BadRequestException('Vai trò không hợp lệ');
+        if(data.isActive!==undefined && typeof data.isActive!=='boolean') throw new BadRequestException('Trạng thái phải là boolean');
+        if(user.role==='ADMIN' && (data.isActive===false || data.role!==undefined && data.role!=='ADMIN')) {
+            const otherAdmins=await this.userRepository.createQueryBuilder('u').where('u.role = :role AND u.is_active = TRUE AND u.user_id <> :id',{role:'ADMIN',id:userId}).getCount();
+            if(!otherAdmins) throw new BadRequestException('Không thể khóa hoặc đổi vai trò quản trị viên cuối cùng');
+        }
+        const roleChanged=data.role!==undefined && data.role!==user.role;
         if (data.role !== undefined) {
             user.role = data.role;
         }
@@ -301,7 +309,7 @@ export class UsersService {
                 user,
             );
 
-        if (saved.isActive === false) {
+        if (saved.isActive === false || roleChanged) {
             await this.sessionRepository
                 .createQueryBuilder()
                 .update(UserSession)

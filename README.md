@@ -1,5 +1,15 @@
 # Vedu LMS Capstone
 
+Ứng dụng React + NestJS + PostgreSQL và worker Python HUSPM/BPR/GRU.
+
+- [Kịch bản demo STT 6 và cách chạy](docs/STT6_DEMO_GUIDE.md)
+- [Đối chiếu chức năng đã làm / còn thiếu](docs/STT6_COMPLETION_AUDIT.md)
+- [Giải thích chi tiết hệ khuyến nghị](docs/RECOMMENDATION_SYSTEM_GUIDE.md)
+
+PowerShell tại thư mục dự án: `docker compose up --build -d`, mở `http://localhost:8080`.
+Để huấn luyện Kaggle, chạy `scripts/import-ml-datasets.ps1` trước. Không xóa volume để cập nhật schema.
+MoMo Sandbox/SMTP cần khóa riêng của nhóm trong `.env`; HTTPS và tiêu chí kiểm thử–triển khai cuối đang tạm hoãn theo yêu cầu.
+
 Vedu LMS hiện có luồng demo hoàn chỉnh: React gọi NestJS qua REST API, NestJS đọc và ghi PostgreSQL, còn toàn bộ ba dịch vụ được khởi động bằng Docker Compose.
 
 ## Kiến trúc demo
@@ -52,6 +62,12 @@ Trước khi trình bày thật, hãy mở `.env` và thay `POSTGRES_PASSWORD`, 
 ```
 
 Mở ứng dụng tại `http://localhost:8080`.
+
+Giao diện không hiển thị thông tin tài khoản/mật khẩu mẫu. Tại cổng học viên, chọn **Tiếp tục với tài khoản khách** để trải nghiệm một phiên học riêng. Giảng viên và admin cần tài khoản đúng role. Đăng ký thành công hiển thị thông báo và nút **Đăng nhập**, không tự đăng nhập.
+
+Thanh tìm kiếm và trang `/courses` tìm tên khóa/chủ đề/giảng viên qua API PostgreSQL; menu chủ đề được tạo từ catalog đã xuất bản. Giảng viên có thể nhập chủ đề khi tạo khóa mới; danh mục tự cập nhật theo API và khi quay lại/focus trang, không cần sửa frontend.
+
+Báo cáo đối chiếu mức độ hoàn thiện theo mục 8/STT 6 nằm tại [RUBRIC_SECTION_8_ITEM_6_REVIEW.md](docs/RUBRIC_SECTION_8_ITEM_6_REVIEW.md). Các tiêu chí còn thiếu được ghi rõ, đặc biệt AI thật, thanh toán, chứng nhận và bảo vệ các API cũ.
 
 Ba tài khoản theo vai trò đã được seed (đăng nhập bằng username, cùng mật khẩu `Demo@123`):
 
@@ -248,3 +264,7 @@ Cả hai lệnh phải trả về `status: ok`. Vite proxy `/api` sang `http://l
 - `backend/src/assessment`: tải quiz, tạo attempt và chấm bài.
 - `backend/src/learning`: ghi learning event.
 - `frontend/src/services/api.js`: lớp gọi REST API dùng chung.
+
+# Học liệu và nhiều lộ trình (15/10/2026)
+
+Xem [hướng dẫn học liệu thực hành, 2–4 phương án và giải thích](docs/LEARNING_CONTENT_AND_PATHS.md).

@@ -80,6 +80,7 @@ export class PortalController {
         @Body() body: {
             name: string;
             description?: string;
+            topic?: string;
             price?: number;
         },
     ) {
@@ -120,10 +121,4 @@ export class PortalController {
         );
     }
 
-    @Post('admin/mining-runs/demo')
-    @UseGuards(RolesGuard)
-    @Roles('ADMIN')
-    runDemoMining(@Req() request: AuthenticatedRequest) {
-        return this.portalService.runDemoMining(request.user.userId);
-    }
 }
