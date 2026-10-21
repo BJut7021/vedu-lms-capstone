@@ -15,6 +15,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import type { UserRole } from '../entities/user.entity';
+import { Public } from './public.decorator';
 
 type AuthenticatedRequest = Request & {
     user: {
@@ -31,6 +32,7 @@ export class AuthController {
     ) { }
 
     @Post('register')
+    @Public()
     register(
         @Body()
         body: {
@@ -46,11 +48,13 @@ export class AuthController {
     }
 
     @Get('username-availability/:username')
+    @Public()
     usernameAvailability(@Param('username') username: string) {
         return this.authService.usernameAvailability(username);
     }
 
     @Post('login')
+    @Public()
     login(
         @Req() request: Request,
         @Body()
@@ -71,7 +75,20 @@ export class AuthController {
         );
     }
 
+    @Post('guest')
+    @Public()
+    guestLogin(
+        @Req() request: Request,
+        @Body() body: { expectedRole?: UserRole },
+    ) {
+        return this.authService.guestLogin(
+            body?.expectedRole ?? 'STUDENT', request.ip,
+            request.headers['user-agent'],
+        );
+    }
+
     @Post('forgot-password')
+    @Public()
     forgotPassword(
         @Body() body: { email: string; expectedRole: UserRole },
     ) {
@@ -79,6 +96,7 @@ export class AuthController {
     }
 
     @Post('reset-password')
+    @Public()
     resetPassword(
         @Body()
         body: {
@@ -97,6 +115,7 @@ export class AuthController {
     }
 
     @Post('refresh')
+    @Public()
     refresh(
         @Body()
         body: {
@@ -109,6 +128,7 @@ export class AuthController {
     }
 
     @Post('revoke')
+    @Public()
     revoke(
         @Body()
         body: {
@@ -118,6 +138,11 @@ export class AuthController {
         return this.authService.revokeByRefreshToken(
             body.refreshToken,
         );
+    }
+
+    @Post('change-password')
+    changePassword(@Req() req: AuthenticatedRequest, @Body() body: { oldPassword: string; newPassword: string; confirmPassword: string }) {
+        return this.authService.changePassword(req.user.userId, body.oldPassword, body.newPassword, body.confirmPassword);
     }
 
     @UseGuards(JwtAuthGuard)

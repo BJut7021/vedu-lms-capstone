@@ -12,7 +12,9 @@ export class CoursesService {
         private readonly dataSource: DataSource,
     ) { }
 
-    async findAll() {
+    async findAll(filters: { q?: string; topic?: string; sort?: string } = {}) {
+        const query = filters.q?.trim().slice(0, 200) || '';
+        const topic = filters.topic?.trim().slice(0, 80) || '';
         const rows = await this.dataSource.query(`
             SELECT
                 c.course_id AS "id",
@@ -44,20 +46,29 @@ export class CoursesService {
                   AND e.status IN ('ACTIVE', 'COMPLETED')
             ) es ON TRUE
             WHERE c.status = 'PUBLISHED' AND c.is_deleted = FALSE
-            ORDER BY c.created_at DESC, c.course_id ASC
-        `);
+              AND ($1 = '' OR c.course_name ILIKE '%' || $1 || '%'
+                   OR COALESCE(c.description, '') ILIKE '%' || $1 || '%'
+                   OR COALESCE(c.topic, '') ILIKE '%' || $1 || '%'
+                   OR u.full_name ILIKE '%' || $1 || '%')
+              AND ($2 = '' OR COALESCE(c.topic, 'Tổng hợp') = $2)
+            ORDER BY
+                CASE WHEN $3 = 'popular' THEN COALESCE(es.student_count, 0) END DESC,
+                CASE WHEN $3 = 'price-asc' THEN c.price END ASC,
+                c.created_at DESC, c.course_id DESC
+        `, [query, topic, filters.sort || 'newest']);
 
         return rows.map((row: Record<string, unknown>) => ({
             ...row,
+            description: typeof row.description==='string' ? row.description.replace(/\[VEDU-OFFICE-v1:[a-z]+\]\s*/g,'') : row.description,
             id: Number(row.id),
             lessons: Number(row.lessons),
             students: Number(row.students),
             durationSeconds: Number(row.durationSeconds),
-            rating: 4.9,
+            rating: null,
         }));
     }
 
-    async findOne(courseId: number) {
+    async findOne(courseId: number, includeContent = true) {
         const courses = await this.dataSource.query(`
             SELECT
                 c.course_id AS "id",
@@ -91,6 +102,7 @@ export class CoursesService {
                 l.title,
                 l.content,
                 l.lesson_order AS "lessonOrder",
+                l.section_id AS "sectionId",
                 l.estimated_duration_seconds AS "durationSeconds",
                 r.resource_type AS "resourceType",
                 r.resource_url AS "resourceUrl",
@@ -120,11 +132,13 @@ export class CoursesService {
             0,
         );
 
-        return {
+        const chapters:any[]=await this.dataSource.query('SELECT section_id AS id,title FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',[courseId]);
+        const result = {
             ...course,
+            description: typeof course.description==='string' ? course.description.replace(/\[VEDU-OFFICE-v1:[a-z]+\]\s*/g,'') : course.description,
             id: Number(course.id),
             students: Number(course.students),
-            rating: 4.9,
+            rating: null,
             durationSeconds: totalDuration,
             sections: [{
                 id: 'course-content',
@@ -136,6 +150,8 @@ export class CoursesService {
 
                     return {
                         ...lesson,
+                        content: includeContent ? lesson.content : null,
+                        resourceUrl: includeContent ? lesson.resourceUrl : null,
                         id: Number(lesson.id),
                         lessonOrder: Number(lesson.lessonOrder),
                         durationSeconds: Number(lesson.durationSeconds ?? 0),
@@ -143,7 +159,7 @@ export class CoursesService {
                         type: lesson.quizId
                             ? 'quiz'
                             : resourceType.toLowerCase(),
-                        videoUrl: resourceType === 'VIDEO'
+                        videoUrl: includeContent && resourceType === 'VIDEO'
                             ? lesson.resourceUrl
                             : null,
                         completed: false,
@@ -151,5 +167,10 @@ export class CoursesService {
                 }),
             }],
         };
+        const mapped=result.sections[0].lessons as {id:number;title:string;type:string;sectionId?:unknown;[key:string]:unknown}[];
+        result.sections=[...chapters.map(s=>({id:String(s.id),title:s.title,lessons:mapped.filter(l=>String(l.sectionId)===String(s.id))})),{id:'course-content',title:'Nội dung khóa học',lessons:mapped.filter(l=>!l.sectionId)}].filter(s=>s.lessons.length>0);
+        const courseQuizzes:any[]=await this.dataSource.query('SELECT quiz_id,title,time_limit_seconds FROM assessment.quizzes WHERE course_id=$1 AND lesson_id IS NULL AND is_published AND NOT is_deleted ORDER BY quiz_id',[courseId]);
+        if(courseQuizzes.length) result.sections.push({id:'course-assessment',title:'Bài kiểm tra khóa học',lessons:courseQuizzes.map(q=>({id:-Number(q.quiz_id),title:q.title,type:'quiz',quizId:Number(q.quiz_id),durationSeconds:Number(q.time_limit_seconds ?? 600),completed:false})) as any});
+        return result;
     }
 }

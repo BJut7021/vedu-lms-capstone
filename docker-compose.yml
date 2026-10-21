@@ -14,6 +14,7 @@ services:
       - ./database/vedu/vedu_v6.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./database/vedu/demo_seed.sql:/docker-entrypoint-initdb.d/02-demo-seed.sql:ro
       - ./database/vedu/portal_demo_seed.sql:/docker-entrypoint-initdb.d/03-portal-demo-seed.sql:ro
+      - ./database/vedu/platform_upgrade.sql:/docker-entrypoint-initdb.d/04-platform-upgrade.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -39,8 +40,11 @@ services:
       - ${POSTGRES_DB}
       - -f
       - /seed/portal_demo_seed.sql
+      - -f
+      - /seed/platform_upgrade.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
+      - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
     depends_on:
       db:
         condition: service_healthy
@@ -68,11 +72,28 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       CORS_ORIGINS: http://localhost:${VEDU_WEB_PORT}
       NODE_ENV: production
+      WEB_URL: http://localhost:${VEDU_WEB_PORT}
+      MEDIA_DIR: /app/media
+      ML_SERVICE_URL: http://ml:8001
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-local-vedu-ml-change-me}
+      MOMO_ENV: ${MOMO_ENV:-sandbox}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_IPN_URL: ${MOMO_IPN_URL:-}
+      MOMO_REDIRECT_URL: ${MOMO_REDIRECT_URL:-}
+      PATH_EXPLAIN_PROVIDER: ${PATH_EXPLAIN_PROVIDER:-disabled}
+      PATH_EXPLAIN_URL: ${PATH_EXPLAIN_URL:-}
+      PATH_EXPLAIN_API_KEY: ${PATH_EXPLAIN_API_KEY:-}
+    volumes:
+      - vedu_media:/app/media
     depends_on:
       db:
         condition: service_healthy
       demo-seed:
         condition: service_completed_successfully
+      ml:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${VEDU_API_PORT}:3000"
     healthcheck:
@@ -96,8 +117,27 @@ services:
     networks:
       - vedu_private
 
+  ml:
+    build: ./ml-core
+    restart: unless-stopped
+    environment:
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-local-vedu-ml-change-me}
+    volumes:
+      - ./ml-core/data:/data:ro
+      - vedu_ml_artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,os; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8001/health',headers={'X-ML-Token':os.environ.get('ML_INTERNAL_TOKEN','local-vedu-ml-change-me')}),timeout=5)"]
+      interval: 5s
+      timeout: 6s
+      start_period: 20s
+      retries: 20
+    networks:
+      - vedu_private
+
 volumes:
   vedu_postgres_data:
+  vedu_media:
+  vedu_ml_artifacts:
 
 networks:
   vedu_private:

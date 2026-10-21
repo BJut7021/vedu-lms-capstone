@@ -36,17 +36,10 @@ export class PortalService {
             await Promise.all([
                 this.dataSource.query(`
                     SELECT
-                        COUNT(DISTINCT e.course_id)::int AS "enrolledCourses",
-                        COUNT(DISTINCT lp.lesson_id) FILTER (WHERE lp.status = 'COMPLETED')::int AS "completedLessons",
-                        COUNT(DISTINCT qa.attempt_id) FILTER (WHERE qa.status IN ('SUBMITTED','GRADED'))::int AS "quizAttempts",
-                        COALESCE(ROUND(AVG(qa.score) FILTER (WHERE qa.score IS NOT NULL), 1), 0) AS "averageScore"
-                    FROM enrollment.enrollments e
-                    LEFT JOIN learning.lesson_progress lp
-                        ON lp.student_id = e.student_id AND lp.course_id = e.course_id
-                    LEFT JOIN assessment.quiz_attempts qa
-                        ON qa.student_id = e.student_id AND qa.course_id = e.course_id
-                    WHERE e.student_id = $1
-                      AND e.status IN ('ACTIVE','COMPLETED')
+                        (SELECT COUNT(*)::int FROM enrollment.enrollments WHERE student_id=$1 AND status IN ('ACTIVE','COMPLETED')) AS "enrolledCourses",
+                        (SELECT COUNT(*)::int FROM learning.lesson_progress WHERE student_id=$1 AND status='COMPLETED') AS "completedLessons",
+                        (SELECT COUNT(*)::int FROM assessment.quiz_attempts WHERE student_id=$1 AND status IN ('SUBMITTED','GRADED')) AS "quizAttempts",
+                        (SELECT COALESCE(ROUND(AVG(score),1),0) FROM assessment.quiz_attempts WHERE student_id=$1 AND status IN ('SUBMITTED','GRADED')) AS "averageScore"
                 `, [userId]),
                 this.dataSource.query(`
                     SELECT
@@ -82,7 +75,8 @@ export class PortalService {
                         recommendation_score AS "score", reason, status,
                         generated_at AS "generatedAt", expires_at AS "expiresAt"
                     FROM learning.v_active_recommendations
-                    WHERE student_id = $1
+                    WHERE student_id = $1 AND (source_type='FALLBACK' OR EXISTS(
+                        SELECT 1 FROM learning.model_registry m JOIN learning.experiments x ON x.experiment_id::text=m.model_version WHERE m.model_id=v_active_recommendations.model_id AND x.status='SUCCEEDED'))
                     ORDER BY recommendation_order, recommendation_score DESC
                 `, [userId]),
                 this.dataSource.query(`
@@ -152,7 +146,7 @@ export class PortalService {
                 FROM lms.courses c
                 LEFT JOIN enrollment.enrollments e ON e.course_id = c.course_id
                 LEFT JOIN assessment.quiz_attempts qa ON qa.course_id = c.course_id
-                WHERE c.teacher_id = $1 AND c.is_deleted = FALSE
+                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1)) AND c.is_deleted = FALSE
             `, [userId]),
             this.dataSource.query(`
                 SELECT
@@ -164,7 +158,7 @@ export class PortalService {
                 LEFT JOIN lms.lessons l ON l.course_id = c.course_id
                 LEFT JOIN enrollment.enrollments e
                     ON e.course_id = c.course_id AND e.status IN ('ACTIVE','COMPLETED')
-                WHERE c.teacher_id = $1 AND c.is_deleted = FALSE
+                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1)) AND c.is_deleted = FALSE
                 GROUP BY c.course_id
                 ORDER BY c.updated_at DESC
             `, [userId]),
@@ -179,7 +173,7 @@ export class PortalService {
                 JOIN auth.users u ON u.user_id = e.student_id
                 LEFT JOIN learning.v_student_progress p
                     ON p.student_id = e.student_id AND p.course_id = e.course_id
-                WHERE c.teacher_id = $1 AND c.is_deleted = FALSE
+                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1)) AND c.is_deleted = FALSE
                 ORDER BY e.enrolled_at DESC
                 LIMIT 30
             `, [userId]),
@@ -191,7 +185,7 @@ export class PortalService {
                     r.submitted_at AS "submittedAt"
                 FROM assessment.v_quiz_results r
                 JOIN lms.courses c ON c.course_id = r.course_id
-                WHERE c.teacher_id = $1
+                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1))
                 ORDER BY r.started_at DESC
                 LIMIT 20
             `, [userId]),
@@ -206,7 +200,7 @@ export class PortalService {
                 FROM assessment.quizzes q
                 JOIN lms.courses c ON c.course_id = q.course_id
                 LEFT JOIN assessment.questions qq ON qq.quiz_id = q.quiz_id
-                WHERE c.teacher_id = $1 AND q.is_deleted = FALSE
+                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1)) AND q.is_deleted = FALSE
                 GROUP BY q.quiz_id, c.course_name
                 ORDER BY q.updated_at DESC
             `, [userId]),
@@ -382,21 +376,23 @@ export class PortalService {
 
     async createCourse(
         teacherId: number,
-        input: { name: string; description?: string; price?: number },
+        input: { name: string; description?: string; topic?: string; price?: number },
     ) {
         const name = input.name?.trim();
         const price = Number(input.price ?? 0);
+        const topic = input.topic?.trim() || 'Tổng hợp';
+        if (topic.length > 80) throw new BadRequestException('Chủ đề tối đa 80 ký tự');
         if (!name) throw new BadRequestException('Tên khóa học không được để trống');
         if (!Number.isFinite(price) || price < 0) {
             throw new BadRequestException('Học phí không hợp lệ');
         }
 
         const rows = await this.dataSource.query(`
-            INSERT INTO lms.courses(course_name, description, teacher_id, price, status)
-            VALUES ($1, $2, $3, $4, 'DRAFT')
+            INSERT INTO lms.courses(course_name, description, teacher_id, price, status, topic)
+            VALUES ($1, $2, $3, $4, 'DRAFT', $5)
             RETURNING course_id AS "courseId", course_name AS "courseName",
                       description, price, status, created_at AS "createdAt"
-        `, [name, input.description?.trim() || null, teacherId, price]);
+        `, [name, input.description?.trim() || null, teacherId, price, topic]);
         return rows[0];
     }
 
@@ -436,45 +432,9 @@ export class PortalService {
         const rows = await this.dataSource.query(`
             UPDATE lms.courses
             SET status = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE course_id = $2 AND teacher_id = $3 AND is_deleted = FALSE
+            WHERE course_id = $2 AND is_deleted = FALSE AND (teacher_id = $3 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=lms.courses.course_id AND ct.teacher_id=$3))
             RETURNING course_id AS "courseId", course_name AS "courseName", status
         `, [status, courseId, teacherId]);
-        return rows[0];
-    }
-
-    async runDemoMining(adminId: number) {
-        const courseRows = await this.dataSource.query(`
-            SELECT course_id AS "courseId"
-            FROM lms.courses
-            WHERE status = 'PUBLISHED' AND is_deleted = FALSE
-            ORDER BY course_id
-            LIMIT 1
-        `);
-        if (!courseRows.length) throw new NotFoundException('Chưa có khóa học để chạy mô phỏng');
-
-        const courseId = courseRows[0].courseId;
-        const now = Date.now();
-        const rows = await this.dataSource.query(`
-            INSERT INTO learning.mining_runs(
-                course_id, algorithm_name, algorithm_version, dataset_version,
-                code_version, min_support, min_utility, utility_definition,
-                parameters, metrics, sequence_count, event_count, pattern_count,
-                runtime_ms, peak_memory_mb, status, started_at, finished_at
-            )
-            SELECT
-                $1, 'HUSP-SP', 'demo-1.0', $2, 'portal-demo',
-                0.10, 1.00,
-                '{"quiz_score":0.5,"completion":0.3,"duration":0.2}'::jsonb,
-                jsonb_build_object('mode', 'DEMO', 'requested_by', $3),
-                '{"note":"Mô phỏng quản trị; không thay thế dịch vụ khai phá Python."}'::jsonb,
-                COUNT(DISTINCT student_id)::int, COUNT(*)::int, 0,
-                320, 24.50, 'SUCCEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            FROM learning.learning_sequence_logs
-            WHERE course_id = $1
-            RETURNING mining_run_id AS "runId", dataset_version AS "datasetVersion",
-                      status, sequence_count AS "sequenceCount", event_count AS "eventCount",
-                      ROUND(runtime_ms / 1000.0, 3) AS "runtimeSeconds", created_at AS "createdAt"
-        `, [courseId, `portal-demo-${now}`, adminId]);
         return rows[0];
     }
 
@@ -485,7 +445,8 @@ export class PortalService {
             WHERE course_id = $1 AND is_deleted = FALSE
         `, [courseId]);
         if (!rows.length) throw new NotFoundException('Không tìm thấy khóa học');
-        if (Number(rows[0].teacherId) !== teacherId) {
+        const assigned = await this.dataSource.query('SELECT 1 FROM lms.course_teachers WHERE course_id=$1 AND teacher_id=$2',[courseId,teacherId]);
+        if (Number(rows[0].teacherId) !== Number(teacherId) && !assigned.length) {
             throw new ForbiddenException('Bạn không quản lý khóa học này');
         }
     }

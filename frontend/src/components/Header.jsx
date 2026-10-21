@@ -1,66 +1,250 @@
-import { Search, BookOpen, LayoutDashboard, LogIn } from 'lucide-react';
+import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Search,
+  ChevronDown,
+  LayoutDashboard,
+  Menu,
+  X,
+  BookOpen,
+} from "lucide-react";
 
-export default function Header({ onOpenAuth, onRoleLogin, user, onLogout, onDashboard, onHome }) {
+export default function Header({
+  onOpenAuth,
+  onRoleLogin,
+  user,
+  onLogout,
+  onDashboard,
+  onHome,
+  topics = [],
+  onRefreshCatalog,
+}) {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const [query, setQuery] = useState(params.get("q") || "");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [topicsOpen, setTopicsOpen] = useState(false);
+  const search = (event) => {
+    event.preventDefault();
+    setMenuOpen(false);
+    navigate(
+      `/courses?${new URLSearchParams(query.trim() ? { q: query.trim() } : {})}`,
+    );
+  };
+  const closeMenus = () => {
+    setMenuOpen(false);
+    setTopicsOpen(false);
+  };
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        <button onClick={onHome} className="flex items-center gap-2 text-left">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
-            V
-          </div>
-          <div>
-            <span className="text-xl font-black text-gray-900 tracking-tight">Vedu</span>
-            <span className="text-xs block text-blue-600 font-semibold -mt-1">LMS Platform</span>
-          </div>
-        </button>
-
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-          <button className="flex items-center gap-1.5 hover:text-blue-600 transition">
-            <BookOpen size={18} />
-            <span>Khóa học</span>
-          </button>
-          <a href="#lo-trinh" className="hover:text-blue-600 transition">Lộ trình thông minh</a>
-          <a href="#ho-tro" className="hover:text-blue-600 transition">Hỗ trợ</a>
-        </nav>
-
-        <div className="flex-1 max-w-md hidden sm:block">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Tìm khóa học, kỹ năng, giảng viên..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-            />
+    <header className="sticky top-0 z-40 border-b border-blue-100/70 bg-white/95 backdrop-blur-xl">
+      <div className="border-b border-slate-100 bg-slate-50">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-1.5 text-xs sm:px-6 lg:px-8">
+          <span className="truncate text-slate-500">VEDU Learning Management System</span>
+          <div className="flex shrink-0 items-center gap-4 font-semibold text-slate-600">
+            <Link to="/teacher/login" onClick={closeMenus} className="hover:text-blue-600">Cổng giảng viên</Link>
+            <Link to="/admin/login" onClick={closeMenus} className="hover:text-blue-600">Cổng quản trị</Link>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
+      </div>
+      <div className="mx-auto flex max-w-7xl items-center gap-5 px-4 py-3 sm:px-6 lg:px-8">
+        <button
+          onClick={onHome}
+          className="flex shrink-0 items-center gap-2.5 text-left"
+          aria-label="Vedu - trang chủ"
+        >
+          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-600 text-xl font-black text-white">
+            v
+          </span>
+          <span className="text-2xl font-black tracking-tight text-slate-900">
+            vedu<span className="text-blue-600">.</span>
+          </span>
+        </button>
+        <nav
+          aria-label="Điều hướng chính"
+          className="hidden shrink-0 items-center gap-5 text-sm font-semibold text-slate-600 lg:flex"
+        >
+          <Link
+            onClick={closeMenus}
+            to="/courses"
+            className="hover:text-blue-600"
+          >
+            Khóa học
+          </Link>
+          <div className="relative">
+            <button
+              onClick={() => {
+                setTopicsOpen(!topicsOpen);
+                onRefreshCatalog?.();
+              }}
+              className="flex items-center gap-1 hover:text-blue-600"
+              aria-expanded={topicsOpen}
+            >
+              Chủ đề
+              <ChevronDown size={15} />
+            </button>
+            {topicsOpen && (
+              <div className="absolute left-0 top-9 w-64 rounded-2xl border border-blue-100 bg-white p-2 shadow-xl">
+                <Link
+                  to="/courses"
+                  onClick={closeMenus}
+                  className="block rounded-xl px-3 py-2.5 hover:bg-blue-50"
+                >
+                  Tất cả chủ đề
+                </Link>
+                {topics.map((topic) => (
+                  <Link
+                    key={topic}
+                    to={`/courses?${new URLSearchParams({ topic })}`}
+                    onClick={closeMenus}
+                    className="block rounded-xl px-3 py-2.5 hover:bg-blue-50"
+                  >
+                    {topic}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          <Link to="/support" className="hover:text-blue-600">
+            Hỗ trợ
+          </Link>
+        </nav>
+        <form
+          role="search"
+          onSubmit={search}
+          className="relative hidden min-w-0 flex-1 md:block"
+        >
+          <Search
+            size={18}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onFocus={onRefreshCatalog}
+            aria-label="Tìm khóa học, chủ đề hoặc giảng viên"
+            placeholder="Bạn muốn học gì hôm nay?"
+            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-16 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+          />
+          <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white px-2.5 py-1.5 text-xs font-bold text-blue-600">
+            Tìm
+          </button>
+        </form>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (
             <>
-              <span className="hidden sm:inline text-sm font-semibold text-gray-700">{user.fullName}</span>
-              <button onClick={onDashboard} className="px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full transition flex items-center gap-1.5">
-                <LayoutDashboard size={16} />
-                <span className="hidden lg:inline">Bảng điều khiển</span>
+              <button
+                onClick={onDashboard}
+                className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2.5 text-sm font-bold text-blue-700"
+              >
+                <LayoutDashboard size={17} />
+                <span className="hidden xl:block">Không gian học tập</span>
               </button>
-              <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-full transition">
+              <button
+                onClick={onLogout}
+                className="hidden px-2 text-sm font-semibold text-slate-600 sm:block"
+              >
                 Đăng xuất
               </button>
             </>
           ) : (
             <>
-              <button onClick={() => onRoleLogin('TEACHER')} className="hidden lg:block text-xs font-bold text-violet-700 hover:text-violet-900">Giảng viên</button>
-              <button onClick={() => onRoleLogin('ADMIN')} className="hidden lg:block text-xs font-bold text-amber-700 hover:text-amber-900">Quản trị</button>
-              <button onClick={() => onOpenAuth('login')} className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition">
+              <button
+                onClick={() => onOpenAuth("login")}
+                className="px-2 text-sm font-semibold text-slate-600 hover:text-blue-600"
+              >
                 Đăng nhập
               </button>
-              <button onClick={() => onOpenAuth('register')} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-full shadow-sm hover:shadow transition flex items-center gap-1.5">
-                <LogIn size={16} />
-                <span>Đăng ký</span>
+              <button
+                onClick={() => onOpenAuth("register")}
+                className="rounded-full bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                Đăng ký
               </button>
             </>
           )}
+          <button
+            aria-label={menuOpen ? "Đóng điều hướng" : "Mở điều hướng"}
+            aria-expanded={menuOpen}
+            onClick={() => {
+              setMenuOpen(!menuOpen);
+              onRefreshCatalog?.();
+            }}
+            className="rounded-lg p-2 text-slate-600 lg:hidden"
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+      <div className="mx-auto max-w-7xl px-4 pb-3 md:hidden">
+        <form
+          role="search"
+          onSubmit={search}
+          className="flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2"
+        >
+          <Search size={18} className="my-auto shrink-0 text-slate-400" />
+          <input
+            aria-label="Tìm khóa học trên điện thoại"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onFocus={onRefreshCatalog}
+            placeholder="Tìm khóa học, giảng viên..."
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+          <button className="px-2 text-sm font-bold text-blue-600">Tìm</button>
+        </form>
+      </div>
+      {menuOpen && (
+        <nav
+          aria-label="Điều hướng di động"
+          className="border-t border-blue-50 bg-white px-4 py-3 lg:hidden"
+        >
+          <Link
+            onClick={closeMenus}
+            to="/courses"
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 font-bold text-blue-700"
+          >
+            <BookOpen size={18} />
+            Tất cả khóa học
+          </Link>
+          <div className="grid grid-cols-2 gap-1">
+            {topics.map((topic) => (
+              <Link
+                key={topic}
+                to={`/courses?${new URLSearchParams({ topic })}`}
+                onClick={closeMenus}
+                className="rounded-xl px-3 py-2.5 text-sm text-slate-600 hover:bg-blue-50"
+              >
+                {topic}
+              </Link>
+            ))}
+          </div>
+          <Link
+            onClick={closeMenus}
+            to="/support"
+            className="block px-3 py-2.5 text-sm font-semibold"
+          >
+            Hỗ trợ học viên
+          </Link>
+          {user ? (
+            <button
+              onClick={onLogout}
+              className="px-3 py-2.5 text-sm text-slate-600"
+            >
+              Đăng xuất
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                closeMenus();
+                onRoleLogin("TEACHER");
+              }}
+              className="px-3 py-2.5 text-sm text-slate-600"
+            >
+              Cổng giảng viên
+            </button>
+          )}
+        </nav>
+      )}
     </header>
   );
 }

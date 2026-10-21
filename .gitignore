@@ -19,3 +19,6 @@ obj/
 .idea/
 .DS_Store
 Thumbs.db
+ml-core/data/
+ml-core/artifacts/
+backend/media/

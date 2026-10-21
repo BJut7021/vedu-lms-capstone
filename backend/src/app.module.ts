@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PlatformModule } from './platform/platform.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -58,6 +59,7 @@ import { PortalModule } from './portal/portal.module';
         AuthModule,
         LearningModule,
         PortalModule,
+        PlatformModule,
     ],
 
     controllers: [AppController],

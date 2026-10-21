@@ -1,8 +1,12 @@
 # Hướng dẫn chạy và kịch bản demo Vedu LMS
 
+> Hướng dẫn cũ. Bản cập nhật sau khi tích hợp ML và giới hạn khách nằm ở [STT6_DEMO_GUIDE.md](STT6_DEMO_GUIDE.md). Khách không còn được dùng quiz, chứng nhận, thanh toán hay gợi ý cá nhân.
+
 Tài liệu này dùng cho môi trường Windows + Visual Studio Code. PostgreSQL chạy trong Docker; không cần cài PostgreSQL trực tiếp trên Windows.
 
 ## 1. Tài khoản demo
+
+Thông tin dưới đây dành cho nhóm phát triển kiểm thử nội bộ; giao diện người dùng không hiển thị credentials mẫu. Để trình bày với vai trò học viên, dùng nút **Tiếp tục với tài khoản khách** ở `/student/login`. Giảng viên/admin không có nút này. Đăng ký kết thúc bằng thông báo thành công và nút **Đăng nhập**.
 
 Tất cả tài khoản dùng mật khẩu `Demo@123`.
 
@@ -90,7 +94,7 @@ Không chạy `docker compose down -v` trước buổi bảo vệ vì lệnh đ�
 
 1. Mở trang chủ học viên, chỉ slider thịnh hành, bán chạy và danh mục theo bốn chủ đề được tải từ PostgreSQL qua NestJS.
 2. Giải thích luồng: React → `/api` → NestJS → PostgreSQL 16.
-3. Mở lần lượt `/student/login`, `/teacher/login`, `/admin/login`; thử dùng `teacher` tại cổng học viên để chứng minh bị từ chối.
+3. Mở `/student/login` và chọn **Tiếp tục với tài khoản khách**. Các cổng teacher/admin không có đăng nhập khách. Có thể kiểm thử riêng việc chặn tài khoản sai cổng bằng tài khoản nội bộ.
 
 ### Phần B — Học viên (4–5 phút)
 

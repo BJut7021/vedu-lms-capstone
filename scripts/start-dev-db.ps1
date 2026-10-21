@@ -43,8 +43,11 @@ for ($attempt = 1; $attempt -le 30; $attempt++) {
             exit 1
         }
 
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml cp database/vedu/platform_upgrade.sql db:/tmp/platform_upgrade.sql
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T db psql -v ON_ERROR_STOP=1 -U $databaseUser -d $databaseName -f /tmp/platform_upgrade.sql
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host 'Vedu PostgreSQL is ready at localhost:5432.' -ForegroundColor Green
-        Write-Host 'Role demo accounts are ready (student/teacher/admin @vedu.local, password Demo@123).' -ForegroundColor Cyan
+        Write-Host 'Vedu database is ready. Use the student guest sign-in or your role account.' -ForegroundColor Cyan
         exit 0
     }
 

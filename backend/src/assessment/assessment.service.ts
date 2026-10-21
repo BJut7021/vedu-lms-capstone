@@ -93,6 +93,7 @@ export class AssessmentService {
                     id: Number(question.questionId),
                     question: question.questionText,
                     points: Number(question.points),
+                    type: question.questionType,
                     options: answers.map((answer) => ({
                         id: Number(answer.answerId),
                         text: answer.answerText,
