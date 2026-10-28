@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../services/api";
 import LearningPaths from "./LearningPaths";
 import PedagogyEditor from "./PedagogyEditor";
+import ContentModeration from "./ContentModeration";
+import { formatMinutes } from "../services/time";
 
 const button =
   "rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50";
@@ -62,6 +64,7 @@ export default function Operations({ page, auth, data, catalog, onLogout }) {
   };
   const props = { auth, data, catalog, act, busy, onLogout };
   const pages = {
+    catalog: ContentModeration,
     security: Security,
     discussions: Discussions,
     reports: Reports,
@@ -195,7 +198,10 @@ function Discussions({ auth, data, act, busy }) {
       <CourseSelect
         courses={data.courses || []}
         value={course}
-        onChange={setCourse}
+        onChange={(id) => {
+          setCourse(id);
+          setQuestions([]);
+        }}
       />
       <button
         className={button}
@@ -352,7 +358,7 @@ function Reports({ auth, data, catalog, act, busy }) {
                 "Khóa học",
                 "Thanh toán",
                 "Bài hoàn thành",
-                "Xem thực (giây)",
+                "Xem thực (phút)",
                 "Điểm cao nhất",
               ].map((x) => (
                 <th className="p-3" key={x}>
@@ -369,7 +375,7 @@ function Reports({ auth, data, catalog, act, busy }) {
                   r.course_name,
                   r.payment_status,
                   r.completed_lessons,
-                  r.actual_seconds,
+                  formatMinutes(r.actual_seconds),
                   r.best_score ?? "—",
                 ].map((v, i) => (
                   <td key={i} className="p-3">
@@ -560,7 +566,20 @@ function Content({ auth, data, act, busy }) {
         )}
       </Card>
       {content && lesson && (
-        <PedagogyEditor key={`metadata-${lesson}`} lesson={content.lessons.find(l=>String(l.lesson_id)===String(lesson))} metadata={content.pedagogy?.find(l=>String(l.lesson_id)===String(lesson))} lessons={content.lessons} auth={auth} act={act} busy={busy} reload={load}/>
+        <PedagogyEditor
+          key={`metadata-${lesson}`}
+          lesson={content.lessons.find(
+            (l) => String(l.lesson_id) === String(lesson),
+          )}
+          metadata={content.pedagogy?.find(
+            (l) => String(l.lesson_id) === String(lesson),
+          )}
+          lessons={content.lessons}
+          auth={auth}
+          act={act}
+          busy={busy}
+          reload={load}
+        />
       )}
       {content && lesson && (
         <LessonEditor
@@ -620,13 +639,22 @@ function LessonEditor({ lesson, sections, auth, act, busy, reload }) {
           />
         </label>
         <Input
-          label="Thời gian đọc dự kiến (giây); video tải lên dùng ffprobe"
+          label="Thời gian đọc (phút); video tải lên tự đo thời lượng"
           type="number"
           min={0}
-          max={86400}
-          value={form.durationSeconds}
+          max={1440}
+          step="any"
+          value={
+            form.durationSeconds === "" ? "" : Number(form.durationSeconds) / 60
+          }
           onChange={(e) =>
-            setForm({ ...form, durationSeconds: e.target.value })
+            setForm({
+              ...form,
+              durationSeconds:
+                e.target.value === ""
+                  ? ""
+                  : Math.round(Number(e.target.value) * 60),
+            })
           }
         />
         <label className="block text-sm">
@@ -731,13 +759,20 @@ function QuizEditor({ auth, data, act, busy }) {
             onChange={(e) => setTitle(e.target.value)}
           />
           <Input
-            label="Thời gian (giây)"
+            label="Thời gian (phút)"
             type="number"
-            min={10}
-            max={86400}
+            min={10 / 60}
+            max={1440}
+            step="any"
             required
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
+            value={duration === "" ? "" : Number(duration) / 60}
+            onChange={(e) =>
+              setDuration(
+                e.target.value === ""
+                  ? ""
+                  : Math.round(Number(e.target.value) * 60),
+              )
+            }
           />
           <Input
             label="Điểm đạt /10"
@@ -1218,7 +1253,7 @@ export function LegacyRecommendations({ auth, data, act, busy }) {
   );
 }
 function Mining({ auth, act, busy }) {
-  const [replay,setReplay] = useState(null);
+  const [replay, setReplay] = useState(null);
   const [dataset, setDataset] = useState("kaggle_recommender"),
     [epochs, setEpochs] = useState(8),
     [jobs, setJobs] = useState([]),
@@ -1344,9 +1379,54 @@ function Mining({ auth, act, busy }) {
       {result?.report && (
         <>
           <Card title="Thử lịch sử bên ngoài — không tạo học viên VEDU">
-            <p className="text-sm text-slate-600">Đọc 5 lịch sử test đủ điều kiện đầu tiên từ CSV gốc và chạy suy luận. Mẫu này không ngẫu nhiên/đại diện; không dùng tỷ lệ trúng của 5 mẫu để báo chất lượng toàn mô hình.</p>
-            <button className={button} disabled={busy || result.report.manifest.dataset === 'vedu_real'} onClick={()=>act(async()=>{setReplay(await api.platform(`/ml/jobs/${result.jobId}/replay`,auth.accessToken,{}));})}>Chạy thử lịch sử Kaggle</button>
-            {replay && <div className="space-y-3"><p className="text-xs text-slate-500">{replay.scope}</p>{replay.samples.map(s=><div className="space-y-2 rounded-xl bg-slate-50 p-4 text-xs" key={s.sample}><strong>Mẫu ẩn danh {s.sample}</strong><p>Lịch sử trước target: {s.history.join(' → ')}</p><p>Target thật: {s.target} · {new Date(s.targetTime).toLocaleString('vi-VN')}</p><p>Top 3: {s.top5.slice(0,3).map(x=>`${x.item} (${x.score.toFixed(3)})`).join(' → ')} · {s.hit3?'Trúng':'Chưa trúng'}</p></div>)}</div>}
+            <p className="text-sm text-slate-600">
+              Đọc 5 lịch sử test đủ điều kiện đầu tiên từ CSV gốc và chạy suy
+              luận. Mẫu này không ngẫu nhiên/đại diện; không dùng tỷ lệ trúng
+              của 5 mẫu để báo chất lượng toàn mô hình.
+            </p>
+            <button
+              className={button}
+              disabled={busy || result.report.manifest.dataset === "vedu_real"}
+              onClick={() =>
+                act(async () => {
+                  setReplay(
+                    await api.platform(
+                      `/ml/jobs/${result.jobId}/replay`,
+                      auth.accessToken,
+                      {},
+                    ),
+                  );
+                })
+              }
+            >
+              Chạy thử lịch sử Kaggle
+            </button>
+            {replay && (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{replay.scope}</p>
+                {replay.samples.map((s) => (
+                  <div
+                    className="space-y-2 rounded-xl bg-slate-50 p-4 text-xs"
+                    key={s.sample}
+                  >
+                    <strong>Mẫu ẩn danh {s.sample}</strong>
+                    <p>Lịch sử trước target: {s.history.join(" → ")}</p>
+                    <p>
+                      Target thật: {s.target} ·{" "}
+                      {new Date(s.targetTime).toLocaleString("vi-VN")}
+                    </p>
+                    <p>
+                      Top 3:{" "}
+                      {s.top5
+                        .slice(0, 3)
+                        .map((x) => `${x.item} (${x.score.toFixed(3)})`)
+                        .join(" → ")}{" "}
+                      · {s.hit3 ? "Trúng" : "Chưa trúng"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
           <Card title="Chất lượng trên tập test (không dùng để chỉnh mô hình)">
             <div className="overflow-x-auto">

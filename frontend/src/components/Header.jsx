@@ -1,13 +1,8 @@
 import { useState } from "react";
+import Brand from "./Brand";
+import Avatar from "./Avatar";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Search,
-  ChevronDown,
-  LayoutDashboard,
-  Menu,
-  X,
-  BookOpen,
-} from "lucide-react";
+import { Search, ChevronDown, Menu, X, BookOpen } from "lucide-react";
 
 export default function Header({
   onOpenAuth,
@@ -17,6 +12,7 @@ export default function Header({
   onDashboard,
   onHome,
   topics = [],
+  classroom = false,
   onRefreshCatalog,
 }) {
   const navigate = useNavigate();
@@ -38,30 +34,39 @@ export default function Header({
   return (
     <header className="sticky top-0 z-40 border-b border-blue-100/70 bg-white/95 backdrop-blur-xl">
       <div className="border-b border-slate-100 bg-slate-50">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-1.5 text-xs sm:px-6 lg:px-8">
-          <span className="truncate text-slate-500">VEDU Learning Management System</span>
+        <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-2 text-xs sm:justify-between sm:px-6 lg:px-8">
+          <span className="hidden whitespace-nowrap text-slate-500 sm:inline">
+            VEDU Learning Management System
+          </span>
           <div className="flex shrink-0 items-center gap-4 font-semibold text-slate-600">
-            <Link to="/teacher/login" onClick={closeMenus} className="hover:text-blue-600">Cổng giảng viên</Link>
-            <Link to="/admin/login" onClick={closeMenus} className="hover:text-blue-600">Cổng quản trị</Link>
+            <Link
+              to="/teacher/login"
+              onClick={closeMenus}
+              className="hover:text-blue-600"
+            >
+              Cổng giảng viên
+            </Link>
+            <Link
+              to="/admin/login"
+              onClick={closeMenus}
+              className="hover:text-blue-600"
+            >
+              Cổng quản trị
+            </Link>
           </div>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl items-center gap-5 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 sm:gap-5 sm:px-6 lg:px-8">
         <button
           onClick={onHome}
-          className="flex shrink-0 items-center gap-2.5 text-left"
+          className="flex shrink-0 items-center gap-1.5 text-left sm:gap-2.5"
           aria-label="Vedu - trang chủ"
         >
-          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-600 text-xl font-black text-white">
-            v
-          </span>
-          <span className="text-2xl font-black tracking-tight text-slate-900">
-            vedu<span className="text-blue-600">.</span>
-          </span>
+          <Brand />
         </button>
         <nav
           aria-label="Điều hướng chính"
-          className="hidden shrink-0 items-center gap-5 text-sm font-semibold text-slate-600 lg:flex"
+          className="hidden shrink-0 items-center gap-5 whitespace-nowrap text-sm font-semibold text-slate-600 lg:flex"
         >
           <Link
             onClick={closeMenus}
@@ -111,7 +116,7 @@ export default function Header({
         <form
           role="search"
           onSubmit={search}
-          className="relative hidden min-w-0 flex-1 md:block"
+          className="relative hidden min-w-[160px] flex-1 md:block"
         >
           <Search
             size={18}
@@ -129,14 +134,59 @@ export default function Header({
             Tìm
           </button>
         </form>
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {user ? (
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          {user && classroom ? (
+            <details className="group relative">
+              <summary
+                aria-label={`Menu tài khoản ${user.fullName}`}
+                className="flex cursor-pointer list-none items-center gap-2 rounded-full p-1.5 text-sm font-semibold text-slate-800 marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden"
+              >
+                <Avatar user={user} className="h-9 w-9" />
+                <span className="hidden max-w-32 truncate sm:block">
+                  {user.fullName}
+                </span>
+                <ChevronDown
+                  size={15}
+                  className="text-slate-400 transition group-open:rotate-180"
+                />
+              </summary>
+              <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl">
+                <p className="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
+                  {user.username}
+                </p>
+                {!user.isGuest && (
+                  <Link
+                    to={`/${user.role.toLowerCase()}/profile`}
+                    className="block rounded-xl px-3 py-2.5 text-sm hover:bg-blue-50"
+                    onClick={(event) => {
+                      event.currentTarget.closest("details").open = false;
+                    }}
+                  >
+                    Hồ sơ & ảnh đại diện
+                  </Link>
+                )}
+                <button
+                  onClick={onDashboard}
+                  className="block w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-blue-50"
+                >
+                  Không gian học tập
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            </details>
+          ) : user ? (
             <>
               <button
                 onClick={onDashboard}
+                aria-label="Mở không gian học tập"
                 className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2.5 text-sm font-bold text-blue-700"
               >
-                <LayoutDashboard size={17} />
+                <Avatar user={user} className="h-7 w-7" />
                 <span className="hidden xl:block">Không gian học tập</span>
               </button>
               <button
@@ -150,13 +200,13 @@ export default function Header({
             <>
               <button
                 onClick={() => onOpenAuth("login")}
-                className="px-2 text-sm font-semibold text-slate-600 hover:text-blue-600"
+                className="whitespace-nowrap px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 sm:px-2 sm:text-sm"
               >
                 Đăng nhập
               </button>
               <button
                 onClick={() => onOpenAuth("register")}
-                className="rounded-full bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+                className="whitespace-nowrap rounded-full bg-blue-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-blue-700 sm:px-4 sm:text-sm"
               >
                 Đăng ký
               </button>

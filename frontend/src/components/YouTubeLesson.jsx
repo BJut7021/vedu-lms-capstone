@@ -129,11 +129,11 @@ export default function YouTubeLesson({
         className="aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-black [&_iframe]:h-full [&_iframe]:w-full"
       />
       {error && (
-        <p role="alert" className="text-sm text-amber-300">
+        <p role="alert" className="text-sm text-amber-700">
           {error}
         </p>
       )}
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         Video nguồn YouTube/LearnFree, có thể phát sinh kết nối với bên cung
         cấp.{" "}
         <a href={url} target="_blank" rel="noreferrer" className="underline">

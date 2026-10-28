@@ -1,0 +1,549 @@
+[
+  {
+    "id": 69,
+    "title": "Mạng máy tính",
+    "topic": "Mạng máy tính",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về mạng máy tính",
+      "02 · Mô hình OSI và giao thức truyền thông",
+      "03 · Địa chỉ IP",
+      "04 · VLSM và Subnetting",
+      "05 · Tầng vật lý – Physical",
+      "06 · Ethernet và Switching",
+      "07 · Tầng mạng và giao thức IP",
+      "08 · Tầng vận chuyển – TCP/UDP",
+      "09 · Tầng ứng dụng",
+      "10 · Xây dựng hệ thống mạng cơ bản",
+      "Thi cuối khóa — Mạng máy tính"
+    ]
+  },
+  {
+    "id": 68,
+    "title": "Cấu trúc rời rạc",
+    "topic": "Toán học & Tin học",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về đồ thị",
+      "02 · Biểu diễn đồ thị",
+      "03 · Các bài toán về đồ thị (phần 1)",
+      "04 · Các bài toán về đồ thị (phần 2)",
+      "05 · Bài toán tìm đường đi ngắn nhất",
+      "06 · Bài toán tìm cây khung nhỏ nhất",
+      "07 · Logic học – Mệnh đề và dạng mệnh đề",
+      "08 · Logic học – Các luật suy diễn",
+      "09 · Logic học – Vị từ",
+      "10 · Phương pháp đếm – Tập hợp – Ánh xạ",
+      "11 · Phương pháp đếm – Phép đếm – Giải tích tổ hợp",
+      "12 · Phương pháp đếm",
+      "13 · Quan hệ (phần 1)",
+      "14 · Quan hệ (phần 2)",
+      "Thi cuối khóa — Cấu trúc rời rạc"
+    ]
+  },
+  {
+    "id": 67,
+    "title": "Kỹ năng số thực hành — Tệp, cộng tác và an toàn email",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Tổ chức tệp và bản sao lưu",
+      "Email công việc và nhận diện phishing",
+      "Thực hành: ma trận quyền chia sẻ",
+      "Ôn tập: phân loại năm tình huống số",
+      "Tình huống: link tài liệu bị gửi nhầm",
+      "Dự án: bộ quy tắc làm việc số cho nhóm",
+      "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư",
+      "Kiểm tra vận dụng — Kỹ năng số thực hành — Tệp, cộng tác và an toàn email"
+    ]
+  },
+  {
+    "id": 66,
+    "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "Thông điệp và cấu trúc câu chuyện",
+      "Bố cục, tương phản và nguồn hình ảnh",
+      "Thực hành: biến bảng số thành thông điệp",
+      "Ôn tập: giản lược slide quá tải",
+      "Video nguồn: làm quen PowerPoint",
+      "Dự án: pitch đề xuất trong 300 giây",
+      "Mở rộng: khả năng tiếp cận và bản bàn giao",
+      "Kiểm tra vận dụng — PowerPoint thực hành — Thuyết trình dự án rõ ràng"
+    ]
+  },
+  {
+    "id": 65,
+    "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "Dữ liệu dạng bảng và kiểu dữ liệu",
+      "Công thức, SUM và tham chiếu ô",
+      "Thực hành: theo dõi ngân sách hoạt động",
+      "Ôn tập: phát hiện lỗi bảng tính",
+      "Video nguồn: làm quen Excel",
+      "Dự án: báo cáo bán hàng mini có kiểm soát",
+      "Mở rộng: tổng hợp theo nhóm và PivotTable",
+      "Kiểm tra vận dụng — Excel thực hành — Quản lý chi phí và báo cáo bán hàng"
+    ]
+  },
+  {
+    "id": 64,
+    "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "Tạo tài liệu và quản lý phiên bản",
+      "Cấu trúc báo cáo bằng Styles",
+      "Thực hành: biên bản họp và bảng phân công",
+      "Ôn tập: sửa năm lỗi thường gặp",
+      "Video nguồn: làm quen Word",
+      "Dự án: hồ sơ đề xuất hoạt động nhóm",
+      "Mở rộng: nhận xét và kiểm soát bản sửa",
+      "Kiểm tra vận dụng — Word thực hành — Báo cáo và hồ sơ văn phòng"
+    ]
+  },
+  {
+    "id": 55,
+    "title": "Office 365 — Nội dung tham chiếu Kaggle",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "What is OneDrive for Business?",
+      "Add, restore, delete documents on OneDrive",
+      "Share documents",
+      "Recycle bin",
+      "Sync OneDrive for Business to your computer (Windows 10 - 1709)",
+      "Work with documents in a synced library folder (Windows 10 - 1709)",
+      "Change location where you sync libraries on your computer (Windows 10 - 1709)",
+      "Introduction and how to use Outlook Online",
+      "Create a new message, with attachments and options",
+      "Search and built-in filters"
+    ]
+  },
+  {
+    "id": 43,
+    "title": "Digital thực hành 10",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 42,
+    "title": "Digital thực hành 09",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 41,
+    "title": "Digital thực hành 08",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 40,
+    "title": "Digital thực hành 07",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 39,
+    "title": "Digital thực hành 06",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 38,
+    "title": "Digital thực hành 05",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 37,
+    "title": "Digital thực hành 04",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 36,
+    "title": "Digital thực hành 03",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 35,
+    "title": "Digital thực hành 02",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 34,
+    "title": "Digital thực hành 01",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 33,
+    "title": "Database thực hành 10",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 32,
+    "title": "Database thực hành 09",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 31,
+    "title": "Database thực hành 08",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 30,
+    "title": "Database thực hành 07",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 29,
+    "title": "Database thực hành 06",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 28,
+    "title": "Database thực hành 05",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 27,
+    "title": "Database thực hành 04",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 26,
+    "title": "Database thực hành 03",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 25,
+    "title": "Database thực hành 02",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 24,
+    "title": "Database thực hành 01",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 23,
+    "title": "AI thực hành 10",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 22,
+    "title": "AI thực hành 09",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 21,
+    "title": "AI thực hành 08",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 20,
+    "title": "AI thực hành 07",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 19,
+    "title": "AI thực hành 06",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 18,
+    "title": "AI thực hành 05",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 17,
+    "title": "AI thực hành 04",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 16,
+    "title": "AI thực hành 03",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 15,
+    "title": "AI thực hành 02",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 14,
+    "title": "AI thực hành 01",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 13,
+    "title": "Web thực hành 10",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 12,
+    "title": "Web thực hành 09",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 11,
+    "title": "Web thực hành 08",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Web thực hành 07",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Web thực hành 06",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Web thực hành 05",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Web thực hành 04",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Web thực hành 03",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Web thực hành 02",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Web thực hành 01",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "Bài 1. Video nhập môn",
+      "Bài 2. Tài liệu thực hành",
+      "Bài 3. Quiz kiểm tra"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "PostgreSQL và thiết kế dữ liệu LMS",
+    "topic": "Cơ sở dữ liệu",
+    "lessonTitles": [
+      "1. Tổ chức schema theo domain",
+      "2. Ràng buộc, function và trigger"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Khai phá dữ liệu chuỗi hành vi với HUSPM",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "1. Chuỗi hành vi học tập và utility",
+      "2. Pipeline HUSPM trong Vedu"
+    ]
+  },
+  {
+    "id": 1,
+    "title": "Lập trình Web với React và Node.js",
+    "topic": "Lập trình Web",
+    "lessonTitles": [
+      "1. Giới thiệu kiến trúc Vedu LMS",
+      "2. React state và kết nối REST API",
+      "3. Quiz kiểm tra kiến thức tích hợp"
+    ]
+  }
+]

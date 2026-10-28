@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen, Search, SlidersHorizontal, User } from "lucide-react";
 import { api } from "../services/api";
+import CourseImage from "./CourseImage";
 
 export default function CourseCatalog({ topics }) {
   const [params, setParams] = useSearchParams();
@@ -48,7 +49,7 @@ export default function CourseCatalog({ topics }) {
             <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
               Khám phá cùng Vedu
             </p>
-            <h1 className="mt-2 text-3xl font-black text-slate-900">
+            <h1 className="home-balanced mt-2 text-3xl font-black text-slate-900">
               {q ? `Kết quả cho “${q}”` : "Tìm khóa học dành cho bạn"}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
@@ -104,15 +105,8 @@ export default function CourseCatalog({ topics }) {
                 to={`/courses/${course.id}`}
                 className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
-                <img
-                  src={course.image || "/favicon.svg"}
-                  alt={course.title}
-                  className="h-40 w-full bg-blue-50 object-cover"
-                />
+                <CourseImage course={course} />
                 <div className="p-4">
-                  <span className="text-[11px] font-bold text-blue-600">
-                    {course.topic || "Tổng hợp"}
-                  </span>
                   <h2 className="mt-1.5 min-h-12 text-base font-bold text-slate-900">
                     {course.title}
                   </h2>

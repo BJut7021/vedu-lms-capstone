@@ -36,6 +36,7 @@ export class ApiPolicyGuard implements CanActivate {
         LearningController: ['logEvent'],
         PlatformController: [
           'classroom',
+          'studyState',
           'media',
           'watch',
           'heartbeat',

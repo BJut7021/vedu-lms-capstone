@@ -24,6 +24,87 @@ export class PlatformService {
     private readonly jwt: JwtService,
     private readonly recommendations: RecommendationService,
   ) {}
+  async studyState(actor: Actor, courseId: number) {
+    // Public curriculum metadata plus only this account's progress; this GET never enrolls or unlocks content.
+    const course = await this.courses.findOne(courseId, false);
+    const lessons = course.sections
+      .flatMap((s) => s.lessons)
+      .filter((l) => l.id > 0 && l.type !== 'quiz');
+    const [progress, quizzes] = await Promise.all([
+      this.db.query(
+        'SELECT lesson_id,status,last_viewed_at,updated_at FROM learning.lesson_progress WHERE student_id=$1 AND course_id=$2',
+        [actor.userId, courseId],
+      ),
+      this.db.query(
+        `SELECT q.quiz_id,
+        EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND a.status IN ('SUBMITTED','GRADED') AND a.score>=q.passing_score) AS passed,
+        EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2) AS attempted
+        FROM assessment.quizzes q WHERE q.course_id=$1 AND q.is_published AND NOT q.is_deleted ORDER BY q.quiz_id`,
+        [courseId, actor.userId],
+      ),
+    ]);
+    const done = new Set<number>(
+      progress
+        .filter((p: any) => p.status === 'COMPLETED')
+        .map((p: any) => Number(p.lesson_id)),
+    );
+    const previewIds = course.sections
+      .flatMap((s) => s.lessons)
+      .filter((l) => l.id > 0)
+      .slice(0, 2)
+      .map((l) => l.id);
+    const allowed = actor.isGuest
+      ? lessons.filter((l) => previewIds.includes(l.id))
+      : lessons;
+    const pending = allowed.filter((l) => !done.has(l.id));
+    const last = progress
+      .filter(
+        (p: any) =>
+          p.status === 'IN_PROGRESS' &&
+          pending.some((l) => l.id === Number(p.lesson_id)),
+      )
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.last_viewed_at ?? b.updated_at).getTime() -
+          new Date(a.last_viewed_at ?? a.updated_at).getTime(),
+      )[0];
+    const completed =
+      !actor.isGuest &&
+      (lessons.length > 0 || quizzes.length > 0) &&
+      lessons.every((l) => done.has(l.id)) &&
+      quizzes.every((q: any) => q.passed);
+    const started =
+      progress.some((p: any) => p.status !== 'NOT_STARTED') ||
+      quizzes.some((q: any) => q.attempted);
+    const review =
+      allowed.find(
+        (l) =>
+          !/^00\s*[·.:_-]|hướng dẫn bắt đầu|hướng dẫn học khóa học|đề cương/i.test(
+            l.title,
+          ),
+      ) ?? allowed[0];
+    const target = completed
+      ? review
+      : last
+        ? allowed.find((l) => l.id === Number(last.lesson_id))
+        : pending[0];
+    const quiz =
+      !actor.isGuest && !target ? quizzes.find((q: any) => !q.passed) : null;
+    return {
+      state: completed ? 'COMPLETED' : started ? 'IN_PROGRESS' : 'NEW',
+      lessonId: target?.id ?? (!quiz ? review?.id : null) ?? null,
+      quizId: quiz ? Number(quiz.quiz_id) : null,
+      completedLessonIds: lessons
+        .filter((l) => done.has(l.id))
+        .map((l) => l.id),
+      completedQuizIds: quizzes
+        .filter((q: any) => q.passed)
+        .map((q: any) => Number(q.quiz_id)),
+      completedLessons: lessons.filter((l) => done.has(l.id)).length,
+      totalLessons: lessons.length,
+      isPreview: !!actor.isGuest,
+    };
+  }
   async classroom(actor: Actor, courseId: number) {
     await this.access.study(actor, courseId);
     const course = await this.courses.findOne(courseId);
@@ -87,8 +168,15 @@ export class PlatformService {
         });
       }
     }
-    const pedagogy: any[] = await this.db.query('SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',[courseId]);
-    for (const s of course.sections) for (const l of s.lessons) Object.assign(l,{pedagogy:pedagogy.find(m=>Number(m.lesson_id)===l.id) ?? null});
+    const pedagogy: any[] = await this.db.query(
+      'SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',
+      [courseId],
+    );
+    for (const s of course.sections)
+      for (const l of s.lessons)
+        Object.assign(l, {
+          pedagogy: pedagogy.find((m) => Number(m.lesson_id) === l.id) ?? null,
+        });
     return course;
   }
   private async resourceUrl(r: any, actor: Actor) {
@@ -202,7 +290,10 @@ export class PlatformService {
   async courseContent(actor: Actor, courseId: number) {
     await this.access.manageCourse(actor, courseId);
     return {
-      pedagogy: await this.db.query('SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',[courseId]),
+      pedagogy: await this.db.query(
+        'SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',
+        [courseId],
+      ),
       sections: await this.db.query(
         'SELECT * FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',
         [courseId],
@@ -353,17 +444,115 @@ export class PlatformService {
     );
     if (!teacher)
       throw new BadRequestException('Tài khoản giảng viên không hợp lệ');
-    if (remove)
-      await this.db.query(
-        'DELETE FROM lms.course_teachers WHERE course_id=$1 AND teacher_id=$2',
-        [courseId, teacherId],
+    await this.db.transaction(async (m) => {
+      if (remove)
+        await m.query(
+          'DELETE FROM lms.course_teachers WHERE course_id=$1 AND teacher_id=$2',
+          [courseId, teacherId],
+        );
+      else
+        await m.query(
+          'INSERT INTO lms.course_teachers(course_id,teacher_id,assigned_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
+          [courseId, teacherId, actor.userId],
+        );
+      const [course] = await m.query(
+        'SELECT course_name FROM lms.courses WHERE course_id=$1',
+        [courseId],
       );
-    else
-      await this.db.query(
-        'INSERT INTO lms.course_teachers(course_id,teacher_id,assigned_by) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
-        [courseId, teacherId, actor.userId],
+      await m.query(
+        `INSERT INTO auth.notifications(user_id,title,body,route) VALUES($1,$2,$3,$4)`,
+        [
+          teacherId,
+          remove
+            ? 'Đã gỡ phân công khóa học'
+            : 'Bạn được phân công khóa học mới',
+          `${course.course_name}. ${remove ? 'Quyền hỗ trợ khóa học đã kết thúc.' : 'Mở Nội dung & học liệu hoặc Hỏi đáp khóa học để hỗ trợ học viên.'}`,
+          remove ? '/teacher/courses' : '/teacher/content',
+        ],
       );
-    return { message: remove ? 'Đã gỡ phân công' : 'Đã phân công giảng viên' };
+    });
+    return {
+      message: remove
+        ? 'Đã gỡ phân công'
+        : 'Đã phân công và gửi thông báo cho giảng viên',
+    };
+  }
+  notifications(actor: Actor) {
+    return this.db.query(
+      `SELECT notification_id AS id,title,body,route,read_at AS "readAt",created_at AS "createdAt" FROM auth.notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [actor.userId],
+    );
+  }
+  async readNotification(actor: Actor, id: number) {
+    const rows = await this.db.query(
+      'WITH updated AS (UPDATE auth.notifications SET read_at=COALESCE(read_at,now()) WHERE notification_id=$1 AND user_id=$2 RETURNING notification_id) SELECT * FROM updated',
+      [id, actor.userId],
+    );
+    if (!rows.length) throw new NotFoundException('Không tìm thấy thông báo');
+    return { message: 'Đã đọc thông báo' };
+  }
+  async moderation(actor: Actor) {
+    if (actor.role !== 'ADMIN') throw new ForbiddenException();
+    return this.db
+      .query(`SELECT c.course_id AS id,c.course_name AS title,c.description,c.status,c.review_status AS "reviewStatus",c.review_note AS "reviewNote",u.full_name AS instructor,
+      (SELECT count(*)::int FROM lms.lessons l WHERE l.course_id=c.course_id AND NOT l.is_deleted) AS lessons,
+      (SELECT count(*)::int FROM lms.lessons l WHERE l.course_id=c.course_id AND NOT l.is_deleted AND l.is_published) AS "publishedLessons",
+      COALESCE((SELECT jsonb_agg(jsonb_build_object('decision',r.decision,'note',r.note,'at',r.created_at,'reviewer',a.full_name) ORDER BY r.created_at DESC) FROM lms.content_reviews r JOIN auth.users a ON a.user_id=r.reviewer_id WHERE r.course_id=c.course_id),'[]') AS history
+      FROM lms.courses c JOIN auth.users u ON u.user_id=c.teacher_id WHERE NOT c.is_deleted ORDER BY (c.review_status='PENDING') DESC,c.updated_at DESC`);
+  }
+  async review(
+    actor: Actor,
+    id: number,
+    data: { decision: string; note: string },
+  ) {
+    if (actor.role !== 'ADMIN') throw new ForbiddenException();
+    if (
+      !['APPROVED', 'CHANGES_REQUESTED', 'HIDDEN'].includes(data.decision) ||
+      !data.note?.trim() ||
+      data.note.length > 2000
+    )
+      throw new BadRequestException(
+        'Chọn quyết định và nhập nhận xét 1–2000 ký tự',
+      );
+    return this.db.transaction(async (m) => {
+      const [c] = await m.query(
+        'SELECT * FROM lms.courses WHERE course_id=$1 AND NOT is_deleted FOR UPDATE',
+        [id],
+      );
+      if (!c) throw new NotFoundException('Khóa học không tồn tại');
+      if (data.decision === 'APPROVED') {
+        const [ready] = await m.query(
+          'SELECT count(*)::int n FROM lms.lessons WHERE course_id=$1 AND is_published AND NOT is_deleted',
+          [id],
+        );
+        if (!ready.n)
+          throw new BadRequestException(
+            'Cần ít nhất một bài học đã công bố trước khi duyệt',
+          );
+      }
+      await m.query(
+        'UPDATE lms.courses SET status=$2,review_status=$3,review_note=$4,updated_at=now() WHERE course_id=$1',
+        [
+          id,
+          data.decision === 'APPROVED'
+            ? 'PUBLISHED'
+            : data.decision === 'HIDDEN'
+              ? 'ARCHIVED'
+              : 'DRAFT',
+          data.decision,
+          data.note.trim(),
+        ],
+      );
+      await m.query(
+        'INSERT INTO lms.content_reviews(course_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4)',
+        [id, actor.userId, data.decision, data.note.trim()],
+      );
+      await m.query(
+        `INSERT INTO auth.notifications(user_id,title,body,route) SELECT teacher_id,'Kết quả kiểm duyệt khóa học',$2,'/teacher/courses' FROM lms.courses WHERE course_id=$1 UNION SELECT teacher_id,'Kết quả kiểm duyệt khóa học',$2,'/teacher/courses' FROM lms.course_teachers WHERE course_id=$1`,
+        [id, `${c.course_name}: ${data.decision}. ${data.note.trim()}`],
+      );
+      return { message: 'Đã lưu quyết định kiểm duyệt và gửi thông báo' };
+    });
   }
   async assignments(actor: Actor) {
     if (actor.role !== 'ADMIN') throw new ForbiddenException();

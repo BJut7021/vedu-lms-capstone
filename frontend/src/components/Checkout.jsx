@@ -131,6 +131,13 @@ export function VerifyCertificate() {
       {error && <p className="text-red-700">{error}</p>}
       {result && (
         <div className="space-y-3 rounded-2xl border bg-white p-6">
+          {result.status === "ISSUED" && (
+            <img
+              src="/brand/vedu-seal.svg"
+              alt="Dấu xác nhận hoàn thành nội bộ VEDU"
+              className="float-right h-24 w-24"
+            />
+          )}
           <p className="font-mono">{result.code}</p>
           <h2 className="text-xl font-bold">{result.learner}</h2>
           <p>{result.course}</p>
@@ -143,6 +150,10 @@ export function VerifyCertificate() {
             {result.status === "ISSUED"
               ? "Chứng nhận hợp lệ"
               : "Chứng nhận đã thu hồi"}
+          </p>
+          <p className="text-xs text-slate-500">
+            Chứng nhận hoàn thành nội bộ VEDU; không thay thế văn bằng hay chứng
+            chỉ chính thức.
           </p>
         </div>
       )}

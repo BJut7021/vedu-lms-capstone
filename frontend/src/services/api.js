@@ -42,6 +42,7 @@ function withToken(token) {
 }
 
 export const api = {
+  me: (token) => request("/users/me", { headers: withToken(token) }),
   health: () => request("/health"),
   courses: (filters = {}) =>
     request(`/courses?${new URLSearchParams(filters)}`),
@@ -119,6 +120,19 @@ export const api = {
     const payload = await response.json();
     if (!response.ok)
       throw new Error(payload.message || "Không tải được tài liệu");
+    return payload;
+  },
+  uploadAvatar: async (file, token) => {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+      method: "POST",
+      headers: withToken(token),
+      body: form,
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok)
+      throw new Error(payload?.message || "Không tải được ảnh đại diện");
     return payload;
   },
   download: async (path, token, filename) => {

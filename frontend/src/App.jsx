@@ -8,7 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import Header from "./components/Header";
-import Banner from "./components/Banner";
+import Banner from "./components/HomeBanner";
 import FeaturedCourses from "./components/FeaturedCourses";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
@@ -36,6 +36,24 @@ function CoursePage({ auth, header }) {
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [error, setError] = useState("");
+  const [study, setStudy] = useState({ key: "", data: null, error: "" });
+  const studyKey = `${courseId}:${auth?.accessToken || "public"}`;
+  useEffect(() => {
+    if (auth?.user?.role !== "STUDENT") return;
+    let active = true;
+    api
+      .platform(`/courses/${courseId}/study-state`, auth.accessToken)
+      .then((data) => {
+        if (active) setStudy({ key: studyKey, data, error: "" });
+      })
+      .catch((reason) => {
+        if (active)
+          setStudy({ key: studyKey, data: null, error: reason.message });
+      });
+    return () => {
+      active = false;
+    };
+  }, [courseId, auth?.accessToken, auth?.user?.role, studyKey]);
   useEffect(() => {
     let active = true;
     api
@@ -87,6 +105,9 @@ function CoursePage({ auth, header }) {
       {header}
       <CourseDetail
         course={course}
+        studyState={study.key === studyKey ? study.data : null}
+        studyLoading={auth?.user?.role === "STUDENT" && study.key !== studyKey}
+        studyError={study.key === studyKey ? study.error : ""}
         onBack={() => navigate("/")}
         onStartLearning={(lessonId) => {
           if (requireStudent()) {
@@ -128,7 +149,7 @@ function CoursePage({ auth, header }) {
   );
 }
 
-function ClassroomPage({ auth, onEvent }) {
+function ClassroomPage({ auth, onEvent, header }) {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
@@ -168,6 +189,7 @@ function ClassroomPage({ auth, onEvent }) {
     );
   return (
     <Classroom
+      header={header}
       course={course}
       token={auth.accessToken}
       isGuest={auth.user.isGuest}
@@ -270,6 +292,11 @@ function ProtectedPortal({ role, auth, courses, onLogout }) {
       onHome={() => navigate("/")}
       onLogout={onLogout}
       onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
+      onUserUpdated={(user) =>
+        window.dispatchEvent(
+          new CustomEvent("vedu:profile-updated", { detail: user }),
+        )
+      }
     />
   );
 }
@@ -282,6 +309,40 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const learningSessionId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    const updated = (event) =>
+      setAuth((previous) => {
+        if (
+          !previous ||
+          Number(previous.user.userId) !== Number(event.detail.userId)
+        )
+          return previous;
+        const next = {
+          ...previous,
+          user: { ...previous.user, ...event.detail },
+        };
+        localStorage.setItem("vedu.auth", JSON.stringify(next));
+        return next;
+      });
+    window.addEventListener("vedu:profile-updated", updated);
+    return () => window.removeEventListener("vedu:profile-updated", updated);
+  }, []);
+  useEffect(() => {
+    if (!auth?.accessToken) return;
+    let active = true;
+    api
+      .me(auth.accessToken)
+      .then((user) => {
+        if (active)
+          window.dispatchEvent(
+            new CustomEvent("vedu:profile-updated", { detail: user }),
+          );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [auth?.accessToken]);
   useEffect(() => {
     const expired = () => {
       localStorage.removeItem("vedu.auth");
@@ -367,6 +428,7 @@ export default function App() {
     <Header
       key={`${location.pathname}-${location.search}`}
       topics={topics}
+      classroom={location.pathname.startsWith("/learn/")}
       onRefreshCatalog={refreshCatalog}
       user={auth?.user}
       onLogout={handleLogout}
@@ -390,7 +452,7 @@ export default function App() {
       <Route
         path="/"
         element={
-          <div className="min-h-screen bg-white text-gray-800">
+          <div className="home-page min-h-screen bg-white text-gray-800">
             {header}
             {error && (
               <div className="bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-800">
@@ -550,7 +612,13 @@ export default function App() {
       />
       <Route
         path="/learn/:courseId/:lessonId"
-        element={<ClassroomPage auth={auth} onEvent={handleLearningEvent} />}
+        element={
+          <ClassroomPage
+            auth={auth}
+            onEvent={handleLearningEvent}
+            header={header}
+          />
+        }
       />
       <Route
         path="/quiz/:courseId/:quizId"
