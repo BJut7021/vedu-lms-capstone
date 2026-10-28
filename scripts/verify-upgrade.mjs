@@ -241,6 +241,14 @@ try {
     { status: "PUBLISHED" },
     "PATCH",
   );
+  for (const id of [courseId,paidCourseId]) {
+    const content=await ok(`/platform/courses/${id}/content`,teacher);
+    if(!content.lessons.some(l=>l.is_published)) {
+      const l=await ok(`/portal/teacher/courses/${id}/lessons`,teacher,{title:'Tài liệu kiểm thử duyệt',content:'Chỉ dùng kiểm thử',durationSeconds:30});
+      await ok(`/platform/lessons/${l.lessonId}`,teacher,{title:'Tài liệu kiểm thử duyệt',content:'Chỉ dùng kiểm thử',durationSeconds:30,isPublished:true},'PATCH');
+    }
+    await ok(`/platform/moderation/${id}`,admin,{decision:'APPROVED',note:'Duyệt khóa kiểm thử tự động, không phải học liệu thật'});
+  }
   await ok(`/enrollments/me/${courseId}`, student, {});
   const classroom = await ok(
     `/platform/courses/${courseId}/classroom`,

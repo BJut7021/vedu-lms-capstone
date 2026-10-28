@@ -113,6 +113,7 @@ try {
       title: course.name,
       lessons: ids.length,
       lessonIds: ids,
+      publicationStatus: 'PENDING_ADMIN_REVIEW',
     });
   }
   mkdirSync(new URL("../docs/validation/", import.meta.url), {

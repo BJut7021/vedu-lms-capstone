@@ -29,6 +29,11 @@ import {
 import { api } from "../services/api";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Operations from "./Operations";
+import Brand from "./Brand";
+import CourseImage from "./CourseImage";
+import Notifications from "./Notifications";
+import Avatar from "./Avatar";
+import Profile from "./Profile";
 
 const roleLabels = {
   STUDENT: "Học viên",
@@ -62,6 +67,7 @@ const menus = {
     ["discussions", "Hỏi đáp khóa học", CircleHelp],
     ["ticket-chat", "Ticket được phân công", CircleHelp],
     ["reports", "Báo cáo & xuất file", BarChart3],
+    ["profile", "Hồ sơ cá nhân", Settings],
     ["security", "Mật khẩu & phiên", ShieldCheck],
   ],
   ADMIN: [
@@ -211,6 +217,7 @@ export default function Portal({
   onHome,
   onLogout,
   onOpenCourse,
+  onUserUpdated,
 }) {
   const role = auth.user.role;
   const roleMenu = useMemo(
@@ -283,6 +290,19 @@ export default function Portal({
       active = false;
     };
   }, [auth.accessToken]);
+
+  useEffect(() => {
+    if (role !== "TEACHER") return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") loadOverview(true);
+    };
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [role, loadOverview]);
 
   useEffect(() => {
     if (location.pathname === `/${role.toLowerCase()}`) {
@@ -361,9 +381,7 @@ export default function Portal({
             onClick={onHome}
             className="flex items-center gap-3 text-left"
           >
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-xl font-black text-white">
-              V
-            </span>
+            <Brand compact dark />
             <span>
               <strong className="block text-lg">Vedu LMS</strong>
               <small className="text-slate-500">Cùng bạn tiến bộ</small>
@@ -375,9 +393,7 @@ export default function Portal({
         </div>
         <div className="mx-4 mt-5 rounded-xl border border-slate-700 bg-slate-900 p-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500 font-black text-white">
-              {auth.user.fullName?.charAt(0)}
-            </div>
+            <Avatar user={auth.user} />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold">{auth.user.fullName}</p>
               <p className="text-xs text-blue-300">{roleLabels[role]}</p>
@@ -450,6 +466,7 @@ export default function Portal({
         </header>
 
         <main className="mx-auto max-w-7xl p-4 sm:p-8">
+          {!auth.user.isGuest && <Notifications token={auth.accessToken} />}
           {auth.user.isGuest && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
               <div>
@@ -487,18 +504,23 @@ export default function Portal({
               {notice}
             </div>
           )}
-          {[
-            "security",
-            "discussions",
-            "ticket-chat",
-            "reports",
-            "content",
-            "assignments",
-            "mining",
-            "quiz-bank",
-            "certificates",
-            "learning-path",
-          ].includes(activePage) ? (
+          {activePage === "profile" &&
+          !auth.user.isGuest &&
+          role !== "ADMIN" ? (
+            <Profile auth={auth} onUserUpdated={onUserUpdated} />
+          ) : [
+              "security",
+              "catalog",
+              "discussions",
+              "ticket-chat",
+              "reports",
+              "content",
+              "assignments",
+              "mining",
+              "quiz-bank",
+              "certificates",
+              "learning-path",
+            ].includes(activePage) ? (
             <Operations
               key={`${role}-${activePage}`}
               page={activePage}
@@ -564,10 +586,9 @@ function StudentCourseList({ courses, onOpenCourse }) {
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
           <div className="flex gap-4 p-5">
-            <img
-              src={course.image || "/favicon.svg"}
-              alt=""
-              className="h-20 w-24 rounded-xl bg-blue-50 object-cover"
+            <CourseImage
+              course={course}
+              className="h-20 w-24 rounded-xl object-cover"
             />
             <div className="min-w-0 flex-1">
               <Badge tone={course.status === "COMPLETED" ? "green" : "blue"}>
@@ -588,7 +609,12 @@ function StudentCourseList({ courses, onOpenCourse }) {
               onClick={() => onOpenCourse({ id: number(course.courseId) })}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
             >
-              Tiếp tục học <ChevronRight size={16} />
+              {course.studyCompleted || course.status === "COMPLETED"
+                ? "Ôn tập"
+                : number(course.completedLessons) > 0 || course.lastActivityAt
+                  ? "Tiếp tục học"
+                  : "Bắt đầu học"}{" "}
+              <ChevronRight size={16} />
             </button>
           </div>
         </article>
@@ -1026,6 +1052,17 @@ function renderTeacherPage({
         <tr key={course.courseId}>
           <td className="px-3 py-4">
             <p className="font-bold">{course.courseName}</p>
+            <p className="mt-1 text-xs font-semibold text-blue-700">
+              {course.teachingRole === "OWNER"
+                ? "Giảng viên chính"
+                : "Giảng viên hỗ trợ"}{" "}
+              · {course.reviewStatus}
+            </p>
+            {course.reviewNote && (
+              <p className="mt-1 text-xs text-amber-700">
+                Kiểm duyệt: {course.reviewNote}
+              </p>
+            )}
             <p className="mt-1 max-w-xs truncate text-xs text-slate-500">
               {course.description}
             </p>
@@ -1061,7 +1098,7 @@ function renderTeacherPage({
               }
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold hover:bg-slate-50"
             >
-              {course.status === "PUBLISHED" ? "Lưu trữ" : "Xuất bản"}
+              {course.status === "PUBLISHED" ? "Lưu trữ" : "Gửi duyệt"}
             </button>
           </td>
         </tr>
@@ -1273,15 +1310,23 @@ function renderTeacherPage({
               />
             </label>
             <label className="block text-sm font-bold">
-              Thời lượng (giây)
+              Thời lượng (phút)
               <input
                 type="number"
                 min="0"
-                value={lessonForm.durationSeconds}
+                step="any"
+                value={
+                  lessonForm.durationSeconds === ""
+                    ? ""
+                    : Number(lessonForm.durationSeconds) / 60
+                }
                 onChange={(event) =>
                   setLessonForm({
                     ...lessonForm,
-                    durationSeconds: event.target.value,
+                    durationSeconds:
+                      event.target.value === ""
+                        ? ""
+                        : Math.round(Number(event.target.value) * 60),
                   })
                 }
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
@@ -1523,7 +1568,13 @@ function renderAdminPage({ activePage, data, catalog, auth, busy, runAction }) {
                 <span className="font-bold text-amber-900">
                   Python mining service
                 </span>
-                <Badge tone="blue">{data.miningRuns.some(r=>r.algorithm==='VEDU-PrefixProjection-HUSPM')?'ĐÃ CHẠY THẬT':'CHƯA HUẤN LUYỆN'}</Badge>
+                <Badge tone="blue">
+                  {data.miningRuns.some(
+                    (r) => r.algorithm === "VEDU-PrefixProjection-HUSPM",
+                  )
+                    ? "ĐÃ CHẠY THẬT"
+                    : "CHƯA HUẤN LUYỆN"}
+                </Badge>
               </div>
             </div>
           </Panel>

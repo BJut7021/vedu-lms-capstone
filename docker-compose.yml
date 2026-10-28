@@ -15,6 +15,7 @@ services:
       - ./database/vedu/demo_seed.sql:/docker-entrypoint-initdb.d/02-demo-seed.sql:ro
       - ./database/vedu/portal_demo_seed.sql:/docker-entrypoint-initdb.d/03-portal-demo-seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/docker-entrypoint-initdb.d/04-platform-upgrade.sql:ro
+      - ./database/vedu/content_workflow.sql:/docker-entrypoint-initdb.d/05-content-workflow.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -42,9 +43,12 @@ services:
       - /seed/portal_demo_seed.sql
       - -f
       - /seed/platform_upgrade.sql
+      - -f
+      - /seed/content_workflow.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
+      - ./database/vedu/content_workflow.sql:/seed/content_workflow.sql:ro
     depends_on:
       db:
         condition: service_healthy

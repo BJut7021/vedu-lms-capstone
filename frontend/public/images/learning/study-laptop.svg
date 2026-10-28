@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 470" fill="none">
+ <defs>
+  <linearGradient id="screen" x1="95" y1="105" x2="232" y2="235" gradientUnits="userSpaceOnUse"><stop stop-color="#93d5ff"/><stop offset=".5" stop-color="#5e8df8"/><stop offset="1" stop-color="#9c91fb"/></linearGradient>
+  <linearGradient id="cover"><stop stop-color="#c1c2ff"/><stop offset="1" stop-color="#6852db"/></linearGradient>
+  <linearGradient id="base"><stop stop-color="#e5f0ff"/><stop offset="1" stop-color="#a1b6fa"/></linearGradient>
+  <filter id="shadow" x="-35%" y="-45%" width="180%" height="200%"><feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#6b85d3" flood-opacity=".22"/></filter>
+ </defs>
+ <ellipse cx="158" cy="302" rx="113" ry="22" fill="#e1eaff"/>
+ <path d="M228 85c58 33 44 85 9 104" stroke="#b5c9eb" stroke-dasharray="4 5" stroke-linecap="round"/>
+ <path d="m39 54 33-14-14 30-4-15-15-1Z" fill="#b9d5fa"/><path d="m54 55 18-15" stroke="#8ca5df"/>
+ <g transform="rotate(9 176 53)"><rect x="116" y="16" width="131" height="61" rx="18" fill="white" stroke="#e5eaff"/><text x="181" y="41" text-anchor="middle" fill="#4764c7" font-family="Arial,sans-serif" font-size="14" font-weight="700">Khám phá</text><text x="181" y="60" text-anchor="middle" fill="#4764c7" font-family="Arial,sans-serif" font-size="14" font-weight="700">kỹ năng mới</text></g>
+ <g filter="url(#shadow)">
+  <path d="m73 261 107-38 89 35-108 43-88-28v-12Z" fill="#7160cd"/>
+  <path d="m80 257 102-35 78 30-101 39-79-27Z" fill="#f1f3ff"/>
+  <path d="m70 247 110-39 89 36-111 43-88-30v-10Z" fill="url(#cover)"/>
+  <path d="m78 233 103-36 79 31-102 39-80-27Z" fill="#eef3ff"/>
+  <path d="m68 226 111-39 91 35-112 44-90-30v-10Z" fill="#7f9cf4"/>
+  <path d="m113 100 117 22q8 1 6 10l-18 94-132-25 18-92q1-11 9-9Z" fill="#a7b9f4"/>
+  <path d="m116 108 110 21-16 85-111-21 17-85Z" fill="#f7fbff"/>
+  <path d="m121 117 96 18-13 70-96-18 13-70Z" fill="url(#screen)"/>
+  <path d="m149 141-15 10 10 15m38-19 9 15-15 10m-13-37-13 38" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m85 199 133 25 34 25-112 29-77-33q-4-3 1-8l21-38Z" fill="url(#base)"/>
+  <path d="m94 211 113 22 17 12-89 22-60-25 19-31Z" fill="#c4d4fa"/>
+  <path d="m100 216 96 19m-101-10 115 22m-120-13 88 17M110 218l-13 22m31-19-13 25m32-22-12 25m31-21-11 25m30-20-11 24" stroke="#96ace4" stroke-width="2"/>
+  <path d="m141 257 22-6 17 5-22 7-17-6Z" fill="#e3ecff"/>
+  <path d="M66 213c-22-11-23-33-14-38 14 4 19 19 14 38Z" fill="#5dba8b"/>
+  <path d="M66 213c-2-27 4-42 15-42 9 12 0 32-15 42Z" fill="#8bd8ac"/>
+  <path d="m52 212 29 5-8 25-17-3-4-27Z" fill="#c8dcf8"/>
+ </g>
+ <g transform="rotate(15 260 115)"><path d="M249 107a11 11 0 1 1 17 9l-2 7h-12l-1-7q-5-3-2-9" fill="#ffda68"/><path d="M253 126h9m-8 4h7" stroke="#b19b58" stroke-width="3" stroke-linecap="round"/></g>
+ <rect x="39" y="283" width="30" height="14" rx="4" transform="rotate(-24 39 283)" fill="#b3b8fa"/><rect x="45" y="283" width="7" height="5" rx="1" transform="rotate(-24 45 283)" fill="#e9eaff"/>
+ <circle cx="261" cy="288" r="9" fill="#dfd8fc"/>
+ <g transform="rotate(10 172 398)" fill="#9183c4" font-family="Segoe Print,Comic Sans MS,cursive" font-size="25"><text x="117" y="360">Ước mơ.</text><text x="105" y="393">Học hỏi.</text><text x="102" y="426">Vươn xa.</text><path d="m111 335 4-13 5 9 9-10-1 14m96 79 3-8 4 7 8 1-7 5 1 8-7-4-7 4 2-8-6-5 9-1" stroke="#aaa0d3" stroke-width="1.5"/></g>
+</svg>

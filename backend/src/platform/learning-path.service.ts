@@ -51,7 +51,7 @@ export class LearningPathService {
       b.count > 4
     )
       throw new BadRequestException(
-        'Chọn mục tiêu, trình độ, công việc, định dạng; 1800–144000 giây/tuần, 1–52 tuần, 2–4 phương án.',
+        'Chọn mục tiêu, trình độ, công việc, định dạng; 0,5–40 giờ/tuần, 1–52 tuần, 2–4 phương án.',
       );
     return {
       goal: b.goal,

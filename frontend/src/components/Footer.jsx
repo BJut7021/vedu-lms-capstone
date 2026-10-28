@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Brand from "./Brand";
 
 export default function Footer() {
   return (
@@ -6,9 +7,9 @@ export default function Footer() {
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-7 sm:grid-cols-2 sm:px-6 lg:grid-cols-[2fr_1fr_1fr_1fr] lg:px-8">
         <div>
           <Link to="/" className="text-2xl font-black text-slate-900">
-            vedu<span className="text-blue-600">.</span>
+            <Brand />
           </Link>
-          <p className="mt-2 max-w-sm text-sm leading-6">
+          <p className="home-copy mt-2 max-w-sm text-sm leading-6">
             Học từng bước, vững từng kỹ năng. Một không gian học tập dành cho sự
             tiến bộ của bạn.
           </p>
@@ -62,6 +63,18 @@ export default function Footer() {
       </div>
       <div className="border-t border-slate-100 px-4 py-3 text-center text-xs text-slate-400">
         © 2026 Vedu LMS. Cùng bạn xây dựng hành trình học tập.
+        <p className="home-copy mx-auto mt-1 max-w-2xl text-[11px] leading-5">
+          Ảnh minh họa học tập:{" "}
+          <a
+            href="https://www.pexels.com/license/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-slate-600"
+          >
+            Pexels
+          </a>{" "}
+          · Max Fischer, Katerina Holmes, Keira Burton và Pavel Danilyuk.
+        </p>
       </div>
     </footer>
   );

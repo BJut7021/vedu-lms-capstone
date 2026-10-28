@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-27T15:34:55.200Z",
+  "desktop": {
+    "viewport": [
+      1280,
+      720
+    ],
+    "firstFourCoversLoaded": true,
+    "cardImage": [
+      284,
+      160
+    ],
+    "horizontalOverflow": false,
+    "screenshot": "docs/screenshots/course-covers-desktop-2026-10-27.png"
+  },
+  "mobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "firstCoverLoaded": true,
+    "cardImage": [
+      342,
+      192
+    ],
+    "horizontalOverflow": false,
+    "screenshot": "docs/screenshots/course-covers-mobile-2026-10-27.png"
+  },
+  "detail": {
+    "courseId": 69,
+    "coverSize": [
+      230,
+      129
+    ],
+    "source": "/images/course-covers/v2/course-69.webp",
+    "loaded": true,
+    "consoleErrors": []
+  },
+  "notes": "Observed with the in-app browser; viewport override reset after responsive verification. Offscreen lazy-loaded images were checked separately through HTTP/decode tests."
+}

@@ -17,7 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
-import { resolve } from 'path';
+import { drawCertificate } from './certificate-design';
 import { Actor } from '../auth/access.service';
 import { Roles } from '../auth/roles.decorator';
 import { Public } from '../auth/public.decorator';
@@ -36,6 +36,12 @@ export class PlatformController {
     private readonly recommendations: RecommendationService,
     private readonly paths: LearningPathService,
   ) {}
+  @Get('courses/:id/study-state') @Roles('STUDENT') studyState(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.studyState(r.user, id);
+  }
   @Get('courses/:id/classroom') classroom(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
@@ -102,6 +108,25 @@ export class PlatformController {
   }
   @Get('assignments') @Roles('ADMIN') assignments(@Req() r: AuthRequest) {
     return this.service.assignments(r.user);
+  }
+  @Get('notifications') notifications(@Req() r: AuthRequest) {
+    return this.service.notifications(r.user);
+  }
+  @Patch('notifications/:id/read') readNotification(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.readNotification(r.user, id);
+  }
+  @Get('moderation') @Roles('ADMIN') moderation(@Req() r: AuthRequest) {
+    return this.service.moderation(r.user);
+  }
+  @Post('moderation/:id') @Roles('ADMIN') review(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: { decision: string; note: string },
+  ) {
+    return this.service.review(r.user, id, b);
   }
   @Post('courses/:id/teachers/:teacherId') @Roles('ADMIN') assign(
     @Req() r: AuthRequest,
@@ -188,43 +213,7 @@ export class PlatformController {
       margin: 60,
     });
     doc.pipe(res);
-    doc.font(resolve('assets/DejaVuSans.ttf'));
-    doc.rect(30, 30, 782, 535).lineWidth(2).stroke('#2563eb');
-    doc
-      .fillColor('#2563eb')
-      .fontSize(20)
-      .text('VEDU Learning Management System', { align: 'center' });
-    doc
-      .moveDown()
-      .fontSize(28)
-      .text(
-        c.status === 'ISSUED'
-          ? 'CHỨNG NHẬN HOÀN THÀNH'
-          : 'CHỨNG NHẬN ĐÃ THU HỒI',
-        { align: 'center' },
-      );
-    doc
-      .moveDown()
-      .fillColor('#0f172a')
-      .fontSize(24)
-      .text(c.full_name, { align: 'center' });
-    doc
-      .moveDown()
-      .fontSize(16)
-      .text(`Đã hoàn thành khóa học: ${c.course_name}`, { align: 'center' });
-    doc
-      .moveDown()
-      .fontSize(12)
-      .text(
-        `Ngày cấp: ${new Date(c.issued_at).toLocaleDateString('vi-VN')}\nMã tra cứu: ${c.certificate_code}`,
-        { align: 'center' },
-      );
-    doc
-      .moveDown()
-      .text(
-        `${process.env.WEB_URL || 'http://localhost:8080'}/verify/${encodeURIComponent(c.certificate_code)}`,
-        { align: 'center' },
-      );
+    drawCertificate(doc, c);
     doc.end();
   }
   @Get('reports') @Roles('ADMIN', 'TEACHER') async report(
@@ -334,7 +323,12 @@ export class PlatformController {
   ) {
     return this.recommendations.job(r.user, id);
   }
-  @Post('ml/jobs/:id/replay') @Roles('ADMIN') replay(@Req() r:AuthRequest,@Param('id') id:string) {return this.recommendations.replay(r.user,id);}
+  @Post('ml/jobs/:id/replay') @Roles('ADMIN') replay(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+  ) {
+    return this.recommendations.replay(r.user, id);
+  }
   @Post('ml/mappings') @Roles('ADMIN') mapping(
     @Req() r: AuthRequest,
     @Body() b: any,
@@ -347,15 +341,51 @@ export class PlatformController {
   ) {
     return this.recommendations.recommend(r.user, id);
   }
-  @Post('courses/:id/path-options') @Roles('STUDENT') pathOptions(@Req() r: AuthRequest,@Param('id',ParseIntPipe) id:number,@Body() b:unknown) {
-    return this.paths.generate(r.user,id,b);
+  @Post('courses/:id/path-options') @Roles('STUDENT') pathOptions(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: unknown,
+  ) {
+    return this.paths.generate(r.user, id, b);
   }
-  @Get('courses/:id/path-options') @Roles('STUDENT') pathHistory(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number) {
-    return this.paths.list(r.user,id);
+  @Get('courses/:id/path-options') @Roles('STUDENT') pathHistory(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.paths.list(r.user, id);
   }
-  @Get('path-options/:id') @Roles('STUDENT') pathSet(@Req() r:AuthRequest,@Param('id') id:string) { return this.paths.get(r.user,id); }
-  @Patch('path-options/:id/selection') @Roles('STUDENT') selectPath(@Req() r:AuthRequest,@Param('id') id:string,@Body() b:{planId:string}) { return this.paths.select(r.user,id,b.planId); }
-  @Post('path-options/:id/feedback') @Roles('STUDENT') pathFeedback(@Req() r:AuthRequest,@Param('id') id:string,@Body() b:any) { return this.paths.feedback(r.user,id,b); }
-  @Post('path-options/:id/explain') @Roles('STUDENT') explainPath(@Req() r:AuthRequest,@Param('id') id:string,@Body() b:{consent:boolean}) {return this.paths.explain(r.user,id,b.consent);}
-  @Patch('lessons/:id/pedagogy') @Roles('TEACHER','ADMIN') pedagogy(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number,@Body() b:any) { return this.paths.pedagogy(r.user,id,b); }
+  @Get('path-options/:id') @Roles('STUDENT') pathSet(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+  ) {
+    return this.paths.get(r.user, id);
+  }
+  @Patch('path-options/:id/selection') @Roles('STUDENT') selectPath(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+    @Body() b: { planId: string },
+  ) {
+    return this.paths.select(r.user, id, b.planId);
+  }
+  @Post('path-options/:id/feedback') @Roles('STUDENT') pathFeedback(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+    @Body() b: any,
+  ) {
+    return this.paths.feedback(r.user, id, b);
+  }
+  @Post('path-options/:id/explain') @Roles('STUDENT') explainPath(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+    @Body() b: { consent: boolean },
+  ) {
+    return this.paths.explain(r.user, id, b.consent);
+  }
+  @Patch('lessons/:id/pedagogy') @Roles('TEACHER', 'ADMIN') pedagogy(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: any,
+  ) {
+    return this.paths.pedagogy(r.user, id, b);
+  }
 }

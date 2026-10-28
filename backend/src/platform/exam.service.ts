@@ -21,6 +21,16 @@ export class ExamService {
     if (actor.role !== 'STUDENT')
       throw new BadRequestException('Chỉ học viên có bài làm');
     await this.access.study(actor, Number(quiz.course_id));
+    if (!quiz.lesson_id && quiz.title.startsWith('Thi cuối khóa —')) {
+      const [missing] = await this.db.query(
+        `SELECT count(*)::int n FROM lms.lessons l WHERE course_id=$1 AND is_published AND NOT is_deleted AND NOT EXISTS(SELECT 1 FROM learning.lesson_progress p WHERE p.student_id=$2 AND p.lesson_id=l.lesson_id AND p.status='COMPLETED')`,
+        [quiz.course_id, actor.userId],
+      );
+      if (missing.n)
+        throw new BadRequestException(
+          `Hoàn thành ${missing.n} bài học còn lại trước khi thi cuối khóa`,
+        );
+    }
     return this.db.transaction(async (m) => {
       await m.query('SELECT pg_advisory_xact_lock($1::integer,$2::integer)', [
         actor.userId,

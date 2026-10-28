@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "../services/api";
+import { formatMinutes } from "../services/time";
 
 const field =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm";
@@ -162,17 +163,27 @@ export default function LearningPaths({ auth, data, act, busy }) {
             ]}
           />
           <label className="space-y-1 text-sm font-medium">
-            Quỹ thời gian mỗi tuần (giây)
+            Quỹ thời gian mỗi tuần (giờ)
             <input
               className={field}
               required
               type="number"
-              min="1800"
-              max="144000"
-              step="1"
-              value={form.weeklySeconds}
-              onChange={(e) => update("weeklySeconds", Number(e.target.value))}
+              min="0.5"
+              max="40"
+              step="0.25"
+              value={form.weeklySeconds === "" ? "" : form.weeklySeconds / 3600}
+              onChange={(e) =>
+                update(
+                  "weeklySeconds",
+                  e.target.value === ""
+                    ? ""
+                    : Math.round(Number(e.target.value) * 3600),
+                )
+              }
             />
+            <small className="block text-xs font-normal text-slate-500">
+              Từ 0,5 đến 40 giờ/tuần. Ví dụ: 1,5 giờ = 1 giờ 30 phút.
+            </small>
           </label>
           <label className="space-y-1 text-sm font-medium">
             Số tuần dự kiến
@@ -298,8 +309,8 @@ export default function LearningPaths({ auth, data, act, busy }) {
                   <p className="text-sm text-slate-600">{plan.focus}</p>
                   <div className="flex flex-wrap gap-2 text-xs">
                     <span className="rounded-lg bg-slate-100 px-3 py-2">
-                      {plan.steps.length} bài · {plan.estimatedSeconds} giây dự
-                      kiến
+                      {plan.steps.length} bài ·{" "}
+                      {formatMinutes(plan.estimatedSeconds)}
                     </span>
                     <span
                       className={`rounded-lg px-3 py-2 ${plan.fitsBudget ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}
@@ -365,10 +376,7 @@ export default function LearningPaths({ auth, data, act, busy }) {
                             </Link>
                             <p className="mt-1 text-xs text-slate-500">
                               {kinds[s.kind]} · Mức {s.difficulty}/3 ·{" "}
-                              {s.estimatedSeconds} giây{" "}
-                              {s.durationBasis === "STUDY_ESTIMATE"
-                                ? "dự kiến"
-                                : "video đã đo"}
+                              {formatMinutes(s.estimatedSeconds)}
                             </p>
                           </div>
                         </div>

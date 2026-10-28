@@ -3,9 +3,7 @@ import {
   ArrowUpRight,
   BookOpen,
   Check,
-  Code2,
   GraduationCap,
-  Play,
   Sparkles,
 } from "lucide-react";
 
@@ -15,154 +13,141 @@ export default function Banner({
   topicCount = 0,
 }) {
   return (
-    <section className="bg-gradient-to-b from-sky-50 via-white to-white">
-      <div className="mx-auto max-w-7xl px-4 pb-8 pt-7 sm:px-6 lg:px-8 lg:pt-10">
-        <div className="grid items-center gap-7 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-          <div className="space-y-5 py-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">
-              <Sparkles size={14} />
-              Học điều mới. Mở cơ hội mới.
-            </span>
-            <h1 className="text-4xl font-black leading-[1.15] tracking-tight text-slate-900 sm:text-5xl xl:text-6xl">
-              Bắt đầu từ hôm nay,
-              <br />
-              <span className="text-blue-600">tiến xa hơn mỗi ngày.</span>
-            </h1>
-            <p className="max-w-lg text-base leading-7 text-slate-500">
-              Khám phá khóa học phù hợp, học từng bước cùng giảng viên và xây
-              dựng kỹ năng bạn cần — ngay trên Vedu.
+    <section className="home-hero" aria-labelledby="home-heading">
+      <div className="mx-auto max-w-7xl px-4 pb-7 pt-7 sm:px-6 lg:px-8 lg:pt-10">
+        <div className="grid items-center gap-7 lg:grid-cols-[1fr_1.08fr] lg:gap-12">
+          <div className="min-w-0 lg:py-5">
+            <p className="home-brand mb-5 flex items-start gap-2 text-xs font-bold text-blue-700">
+              <Sparkles size={16} className="mt-0.5 shrink-0" />
+              <span>VEDU Learning Management System</span>
             </p>
-            <div className="flex flex-wrap gap-3">
+            <h1
+              id="home-heading"
+              className="home-hero-title font-extrabold tracking-tight text-slate-900"
+            >
+              <span className="block">Học điều mới, </span>
+              <span className="block text-blue-600">mở thêm cơ hội.</span>
+            </h1>
+            <p className="home-copy mt-5 max-w-[47ch] text-base leading-7 text-slate-600 sm:text-[17px]">
+              Từ bài học đầu tiên đến kỹ năng dùng mỗi ngày. Khám phá khóa học,
+              thực hành cùng giảng viên và tiến bộ theo nhịp độ của bạn.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 to="/courses"
-                className="flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
+                className="home-cta inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200/60 transition hover:bg-blue-700"
               >
-                Khám phá khóa học
-                <ArrowUpRight size={18} />
+                Khám phá khóa học{" "}
+                <ArrowUpRight size={18} className="shrink-0" />
               </Link>
               <button
                 onClick={() => onOpenAuth("login")}
-                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:border-blue-300"
+                className="home-cta rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50"
               >
                 Trải nghiệm học ngay
               </button>
             </div>
-            <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <Check size={15} className="text-emerald-500" />
-                Học theo nhịp độ của bạn
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-600">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <Check size={16} className="shrink-0 text-emerald-600" />
+                Học theo nhịp độ riêng
               </span>
-              <span className="flex items-center gap-1.5">
-                <Check size={15} className="text-emerald-500" />
-                Video, tài liệu & bài tập
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <Check size={16} className="shrink-0 text-emerald-600" />
+                Video, tài liệu, bài tập
               </span>
             </div>
           </div>
-          <Link
-            to="/courses?sort=popular"
-            aria-label="Khám phá khóa học được yêu thích"
-            className="group relative isolate overflow-hidden rounded-[28px] border border-blue-100 bg-gradient-to-br from-blue-100 via-sky-50 to-amber-100 p-6 shadow-sm sm:p-8"
+          <div
+            className="home-photo-grid"
+            aria-label="Khoảnh khắc giảng dạy và học tập"
           >
-            <div
-              aria-hidden="true"
-              className="absolute -right-16 -top-20 -z-10 h-72 w-72 rounded-full border-[35px] border-white/50"
-            />
-            <div className="flex items-center justify-between">
-              <span className="rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-black tracking-wider text-blue-700">
-                VEDU Learning Management System
-              </span>
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-blue-600 transition group-hover:rotate-45">
-                <ArrowUpRight size={20} />
-              </span>
-            </div>
-            <h2 className="mt-5 text-3xl font-black leading-tight text-slate-900 sm:text-4xl">
-              Đầu tư vào bạn.
-              <br />
-              Mở khóa tương lai.
-            </h2>
-            <p className="mt-3 max-w-xs text-sm leading-6 text-slate-600">
-              Từ những kiến thức đầu tiên đến kỹ năng thực hành. Chọn hành trình
-              của riêng bạn.
-            </p>
-            <div className="mt-6 grid grid-cols-[1fr_auto] items-end gap-3">
-              <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold text-slate-500">
-                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-blue-100 text-blue-600">
-                    <Code2 size={17} />
-                  </span>
-                  BÀI HỌC MỖI NGÀY
-                </div>
-                <p className="font-bold text-slate-800">
-                  Một kỹ năng mới,
-                  <br />
-                  nhiều cơ hội hơn.
-                </p>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100">
-                  <div className="h-full w-3/4 rounded-full bg-blue-500" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <span className="grid h-16 w-16 place-items-center rounded-2xl bg-amber-300 text-amber-900 shadow-sm">
-                  <GraduationCap size={34} />
+            <figure className="home-photo-main relative overflow-hidden rounded-[24px] bg-slate-100">
+              <img
+                src="/images/learning/classroom-smiles.webp"
+                alt="Giảng viên và nhóm học viên tươi cười trong lớp học"
+                width="1200"
+                height="800"
+                fetchPriority="high"
+                className="h-full w-full object-cover object-[50%_15%]"
+              />
+              <figcaption className="absolute inset-x-3 bottom-3 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/95 px-4 py-3 text-sm text-slate-800 shadow-sm">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
+                  <GraduationCap size={21} />
                 </span>
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200">
-                  <Play size={20} fill="currentColor" />
+                <span className="home-copy font-semibold">
+                  Mỗi bài học, một bước tiến mới.
                 </span>
-              </div>
-            </div>
-          </Link>
+              </figcaption>
+            </figure>
+            <figure className="home-photo-small overflow-hidden rounded-[20px] bg-slate-100">
+              <img
+                src="/images/learning/teacher-laptop.webp"
+                alt="Giảng viên mỉm cười khi giảng dạy với laptop"
+                width="640"
+                height="427"
+                decoding="async"
+                className="h-full w-full object-cover object-[50%_43%]"
+              />
+            </figure>
+            <figure className="home-photo-small overflow-hidden rounded-[20px] bg-slate-100">
+              <img
+                src="/images/learning/students-campus.webp"
+                alt="Hai học viên cùng học bằng laptop và ghi chép trong khuôn viên trường"
+                width="640"
+                height="960"
+                decoding="async"
+                className="h-full w-full object-cover object-[50%_43%]"
+              />
+            </figure>
+          </div>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 bg-white p-4 sm:grid-cols-4">
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-blue-50 p-2 text-blue-600">
-              <BookOpen size={20} />
-            </span>
-            <div>
-              <strong className="block text-lg text-slate-900">
-                {courseCount}+
-              </strong>
-              <span className="text-xs text-slate-500">
-                Khóa học để khám phá
+        <div className="mt-7 grid grid-cols-2 gap-x-4 gap-y-5 rounded-2xl border border-blue-100/70 bg-white/90 p-4 sm:p-5 lg:grid-cols-4">
+          {[
+            {
+              icon: BookOpen,
+              value: courseCount,
+              label: "Khóa học để khám phá",
+              tone: "bg-blue-50 text-blue-600",
+            },
+            {
+              icon: Sparkles,
+              value: topicCount,
+              label: "Chủ đề kỹ năng",
+              tone: "bg-amber-50 text-amber-600",
+            },
+            {
+              icon: Check,
+              value: "Học và thực hành",
+              label: "Kiến thức đi cùng bài tập",
+              tone: "bg-emerald-50 text-emerald-600",
+            },
+            {
+              icon: GraduationCap,
+              value: "Theo dõi tiến bộ",
+              label: "Lưu từng bước học tập",
+              tone: "bg-violet-50 text-violet-600",
+            },
+          ].map(({ icon: Icon, value, label, tone }) => (
+            <div
+              key={label}
+              className="flex min-w-0 items-center gap-2.5 sm:gap-3"
+            >
+              <span
+                className={`hidden shrink-0 rounded-xl p-2.5 min-[380px]:block ${tone}`}
+              >
+                <Icon size={20} />
               </span>
+              <div className="min-w-0">
+                <strong className="home-balanced block text-sm font-bold leading-5 text-slate-900 sm:text-[15px]">
+                  {value}
+                </strong>
+                <span className="home-copy mt-1 block text-xs leading-5 text-slate-500">
+                  {label}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-amber-50 p-2 text-amber-600">
-              <Sparkles size={20} />
-            </span>
-            <div>
-              <strong className="block text-lg text-slate-900">
-                {topicCount}
-              </strong>
-              <span className="text-xs text-slate-500">Chủ đề kỹ năng</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
-              <Check size={20} />
-            </span>
-            <div>
-              <strong className="block text-sm text-slate-900">
-                Học & thực hành
-              </strong>
-              <span className="text-xs text-slate-500">
-                Kiến thức đi cùng bài tập
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-violet-50 p-2 text-violet-600">
-              <GraduationCap size={20} />
-            </span>
-            <div>
-              <strong className="block text-sm text-slate-900">
-                Theo dõi tiến bộ
-              </strong>
-              <span className="text-xs text-slate-500">
-                Từng bước, từng bài học
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

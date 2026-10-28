@@ -62,7 +62,10 @@ try {
   await check('Tạo chủ đề mới không cần sửa frontend', async () => {
     const course = await api('/portal/teacher/courses', { method: 'POST', status: 201, token: teacher.accessToken, body: { name: marker, topic, price: 0 } });
     createdCourseId = course.courseId;
+    const l=await api(`/portal/teacher/courses/${createdCourseId}/lessons`,{method:'POST',status:201,token:teacher.accessToken,body:{title:'Bài học kiểm thử tìm kiếm',content:'Chỉ dùng kiểm thử',durationSeconds:30}});
+    await api(`/platform/lessons/${l.lessonId}`,{method:'PATCH',token:teacher.accessToken,body:{title:'Bài học kiểm thử tìm kiếm',content:'Chỉ dùng kiểm thử',durationSeconds:30,isPublished:true}});
     await api(`/portal/teacher/courses/${createdCourseId}/status`, { method: 'PATCH', token: teacher.accessToken, body: { status: 'PUBLISHED' } });
+    await api(`/platform/moderation/${createdCourseId}`,{method:'POST',status:201,token:admin.accessToken,body:{decision:'APPROVED',note:'Duyệt khóa kiểm thử tìm kiếm'}});
     const searched = await api(`/courses?q=${encodeURIComponent(marker)}&topic=${encodeURIComponent(topic)}`);
     assert(searched.some((c) => c.id === Number(createdCourseId) && c.topic === topic));
   });

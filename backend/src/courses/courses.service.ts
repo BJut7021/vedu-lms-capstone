@@ -6,16 +6,17 @@ import { Course } from '../entities/course.entity';
 
 @Injectable()
 export class CoursesService {
-    constructor(
-        @InjectRepository(Course)
-        private readonly courseRepository: Repository<Course>,
-        private readonly dataSource: DataSource,
-    ) { }
+  constructor(
+    @InjectRepository(Course)
+    private readonly courseRepository: Repository<Course>,
+    private readonly dataSource: DataSource,
+  ) {}
 
-    async findAll(filters: { q?: string; topic?: string; sort?: string } = {}) {
-        const query = filters.q?.trim().slice(0, 200) || '';
-        const topic = filters.topic?.trim().slice(0, 80) || '';
-        const rows = await this.dataSource.query(`
+  async findAll(filters: { q?: string; topic?: string; sort?: string } = {}) {
+    const query = filters.q?.trim().slice(0, 200) || '';
+    const topic = filters.topic?.trim().slice(0, 80) || '';
+    const rows = await this.dataSource.query(
+      `
             SELECT
                 c.course_id AS "id",
                 c.course_name AS "title",
@@ -55,21 +56,30 @@ export class CoursesService {
                 CASE WHEN $3 = 'popular' THEN COALESCE(es.student_count, 0) END DESC,
                 CASE WHEN $3 = 'price-asc' THEN c.price END ASC,
                 c.created_at DESC, c.course_id DESC
-        `, [query, topic, filters.sort || 'newest']);
+        `,
+      [query, topic, filters.sort || 'newest'],
+    );
 
-        return rows.map((row: Record<string, unknown>) => ({
-            ...row,
-            description: typeof row.description==='string' ? row.description.replace(/\[VEDU-OFFICE-v1:[a-z]+\]\s*/g,'') : row.description,
-            id: Number(row.id),
-            lessons: Number(row.lessons),
-            students: Number(row.students),
-            durationSeconds: Number(row.durationSeconds),
-            rating: null,
-        }));
-    }
+    return rows.map((row: Record<string, unknown>) => ({
+      ...row,
+      description:
+        typeof row.description === 'string'
+          ? row.description.replace(
+              /\[VEDU-(?:OFFICE|COMPUTING)-v1:[a-z]+\]\s*/g,
+              '',
+            )
+          : row.description,
+      id: Number(row.id),
+      lessons: Number(row.lessons),
+      students: Number(row.students),
+      durationSeconds: Number(row.durationSeconds),
+      rating: null,
+    }));
+  }
 
-    async findOne(courseId: number, includeContent = true) {
-        const courses = await this.dataSource.query(`
+  async findOne(courseId: number, includeContent = true) {
+    const courses = await this.dataSource.query(
+      `
             SELECT
                 c.course_id AS "id",
                 c.course_name AS "title",
@@ -90,13 +100,16 @@ export class CoursesService {
               AND c.status = 'PUBLISHED'
               AND c.is_deleted = FALSE
             GROUP BY c.course_id, u.full_name
-        `, [courseId]);
+        `,
+      [courseId],
+    );
 
-        if (courses.length === 0) {
-            throw new NotFoundException(`Khóa học ${courseId} không tồn tại`);
-        }
+    if (courses.length === 0) {
+      throw new NotFoundException(`Khóa học ${courseId} không tồn tại`);
+    }
 
-        const lessons = await this.dataSource.query(`
+    const lessons = await this.dataSource.query(
+      `
             SELECT
                 l.lesson_id AS "id",
                 l.title,
@@ -123,54 +136,99 @@ export class CoursesService {
               AND l.is_published = TRUE
               AND l.is_deleted = FALSE
             ORDER BY l.lesson_order
-        `, [courseId]);
+        `,
+      [courseId],
+    );
 
-        const course = courses[0] as Record<string, unknown>;
-        const totalDuration = lessons.reduce(
-            (sum: number, lesson: Record<string, unknown>) =>
-                sum + Number(lesson.durationSeconds ?? 0),
-            0,
-        );
+    const course = courses[0] as Record<string, unknown>;
+    const totalDuration = lessons.reduce(
+      (sum: number, lesson: Record<string, unknown>) =>
+        sum + Number(lesson.durationSeconds ?? 0),
+      0,
+    );
 
-        const chapters:any[]=await this.dataSource.query('SELECT section_id AS id,title FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',[courseId]);
-        const result = {
-            ...course,
-            description: typeof course.description==='string' ? course.description.replace(/\[VEDU-OFFICE-v1:[a-z]+\]\s*/g,'') : course.description,
-            id: Number(course.id),
-            students: Number(course.students),
-            rating: null,
-            durationSeconds: totalDuration,
-            sections: [{
-                id: 'course-content',
-                title: 'Nội dung khóa học',
-                lessons: lessons.map((lesson: Record<string, unknown>) => {
-                    const resourceType = typeof lesson.resourceType === 'string'
-                        ? lesson.resourceType
-                        : 'DOCUMENT';
+    const chapters: any[] = await this.dataSource.query(
+      'SELECT section_id AS id,title FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',
+      [courseId],
+    );
+    const result = {
+      ...course,
+      description:
+        typeof course.description === 'string'
+          ? course.description.replace(
+              /\[VEDU-(?:OFFICE|COMPUTING)-v1:[a-z]+\]\s*/g,
+              '',
+            )
+          : course.description,
+      id: Number(course.id),
+      students: Number(course.students),
+      rating: null,
+      durationSeconds: totalDuration,
+      sections: [
+        {
+          id: 'course-content',
+          title: 'Nội dung khóa học',
+          lessons: lessons.map((lesson: Record<string, unknown>) => {
+            const resourceType =
+              typeof lesson.resourceType === 'string'
+                ? lesson.resourceType
+                : 'DOCUMENT';
 
-                    return {
-                        ...lesson,
-                        content: includeContent ? lesson.content : null,
-                        resourceUrl: includeContent ? lesson.resourceUrl : null,
-                        id: Number(lesson.id),
-                        lessonOrder: Number(lesson.lessonOrder),
-                        durationSeconds: Number(lesson.durationSeconds ?? 0),
-                        quizId: lesson.quizId ? Number(lesson.quizId) : null,
-                        type: lesson.quizId
-                            ? 'quiz'
-                            : resourceType.toLowerCase(),
-                        videoUrl: includeContent && resourceType === 'VIDEO'
-                            ? lesson.resourceUrl
-                            : null,
-                        completed: false,
-                    };
-                }),
-            }],
-        };
-        const mapped=result.sections[0].lessons as {id:number;title:string;type:string;sectionId?:unknown;[key:string]:unknown}[];
-        result.sections=[...chapters.map(s=>({id:String(s.id),title:s.title,lessons:mapped.filter(l=>String(l.sectionId)===String(s.id))})),{id:'course-content',title:'Nội dung khóa học',lessons:mapped.filter(l=>!l.sectionId)}].filter(s=>s.lessons.length>0);
-        const courseQuizzes:any[]=await this.dataSource.query('SELECT quiz_id,title,time_limit_seconds FROM assessment.quizzes WHERE course_id=$1 AND lesson_id IS NULL AND is_published AND NOT is_deleted ORDER BY quiz_id',[courseId]);
-        if(courseQuizzes.length) result.sections.push({id:'course-assessment',title:'Bài kiểm tra khóa học',lessons:courseQuizzes.map(q=>({id:-Number(q.quiz_id),title:q.title,type:'quiz',quizId:Number(q.quiz_id),durationSeconds:Number(q.time_limit_seconds ?? 600),completed:false})) as any});
-        return result;
-    }
+            return {
+              ...lesson,
+              content: includeContent ? lesson.content : null,
+              resourceUrl: includeContent ? lesson.resourceUrl : null,
+              id: Number(lesson.id),
+              lessonOrder: Number(lesson.lessonOrder),
+              durationSeconds: Number(lesson.durationSeconds ?? 0),
+              quizId: lesson.quizId ? Number(lesson.quizId) : null,
+              type: lesson.quizId ? 'quiz' : resourceType.toLowerCase(),
+              videoUrl:
+                includeContent && resourceType === 'VIDEO'
+                  ? lesson.resourceUrl
+                  : null,
+              completed: false,
+            };
+          }),
+        },
+      ],
+    };
+    const mapped = result.sections[0].lessons as {
+      id: number;
+      title: string;
+      type: string;
+      sectionId?: unknown;
+      [key: string]: unknown;
+    }[];
+    result.sections = [
+      ...chapters.map((s) => ({
+        id: String(s.id),
+        title: s.title,
+        lessons: mapped.filter((l) => String(l.sectionId) === String(s.id)),
+      })),
+      {
+        id: 'course-content',
+        title: 'Nội dung khóa học',
+        lessons: mapped.filter((l) => !l.sectionId),
+      },
+    ].filter((s) => s.lessons.length > 0);
+    const courseQuizzes: any[] = await this.dataSource.query(
+      'SELECT quiz_id,title,time_limit_seconds FROM assessment.quizzes WHERE course_id=$1 AND lesson_id IS NULL AND is_published AND NOT is_deleted ORDER BY quiz_id',
+      [courseId],
+    );
+    if (courseQuizzes.length)
+      result.sections.push({
+        id: 'course-assessment',
+        title: 'Bài kiểm tra khóa học',
+        lessons: courseQuizzes.map((q) => ({
+          id: -Number(q.quiz_id),
+          title: q.title,
+          type: 'quiz',
+          quizId: Number(q.quiz_id),
+          durationSeconds: Number(q.time_limit_seconds ?? 600),
+          completed: false,
+        })) as any,
+      });
+    return result;
+  }
 }
