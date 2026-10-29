@@ -1,4 +1,24 @@
 {
+  "phân tích thiết kế hệ thống": {
+    "courseId": 76,
+    "title": "Phân tích thiết kế hệ thống",
+    "src": "/images/course-covers/v2/course-76.webp",
+    "headline": "Thiết kế hệ thống",
+    "subtitle": "Yêu cầu · UML · Thiết kế",
+    "ink": "#1b5a78",
+    "photo": false,
+    "series": null
+  },
+  "lập trình hướng đối tượng": {
+    "courseId": 75,
+    "title": "Lập trình hướng đối tượng",
+    "src": "/images/course-covers/v2/course-75.webp",
+    "headline": "OOP với C#",
+    "subtitle": "C# · Kế thừa · Đa hình",
+    "ink": "#563795",
+    "photo": false,
+    "series": null
+  },
   "mạng máy tính": {
     "courseId": 69,
     "title": "Mạng máy tính",
@@ -34,9 +54,9 @@
     "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
     "src": "/images/course-covers/v2/course-66.webp",
     "headline": "PowerPoint",
-    "subtitle": "Thuyết trình dự án rõ ràng",
-    "ink": "#9c4d32",
-    "photo": true,
+    "subtitle": "Bố cục · Slide · Thuyết trình",
+    "ink": "#a2442a",
+    "photo": false,
     "series": null
   },
   "excel thực hành — quản lý chi phí và báo cáo bán hàng": {
@@ -44,9 +64,9 @@
     "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
     "src": "/images/course-covers/v2/course-65.webp",
     "headline": "Excel thực hành",
-    "subtitle": "Chi phí · Công thức · Báo cáo",
-    "ink": "#205b43",
-    "photo": true,
+    "subtitle": "Công thức · Bảng tính · Báo cáo",
+    "ink": "#146345",
+    "photo": false,
     "series": null
   },
   "word thực hành — báo cáo và hồ sơ văn phòng": {
@@ -54,19 +74,19 @@
     "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
     "src": "/images/course-covers/v2/course-64.webp",
     "headline": "Word thực hành",
-    "subtitle": "Báo cáo · Styles · Hồ sơ",
-    "ink": "#255c93",
-    "photo": true,
+    "subtitle": "Styles · Mục lục · Báo cáo",
+    "ink": "#174a94",
+    "photo": false,
     "series": null
   },
   "office 365 — nội dung tham chiếu kaggle": {
     "courseId": 55,
     "title": "Office 365 — Nội dung tham chiếu Kaggle",
     "src": "/images/course-covers/v2/course-55.webp",
-    "headline": "Office 365",
-    "subtitle": "Đồng bộ tệp · Chia sẻ · Email",
-    "ink": "#265a87",
-    "photo": true,
+    "headline": "Microsoft 365",
+    "subtitle": "Tệp · Chia sẻ · Cộng tác",
+    "ink": "#3e4696",
+    "photo": false,
     "series": null
   },
   "digital thực hành 10": {

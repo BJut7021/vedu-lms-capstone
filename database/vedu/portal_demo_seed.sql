@@ -62,11 +62,11 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_user_active
 ON auth.password_reset_tokens(user_id, expires_at DESC)
 WHERE used_at IS NULL;
 
-UPDATE auth.users SET username = 'student', phone = '0900000001'
+UPDATE auth.users SET username = COALESCE(NULLIF(username,''),'student'), phone = COALESCE(NULLIF(phone,''),'0900000001')
 WHERE lower(email) = 'student@vedu.local';
-UPDATE auth.users SET username = 'teacher', phone = '0900000002'
+UPDATE auth.users SET username = COALESCE(NULLIF(username,''),'teacher'), phone = COALESCE(NULLIF(phone,''),'0900000002')
 WHERE lower(email) = 'teacher@vedu.local';
-UPDATE auth.users SET username = 'admin', phone = '0900000003'
+UPDATE auth.users SET username = COALESCE(NULLIF(username,''),'admin'), phone = COALESCE(NULLIF(phone,''),'0900000003')
 WHERE lower(email) = 'admin@vedu.local';
 
 DO $$
@@ -93,7 +93,7 @@ BEGIN
     END IF;
 
     UPDATE auth.users
-    SET username = 'admin', phone = COALESCE(phone, '0900000003')
+    SET username = COALESCE(NULLIF(username,''),'admin'), phone = COALESCE(NULLIF(phone,''), '0900000003')
     WHERE user_id = v_admin_id;
 
     SELECT user_id INTO v_student_id

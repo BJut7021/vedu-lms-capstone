@@ -1,0 +1,39 @@
+name: Update shared VEDU server
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vedu-shared-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/develop' && vars.VEDU_AUTO_DEPLOY == 'true'
+    runs-on: [self-hosted, Windows, X64, vedu-server]
+    timeout-minutes: 60
+    env:
+      VEDU_DEPLOY_PATH: ${{ vars.VEDU_DEPLOY_PATH }}
+      GIT_TERMINAL_PROMPT: '0'
+    steps:
+      # Use a dedicated, persistent checkout. Never clean a developer's workspace
+      # or copy .env, uploaded media, datasets, or model volumes into Actions.
+      - name: Pull develop and update Docker while retaining data
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = $env:VEDU_DEPLOY_PATH
+          if (-not $root -or -not [IO.Path]::IsPathRooted($root)) {
+            throw 'Set repository variable VEDU_DEPLOY_PATH to the dedicated server checkout.'
+          }
+          $script = Join-Path $root 'scripts\deploy-develop.ps1'
+          if (-not (Test-Path -LiteralPath $script)) {
+            throw 'Clone develop into the server folder after merging the deployment scripts.'
+          }
+          & $script -DeployPath $root
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

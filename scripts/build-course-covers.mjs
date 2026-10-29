@@ -3,6 +3,10 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import {
+  createSubjectArtwork,
+  subjectCoverInfo,
+} from "../frontend/src/services/subjectCourseArtwork.js";
+import {
   createCourseArtwork,
   courseFamily,
   courseIdentity,
@@ -59,15 +63,17 @@ const labels = {
 const manifest = {},
   checks = [];
 for (const c of catalog) {
+  const specific = subjectCoverInfo(c);
   const id = c.id,
     photo = generated.find((g) => g.id === id),
     filename = `course-${id}.webp`,
     url = `/images/course-covers/v2/${filename}`;
   const target = new URL(filename, out),
-    isCurated = !!reviewed[id];
-  if ((photo && existsSync(photo.path)) || !isCurated) {
-    const input =
-      photo && existsSync(photo.path)
+    isCurated = !!reviewed[id] || !!specific;
+  if (specific || (photo && existsSync(photo.path)) || !isCurated) {
+    const input = specific
+      ? Buffer.from(createSubjectArtwork(c))
+      : photo && existsSync(photo.path)
         ? photo.path
         : Buffer.from(createCourseArtwork(c));
     await sharp(input)
@@ -81,7 +87,9 @@ for (const c of catalog) {
   const bytes = readFileSync(new URL(filename, out));
   const n = c.title.match(/(\d+)$/)?.[1],
     family = courseFamily(c);
-  const [headline, subtitle, ink] = reviewed[id] || [
+  const [headline, subtitle, ink] = (specific
+    ? [specific.headline, specific.subtitle, specific.ink]
+    : reviewed[id]) || [
     labels[family]?.[0] || c.title,
     n ? `Thực hành ${n} · Video, tài liệu & quiz` : "Học và thực hành",
     labels[family]?.[1] || "#294968",
@@ -93,15 +101,16 @@ for (const c of catalog) {
     headline,
     subtitle,
     ink,
-    photo: isCurated,
+    photo: isCurated && !specific,
     series: n || null,
   };
   checks.push({
     id,
     title: c.title,
-    source: isCurated
-      ? "AI-assisted editorial illustration"
-      : "Original code-native editorial artwork",
+    source:
+      isCurated && !specific
+        ? "AI-assisted editorial illustration"
+        : "Original code-native editorial artwork",
     file: url,
     bytes: bytes.length,
     sha256: createHash("sha256").update(bytes).digest("hex"),

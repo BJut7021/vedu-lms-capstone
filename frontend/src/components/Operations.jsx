@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import LearningPaths from "./LearningPaths";
 import PedagogyEditor from "./PedagogyEditor";
 import ContentModeration from "./ContentModeration";
+import CourseOverviewEditor from "./CourseOverviewEditor";
 import { formatMinutes } from "../services/time";
 
 const button =
@@ -575,6 +576,17 @@ function Content({ auth, data, act, busy }) {
             (l) => String(l.lesson_id) === String(lesson),
           )}
           lessons={content.lessons}
+          auth={auth}
+          act={act}
+          busy={busy}
+          reload={load}
+        />
+      )}
+      {content && (
+        <CourseOverviewEditor
+          key={`overview-${course}`}
+          courseId={course}
+          content={content}
           auth={auth}
           act={act}
           busy={busy}

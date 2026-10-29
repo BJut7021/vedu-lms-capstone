@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { resolve } from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
@@ -14,6 +15,7 @@ export class CoursesService {
 
   async findAll(filters: { q?: string; topic?: string; sort?: string } = {}) {
     const query = filters.q?.trim().slice(0, 200) || '';
+    const pattern = query.replace(/[\\%_]/g, '\\$&');
     const topic = filters.topic?.trim().slice(0, 80) || '';
     const rows = await this.dataSource.query(
       `
@@ -43,21 +45,22 @@ export class CoursesService {
             LEFT JOIN LATERAL (
                 SELECT COUNT(*) AS student_count
                 FROM enrollment.enrollments e
+                JOIN auth.users learner ON learner.user_id = e.student_id
                 WHERE e.course_id = c.course_id
                   AND e.status IN ('ACTIVE', 'COMPLETED')
+                  AND NOT learner.is_test_account
             ) es ON TRUE
             WHERE c.status = 'PUBLISHED' AND c.is_deleted = FALSE
-              AND ($1 = '' OR c.course_name ILIKE '%' || $1 || '%'
-                   OR COALESCE(c.description, '') ILIKE '%' || $1 || '%'
-                   OR COALESCE(c.topic, '') ILIKE '%' || $1 || '%'
-                   OR u.full_name ILIKE '%' || $1 || '%')
+              AND ($1 = '' OR public.unaccent(lower(c.course_name)) LIKE '%' || public.unaccent(lower($1)) || '%'
+                   OR (length($1)>=3 AND (public.unaccent(lower(COALESCE(c.topic,''))) LIKE '%' || public.unaccent(lower($1)) || '%'
+                   OR public.unaccent(lower(u.full_name)) LIKE '%' || public.unaccent(lower($1)) || '%')))
               AND ($2 = '' OR COALESCE(c.topic, 'Tổng hợp') = $2)
             ORDER BY
                 CASE WHEN $3 = 'popular' THEN COALESCE(es.student_count, 0) END DESC,
                 CASE WHEN $3 = 'price-asc' THEN c.price END ASC,
                 c.created_at DESC, c.course_id DESC
         `,
-      [query, topic, filters.sort || 'newest'],
+      [pattern, topic, filters.sort || 'newest'],
     );
 
     return rows.map((row: Record<string, unknown>) => ({
@@ -75,6 +78,20 @@ export class CoursesService {
       durationSeconds: Number(row.durationSeconds),
       rating: null,
     }));
+  }
+
+  async suggestions(value = '') {
+    const query = value.trim().slice(0, 120);
+    if (Array.from(query).length < 2) return [];
+    const literal = query.replace(/[\\%_]/g, '\\$&');
+    const rows = await this.dataSource.query(
+      `SELECT course_id AS id,course_name AS title FROM lms.courses
+       WHERE status='PUBLISHED' AND NOT is_deleted
+       AND public.unaccent(lower(course_name)) LIKE '%' || public.unaccent(lower($1)) || '%'
+       ORDER BY (public.unaccent(lower(course_name)) LIKE public.unaccent(lower($1)) || '%') DESC,course_name,course_id LIMIT 5`,
+      [literal],
+    );
+    return rows.map((r: any) => ({ id: Number(r.id), title: r.title }));
   }
 
   async findOne(courseId: number, includeContent = true) {
@@ -96,6 +113,7 @@ export class CoursesService {
             LEFT JOIN enrollment.enrollments e
                 ON e.course_id = c.course_id
                 AND e.status IN ('ACTIVE', 'COMPLETED')
+                AND EXISTS (SELECT 1 FROM auth.users learner WHERE learner.user_id=e.student_id AND NOT learner.is_test_account)
             WHERE c.course_id = $1
               AND c.status = 'PUBLISHED'
               AND c.is_deleted = FALSE
@@ -229,6 +247,89 @@ export class CoursesService {
           completed: false,
         })) as any,
       });
-    return result;
+    return { ...result, overview: await this.overview(courseId) };
+  }
+  async overview(courseId: number) {
+    const [saved] = await this.dataSource.query(
+      'SELECT * FROM lms.course_overviews WHERE course_id=$1',
+      [courseId],
+    );
+    const pedagogy: any[] = await this.dataSource.query(
+      `SELECT p.outcomes FROM lms.lessons l JOIN lms.lesson_pedagogy p USING(lesson_id)
+       WHERE l.course_id=$1 AND l.is_published AND NOT l.is_deleted
+       AND l.title !~* '^(00[ ·.:_-]|.*hướng dẫn)' ORDER BY l.lesson_order,l.lesson_id`,
+      [courseId],
+    );
+    const outcomes = saved?.outcomes?.length
+      ? saved.outcomes
+      : [
+          ...new Set<string>(
+            pedagogy
+              .flatMap((p) => p.outcomes)
+              .filter((v) => typeof v === 'string' && v.trim()),
+          ),
+        ];
+    const quizzes: any[] = await this.dataSource.query(
+      `SELECT title,passing_score,max_attempts,COALESCE(time_limit_seconds,600) AS time_limit_seconds,
+       (lesson_id IS NULL AND title LIKE 'Thi cuối khóa —%') AS requires_completed_lessons
+       FROM assessment.quizzes WHERE course_id=$1 AND is_published AND NOT is_deleted ORDER BY quiz_id`,
+      [courseId],
+    );
+    const [count] = await this.dataSource.query(
+      'SELECT count(*)::int n FROM lms.lessons WHERE course_id=$1 AND is_published AND NOT is_deleted',
+      [courseId],
+    );
+    const resource = await this.syllabusResource(courseId);
+    return {
+      audience: saved?.audience || '',
+      preparation: saved?.preparation || '',
+      outcomes,
+      practiceNote: saved?.practice_note || '',
+      lessonCount: count.n,
+      assessments: quizzes.map((q) => ({
+        title: q.title,
+        passingScore: Number(q.passing_score),
+        maxAttempts: Number(q.max_attempts),
+        durationSeconds: Number(q.time_limit_seconds),
+        requiresCompletedLessons: q.requires_completed_lessons,
+      })),
+      syllabus: resource
+        ? {
+            title: resource.title,
+            type: resource.resource_type,
+            url: resource.resource_url.startsWith('vedu-file:')
+              ? `/api/courses/${courseId}/syllabus`
+              : resource.resource_url,
+          }
+        : null,
+    };
+  }
+  private async syllabusResource(courseId: number) {
+    const [r] = await this.dataSource.query(
+      `SELECT r.* FROM lms.course_overviews o JOIN lms.courses c USING(course_id)
+       JOIN lms.lesson_resources r ON r.resource_id=o.syllabus_resource_id
+       JOIN lms.lessons l ON l.lesson_id=r.lesson_id AND l.course_id=o.course_id
+       WHERE o.course_id=$1 AND c.status='PUBLISHED' AND NOT c.is_deleted AND l.is_published AND NOT l.is_deleted
+       AND r.resource_type IN ('PDF','LINK','DOCUMENT')`,
+      [courseId],
+    );
+    if (!r) return null;
+    const url = String(r.resource_url);
+    if (
+      /^vedu-file:[a-f0-9-]{36}\.pdf$/.test(url) ||
+      /^https:\/\//.test(url) ||
+      /^\/course-materials\/[a-z]+\/\d+\.html$/.test(url)
+    )
+      return r;
+    return null;
+  }
+  async syllabus(courseId: number) {
+    const r = await this.syllabusResource(courseId);
+    if (!r || !/^vedu-file:[a-f0-9-]{36}\.pdf$/.test(r.resource_url))
+      throw new NotFoundException('Khóa học chưa công bố đề cương PDF');
+    return resolve(
+      process.env.MEDIA_DIR || './media',
+      r.resource_url.slice('vedu-file:'.length),
+    );
   }
 }

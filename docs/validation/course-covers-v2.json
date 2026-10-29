@@ -1,9 +1,48 @@
 {
-  "checkedAt": "2026-10-27T15:23:53.654Z",
-  "courseCount": 50,
-  "uniqueFiles": 50,
-  "totalBytes": 1275682,
+  "checkedAt": "2026-10-28T11:07:26.063Z",
+  "courseCount": 52,
+  "uniqueFiles": 52,
+  "totalBytes": 1048746,
   "checks": [
+    {
+      "id": 76,
+      "title": "Phân tích thiết kế hệ thống",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-76.webp",
+      "bytes": 19954,
+      "sha256": "ffddffe0090677d487846241eae273e5e500f37e0258822b9b925976922474e8",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Tổng quan về hệ thống thông tin",
+        "02 · Xác định yêu cầu",
+        "03 · Mô hình hóa nghiệp vụ",
+        "04 · Mô hình hóa chức năng",
+        "05 · Mô hình hóa cấu trúc",
+        "06 · Thiết kế lớp và dữ liệu",
+        "07 · Thiết kế chức năng hệ thống"
+      ]
+    },
+    {
+      "id": 75,
+      "title": "Lập trình hướng đối tượng",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-75.webp",
+      "bytes": 17484,
+      "sha256": "8262e44cf4e5b402f16b742d4fd6de9410acc96b77bcab680239dac3b2d49197",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Ôn C# và phương pháp hướng đối tượng",
+        "02 · Lớp đối tượng và đóng gói",
+        "03 · Constructor nạp chồng và thành phần tĩnh",
+        "04 · Danh sách generic XML và mô hình lớp",
+        "05 · Kế thừa và quan hệ giữa các lớp",
+        "06 · Đa hình và lớp trừu tượng",
+        "07 · Interface và hợp đồng hành vi",
+        "08 · Tổ chức ứng dụng theo ba lớp",
+        "09 · Nguyên lý đóng mở Liskov và đảo phụ thuộc",
+        "10 · Ba nhóm mẫu thiết kế"
+      ]
+    },
     {
       "id": 69,
       "title": "Mạng máy tính",
@@ -22,8 +61,7 @@
         "07 · Tầng mạng và giao thức IP",
         "08 · Tầng vận chuyển – TCP/UDP",
         "09 · Tầng ứng dụng",
-        "10 · Xây dựng hệ thống mạng cơ bản",
-        "Thi cuối khóa — Mạng máy tính"
+        "10 · Xây dựng hệ thống mạng cơ bản"
       ]
     },
     {
@@ -48,8 +86,7 @@
         "11 · Phương pháp đếm – Phép đếm – Giải tích tổ hợp",
         "12 · Phương pháp đếm",
         "13 · Quan hệ (phần 1)",
-        "14 · Quan hệ (phần 2)",
-        "Thi cuối khóa — Cấu trúc rời rạc"
+        "14 · Quan hệ (phần 2)"
       ]
     },
     {
@@ -66,17 +103,16 @@
         "Ôn tập: phân loại năm tình huống số",
         "Tình huống: link tài liệu bị gửi nhầm",
         "Dự án: bộ quy tắc làm việc số cho nhóm",
-        "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư",
-        "Kiểm tra vận dụng — Kỹ năng số thực hành — Tệp, cộng tác và an toàn email"
+        "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư"
       ]
     },
     {
       "id": 66,
       "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
-      "source": "AI-assisted editorial illustration",
+      "source": "Original code-native editorial artwork",
       "file": "/images/course-covers/v2/course-66.webp",
-      "bytes": 95800,
-      "sha256": "5392da00a231f4533aa5d5e6a5706a3fd501830ada9ee2afc8851d6bc869e6e4",
+      "bytes": 17592,
+      "sha256": "108879bda64937fa90b447f25b0d9203f7aa66072868958d628a2abf0823d610",
       "lessonTitles": [
         "Thông điệp và cấu trúc câu chuyện",
         "Bố cục, tương phản và nguồn hình ảnh",
@@ -84,17 +120,16 @@
         "Ôn tập: giản lược slide quá tải",
         "Video nguồn: làm quen PowerPoint",
         "Dự án: pitch đề xuất trong 300 giây",
-        "Mở rộng: khả năng tiếp cận và bản bàn giao",
-        "Kiểm tra vận dụng — PowerPoint thực hành — Thuyết trình dự án rõ ràng"
+        "Mở rộng: khả năng tiếp cận và bản bàn giao"
       ]
     },
     {
       "id": 65,
       "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
-      "source": "AI-assisted editorial illustration",
+      "source": "Original code-native editorial artwork",
       "file": "/images/course-covers/v2/course-65.webp",
-      "bytes": 103984,
-      "sha256": "87cc154e9c67b1eade039e6b5b8009f7654c4a3cd21a0f19ee62b0f2da6cfa3e",
+      "bytes": 18190,
+      "sha256": "bde3e922f90e2736c37e4debde19377357dc9790eca0ca8fc8f42ae7298a487b",
       "lessonTitles": [
         "Dữ liệu dạng bảng và kiểu dữ liệu",
         "Công thức, SUM và tham chiếu ô",
@@ -102,17 +137,16 @@
         "Ôn tập: phát hiện lỗi bảng tính",
         "Video nguồn: làm quen Excel",
         "Dự án: báo cáo bán hàng mini có kiểm soát",
-        "Mở rộng: tổng hợp theo nhóm và PivotTable",
-        "Kiểm tra vận dụng — Excel thực hành — Quản lý chi phí và báo cáo bán hàng"
+        "Mở rộng: tổng hợp theo nhóm và PivotTable"
       ]
     },
     {
       "id": 64,
       "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
-      "source": "AI-assisted editorial illustration",
+      "source": "Original code-native editorial artwork",
       "file": "/images/course-covers/v2/course-64.webp",
-      "bytes": 70704,
-      "sha256": "5925c5f8c51abd006fb7aeeb9ec0110458c27255de995356d5a2ff47c6c89a2c",
+      "bytes": 17230,
+      "sha256": "ff049507f21c84fa6c2b828a73aadc4e647f530c2aa00f1d2e6b0ce84a1d1760",
       "lessonTitles": [
         "Tạo tài liệu và quản lý phiên bản",
         "Cấu trúc báo cáo bằng Styles",
@@ -120,17 +154,16 @@
         "Ôn tập: sửa năm lỗi thường gặp",
         "Video nguồn: làm quen Word",
         "Dự án: hồ sơ đề xuất hoạt động nhóm",
-        "Mở rộng: nhận xét và kiểm soát bản sửa",
-        "Kiểm tra vận dụng — Word thực hành — Báo cáo và hồ sơ văn phòng"
+        "Mở rộng: nhận xét và kiểm soát bản sửa"
       ]
     },
     {
       "id": 55,
       "title": "Office 365 — Nội dung tham chiếu Kaggle",
-      "source": "AI-assisted editorial illustration",
+      "source": "Original code-native editorial artwork",
       "file": "/images/course-covers/v2/course-55.webp",
-      "bytes": 63240,
-      "sha256": "7bd6bb6a1d77b3719a947581d29664d06084748abfedc16b700d6f8062cdcf05",
+      "bytes": 16342,
+      "sha256": "e3057d96459ca4ab603db787750d5cad98cae99f65158f34e27ae4ec9268b4d0",
       "lessonTitles": [
         "What is OneDrive for Business?",
         "Add, restore, delete documents on OneDrive",

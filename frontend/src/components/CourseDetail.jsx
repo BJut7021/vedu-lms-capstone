@@ -1,6 +1,7 @@
 import { useState } from "react";
 import CourseStartGuide from "./CourseStartGuide";
 import CourseImage from "./CourseImage";
+import CourseIntroduction from "./CourseIntroduction";
 import {
   ArrowLeft,
   PlayCircle,
@@ -55,7 +56,7 @@ export default function CourseDetail({
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-8 space-y-4">
             <span className="px-3 py-1 bg-blue-50 text-blue-700 font-semibold text-xs rounded-full">
-              Khóa học định hướng lộ trình AI
+              Học theo mục tiêu · Theo dõi tiến độ
             </span>
             <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight">
               {course.title}
@@ -63,6 +64,13 @@ export default function CourseDetail({
             <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
               {course.description}
             </p>
+            <a
+              href="#truoc-khi-hoc"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 hover:bg-blue-100"
+            >
+              <FileText size={18} />
+              Xem đề cương & yêu cầu khóa học
+            </a>
 
             <div className="flex flex-wrap items-center gap-6 pt-2 text-sm text-gray-500">
               <div className="flex items-center gap-1.5 text-amber-500 font-bold">
@@ -129,19 +137,28 @@ export default function CourseDetail({
           </div>
         </div>
 
-        <CourseStartGuide />
+        <CourseIntroduction course={course} />
+        <details className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+          <summary className="cursor-pointer font-bold text-blue-800">
+            Hướng dẫn sử dụng phòng học cho người mới
+          </summary>
+          <div className="mt-4">
+            <CourseStartGuide />
+          </div>
+        </details>
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
           <div className="flex items-center justify-between border-b pb-4">
             <div>
               <h2 className="text-xl font-extrabold text-gray-900">
-                Đề cương chi tiết khóa học
+                Nội dung và thứ tự bài học
               </h2>
               <p className="text-xs text-gray-500 mt-1">
-                Bao gồm chuỗi bài giảng video, tài liệu và bài quiz đánh giá
+                Các bài học, học liệu và bài kiểm tra đã công bố
               </p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-lg text-gray-600">
-              {course.sections.length} chương • {allLessons.length} bài học
+              {allLessons.filter((l) => l.type !== "quiz").length} bài học ·{" "}
+              {allLessons.filter((l) => l.type === "quiz").length} bài kiểm tra
             </span>
           </div>
 

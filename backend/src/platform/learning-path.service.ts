@@ -11,6 +11,7 @@ import { AccessService, Actor } from '../auth/access.service';
 import { RecommendationService } from './recommendation.service';
 import { planOptions } from './path-planner';
 import type { PathLesson, Preferences } from './path-planner';
+import { weeklySchedule } from './path-schedule';
 
 @Injectable()
 export class LearningPathService {
@@ -126,7 +127,7 @@ export class LearningPathService {
       throw new BadRequestException((e as Error).message);
     }
     const evidence = {
-      version: 'vedu-path-planner-1.0',
+      version: 'vedu-path-planner-1.1',
       source: ranking.source === 'MODEL' ? 'MODEL_CONSTRAINED' : 'CURRICULUM',
       experimentId: ranking.source === 'MODEL' ? ranking.experimentId : null,
       reason: ranking.reason,
@@ -137,7 +138,7 @@ export class LearningPathService {
       note:
         plans.length < p.count
           ? 'Chỉ có số phương án khác nhau như hiển thị do số bài còn lại/tiên quyết. Không nhân bản kế hoạch để đủ số lượng.'
-          : 'Các phương án có tập bài hoặc thứ tự khác nhau; không tự cấp quyền học.',
+          : 'So sánh cả nội dung và nhịp học. Khóa tuần tự có thể cùng thứ tự bài nhưng khác thời gian ôn/luyện và lịch tuần; không tự cấp quyền học.',
     };
     const id = randomUUID();
     await this.db.query(
@@ -177,6 +178,14 @@ export class LearningPathService {
       [actor.userId, row.course_id],
     );
     const done = new Set(progress.map((r) => Number(r.lesson_id)));
+    const changes: any[] = await this.db.query(
+      'SELECT l.lesson_id,l.is_published,l.is_deleted,GREATEST(l.updated_at,m.updated_at) changed_at FROM lms.lessons l LEFT JOIN lms.lesson_pedagogy m USING(lesson_id) WHERE l.course_id=$1',
+      [row.course_id],
+    );
+    const curriculumChanged = changes.some(
+      (l) =>
+        new Date(l.changed_at).getTime() > new Date(row.created_at).getTime(),
+    );
     const feedback = await this.db.query(
       'SELECT plan_id,rating,comment FROM learning.path_feedback WHERE path_set_id=$1 AND student_id=$2',
       [id, actor.userId],
@@ -185,14 +194,58 @@ export class LearningPathService {
       ...row,
       course_id: Number(row.course_id),
       feedback,
+      curriculumChanged,
       externalExplanationAvailable: this.externalReady(),
-      plans: row.plans.map((p: any) => ({
-        ...p,
-        steps: p.steps.map((s: any) => ({
+      plans: row.plans.map((p: any) => {
+        const steps = p.steps.map((s: any) => ({
           ...s,
           completed: done.has(s.lessonId),
-        })),
-      })),
+        }));
+        const activities = (
+          p.activities ??
+          p.steps.map((s: any) => ({
+            lessonId: s.lessonId,
+            title: s.title,
+            activity: 'LEARN',
+            estimatedSeconds: s.estimatedSeconds,
+          }))
+        ).filter((a: any) => !done.has(a.lessonId));
+        const next = steps.find(
+          (s: any) =>
+            !s.completed && s.prerequisites.every((id: number) => done.has(id)),
+        );
+        const remainingSeconds = activities.reduce(
+          (sum: number, a: any) => sum + a.estimatedSeconds,
+          0,
+        );
+        return {
+          ...p,
+          steps,
+          remainingSeconds,
+          fitsBudget:
+            remainingSeconds <=
+            row.preferences.weeklySeconds * row.preferences.horizonWeeks,
+          estimatedWeeks: Math.ceil(
+            remainingSeconds / row.preferences.weeklySeconds,
+          ),
+          schedule: weeklySchedule(
+            activities,
+            row.preferences.weeklySeconds,
+            row.preferences.horizonWeeks,
+          ),
+          progress: {
+            completed: steps.filter((s: any) => s.completed).length,
+            total: steps.length,
+            percent: steps.length
+              ? Math.round(
+                  (100 * steps.filter((s: any) => s.completed).length) /
+                    steps.length,
+                )
+              : 100,
+          },
+          nextLessonId: !curriculumChanged ? (next?.lessonId ?? null) : null,
+        };
+      }),
     };
   }
   async select(actor: Actor, id: string, planId: unknown) {

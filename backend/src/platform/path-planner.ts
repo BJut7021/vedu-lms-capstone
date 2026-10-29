@@ -1,4 +1,5 @@
 // Curriculum constraints are authoritative. Model scores only rank eligible frontier nodes.
+import { weeklySchedule } from './path-schedule';
 export type Preferences = {
   goal: 'FOUNDATION' | 'PRACTICAL' | 'CAREER' | 'CERTIFICATION';
   level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
@@ -76,6 +77,8 @@ export function planOptions(
       focus: 'Củng cố khái niệm và tự kiểm tra trước khi tăng độ khó.',
       kinds: ['CONCEPT', 'REVIEW'],
       weight: 0.15,
+      review: 0.25,
+      practice: 0.1,
     },
     {
       id: 'balanced',
@@ -83,6 +86,8 @@ export function planOptions(
       focus: 'Kết hợp kiến thức, thực hành và sản phẩm đầu ra.',
       kinds: ['CONCEPT', 'PRACTICE', 'PROJECT'],
       weight: 0.35,
+      review: 0.1,
+      practice: 0.2,
     },
     {
       id: 'fast',
@@ -91,6 +96,8 @@ export function planOptions(
         'Tập trung các bước thiết yếu để ứng dụng; không thay thế học đủ khóa.',
       kinds: ['PROJECT'],
       weight: 0.25,
+      review: 0,
+      practice: 0.05,
     },
     {
       id: 'deep',
@@ -98,6 +105,8 @@ export function planOptions(
       focus: 'Thêm video, ôn tập và bài nâng cao; cần quỹ thời gian lớn hơn.',
       kinds: ['CONCEPT', 'PRACTICE', 'PROJECT', 'REVIEW', 'VIDEO'],
       weight: 0.5,
+      review: 0.3,
+      practice: 0.3,
     },
   ];
   // Goal changes presentation priority; it never changes the assessment/completion requirements.
@@ -111,7 +120,7 @@ export function planOptions(
     (a, b) => Number(b.id === preferred) - Number(a.id === preferred),
   );
   const seen = new Set<string>();
-  return variants
+  const plans = variants
     .flatMap((v) => {
       const selected = new Set<number>();
       const add = (id: number) => {
@@ -164,16 +173,62 @@ export function planOptions(
         selected.delete(next.id);
         satisfied.add(next.id);
       }
-      const signature = ordered.map((l) => l.id).join(',');
+      const activities = ordered.flatMap((l) => [
+        {
+          lessonId: l.id,
+          title: l.title,
+          activity: 'LEARN',
+          estimatedSeconds: Math.max(1, l.seconds),
+        },
+        ...(ordered.length >= 3 && v.review > 0
+          ? [
+              {
+                lessonId: l.id,
+                title: l.title,
+                activity: 'REVIEW',
+                estimatedSeconds: Math.ceil(l.seconds * v.review),
+              },
+            ]
+          : []),
+        ...(ordered.length >= 3 &&
+        v.practice > 0 &&
+        !['PRACTICE', 'PROJECT'].includes(l.kind)
+          ? [
+              {
+                lessonId: l.id,
+                title: l.title,
+                activity: 'PRACTICE',
+                estimatedSeconds: Math.ceil(l.seconds * v.practice),
+              },
+            ]
+          : []),
+      ]);
+      const contentSignature = ordered.map((l) => l.id).join(',');
+      const signature =
+        contentSignature +
+        '|' +
+        activities.map((a) => `${a.activity}:${a.estimatedSeconds}`).join(',');
       if (seen.has(signature)) return [];
       seen.add(signature);
-      const seconds = ordered.reduce((s, l) => s + l.seconds, 0);
+      const seconds = activities.reduce((s, a) => s + a.estimatedSeconds, 0);
+      const minutes = (value: number) =>
+        `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value / 60)} phút`;
       const budget = p.weeklySeconds * p.horizonWeeks;
       return [
         {
           id: v.id,
           title: v.title,
           focus: v.focus,
+          contentSignature,
+          activities,
+          schedule: weeklySchedule(activities, p.weeklySeconds, p.horizonWeeks),
+          contentSeconds: ordered.reduce((s, l) => s + l.seconds, 0),
+          reviewSeconds: activities
+            .filter((a) => a.activity === 'REVIEW')
+            .reduce((s, a) => s + a.estimatedSeconds, 0),
+          practiceSeconds: activities
+            .filter((a) => a.activity === 'PRACTICE')
+            .reduce((s, a) => s + a.estimatedSeconds, 0),
           estimatedSeconds: seconds,
           estimatedWeeks: Math.ceil(seconds / p.weeklySeconds),
           fitsBudget: seconds <= budget,
@@ -181,7 +236,8 @@ export function planOptions(
           omittedLessonCount: remaining.length - ordered.length,
           explanation: [
             `Mục tiêu: ${GOALS[p.goal]}; ngữ cảnh: ${OCCUPATIONS[p.occupation]}. Trình độ là tự khai, chưa phải kết quả kiểm tra đầu vào.`,
-            `${ordered.length} bài còn lại, khoảng ${seconds} giây. ${seconds <= budget ? 'Nằm trong' : 'Vượt'} ngân sách ${budget} giây; không cắt bỏ bài tiên quyết để ép vừa thời gian.`,
+            `${ordered.length} bài còn lại, khoảng ${minutes(seconds)} gồm học, ôn và luyện tập. ${seconds <= budget ? 'Nằm trong' : 'Vượt'} quỹ ${minutes(budget)}; không cắt bỏ bài tiên quyết để ép vừa thời gian.`,
+            'Phần ôn và luyện tập là thời gian tự học dự kiến, không phải thời lượng video hay thời gian đã học được ghi nhận.',
             ...(ordered.some((l) => l.difficulty > level)
               ? [
                   'Có bài vượt trình độ tự khai. Cân nhắc học nền tảng/nhờ giảng viên hỗ trợ trước khi chọn phương án này.',
@@ -228,4 +284,16 @@ export function planOptions(
       ];
     })
     .slice(0, p.count);
+  const recommended = plans.find((plan) => plan.fitsBudget) ?? plans[0];
+  return plans.map((plan) => ({
+    ...plan,
+    recommended: plan.id === recommended?.id,
+    differenceBasis: plans.some(
+      (other) =>
+        other.id !== plan.id &&
+        other.contentSignature === plan.contentSignature,
+    )
+      ? 'STUDY_PACE'
+      : 'CONTENT_AND_ORDER',
+  }));
 }

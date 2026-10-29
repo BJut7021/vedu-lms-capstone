@@ -1,15 +1,15 @@
 {
-  "checkedAt": "2026-10-27T15:35:03.044Z",
+  "checkedAt": "2026-10-28T11:09:47.108Z",
   "checks": [
     "Every reviewed course has its own file",
-    "50 decoded images use wide composition and efficient WebP",
+    "All catalog images decode with wide composition and efficient WebP",
     "No repeated image bytes",
     "No exact perceptual duplicate in the illustration area",
-    "All 50 deployed URLs serve the intended image",
+    "All 52 deployed URLs serve the intended image",
     "Entire cover library stays under 2 MB"
   ],
-  "count": 50,
-  "totalBytes": 1275682,
+  "count": 52,
+  "totalBytes": 1048746,
   "closestVisualPairs": [
     {
       "a": 32,

@@ -1,0 +1,15 @@
+# Isolated local copy: never run the normal seed over the restored database.
+services:
+  db:
+    volumes: !override
+      - vedu_postgres_data:/var/lib/postgresql/data
+  backend:
+    depends_on: !override
+      db:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+  ml:
+    volumes: !override
+      - vedu_ml_artifacts:/app/artifacts
+      - "${VEDU_SNAPSHOT_DATA_DIR}:/data:ro"

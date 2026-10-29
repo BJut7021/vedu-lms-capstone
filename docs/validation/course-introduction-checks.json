@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-28T13:29:57.260Z",
+  "checks": [
+    "oop: learning outcomes and preparation visible without authentication",
+    "oop: all lesson bodies and private resource URLs remain hidden",
+    "oop: only the chosen original syllabus PDF can be read before enrollment",
+    "systems: learning outcomes and preparation visible without authentication",
+    "systems: all lesson bodies and private resource URLs remain hidden",
+    "systems: only the chosen original syllabus PDF can be read before enrollment",
+    "Unrelated teacher cannot alter the public introduction",
+    "Student cannot publish an introduction",
+    "Owner can save introduction and selected syllabus",
+    "Cannot publish a resource belonging to another course",
+    "Invalid learning outcomes are rejected",
+    "Reading syllabus never creates enrollment or unlocks a paid classroom",
+    "Ordinary lesson media remains protected",
+    "Removing syllabus immediately closes its public PDF endpoint",
+    "Unpublished lesson cannot expose a linked syllabus",
+    "Draft course and syllabus cannot be viewed publicly"
+  ],
+  "notes": "Isolated test course archived and test sessions revoked afterwards; existing learner progress unchanged."
+}

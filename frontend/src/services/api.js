@@ -23,7 +23,10 @@ async function request(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401 && options.headers?.Authorization)
       window.dispatchEvent(new Event("vedu:session-expired"));
-    if (response.status === 502 || response.status === 503) {
+    if (
+      (response.status === 502 || response.status === 503) &&
+      !payload?.message
+    ) {
       throw new Error(
         'Backend chưa chạy ở cổng 3000. Hãy chạy task "Vedu: Backend" trong VS Code.',
       );
@@ -46,6 +49,8 @@ export const api = {
   health: () => request("/health"),
   courses: (filters = {}) =>
     request(`/courses?${new URLSearchParams(filters)}`),
+  courseSuggestions: (q, signal) =>
+    request(`/courses/suggestions?${new URLSearchParams({ q })}`, { signal }),
   course: (courseId) => request(`/courses/${courseId}`),
   enroll: (courseId, token) =>
     request(`/enrollments/me/${courseId}`, {
@@ -133,6 +138,23 @@ export const api = {
     const payload = await response.json().catch(() => null);
     if (!response.ok)
       throw new Error(payload?.message || "Không tải được ảnh đại diện");
+    return payload;
+  },
+  configureMomoWallet: async (data, file, token) => {
+    const form = new FormData();
+    Object.entries(data).forEach(([k, v]) => form.append(k, String(v)));
+    if (file) form.append("file", file);
+    const response = await fetch(
+      `${API_BASE_URL}/platform/payments/momo/wallet`,
+      {
+        method: "POST",
+        headers: withToken(token),
+        body: form,
+      },
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok)
+      throw new Error(payload?.message || "Không lưu được QR MoMo");
     return payload;
   },
   download: async (path, token, filename) => {

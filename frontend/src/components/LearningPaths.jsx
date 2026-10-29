@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { api } from "../services/api";
 import { formatMinutes } from "../services/time";
+import { PathComparison, PathProgress, WeeklyPlan } from "./PathPlanTools";
 
 const field =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm";
@@ -26,6 +27,7 @@ function Select({ label, options, value, onChange }) {
     <label className="space-y-1 text-sm font-medium">
       <span className="block">{label}</span>
       <select
+        aria-label={label}
         className={field}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -55,6 +57,25 @@ export default function LearningPaths({ auth, data, act, busy }) {
   const [feedback, setFeedback] = useState({});
   const [consent, setConsent] = useState(false);
   const update = (key, value) => setForm((s) => ({ ...s, [key]: value }));
+  const applyResult = (r) => {
+    setResult(r);
+    setHistory((h) =>
+      h.map((item) => (item.path_set_id === r.path_set_id ? r : item)),
+    );
+  };
+  const generate = () =>
+    act(async () => {
+      const r = await api.platform(
+        `/courses/${course}/path-options`,
+        auth.accessToken,
+        form,
+      );
+      setResult(r);
+      setHistory((h) => [r, ...h].slice(0, 5));
+      return {
+        message: "Đã cập nhật phương án và lịch tuần theo tiến độ hiện tại.",
+      };
+    });
   const loadHistory = async (id) => {
     if (!id) {
       setHistory([]);
@@ -69,7 +90,7 @@ export default function LearningPaths({ auth, data, act, busy }) {
     if (rows[0]) setForm(rows[0].preferences);
   };
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <section className="rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white">
         <div className="mb-3 flex items-center gap-2">
           <Compass size={24} />
@@ -84,16 +105,7 @@ export default function LearningPaths({ auth, data, act, busy }) {
         className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
         onSubmit={(e) => {
           e.preventDefault();
-          act(async () => {
-            const r = await api.platform(
-              `/courses/${course}/path-options`,
-              auth.accessToken,
-              form,
-            );
-            setResult(r);
-            setHistory((h) => [r, ...h].slice(0, 5));
-            return { message: "Đã tạo các phương án phù hợp dữ liệu hiện có." };
-          });
+          generate();
         }}
       >
         <label className="block space-y-1 text-sm font-medium">
@@ -242,7 +254,9 @@ export default function LearningPaths({ auth, data, act, busy }) {
         <>
           <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <strong>
-              Giải thích dựa trên bằng chứng · {result.evidence.source}
+              {result.evidence.source === "MODEL_CONSTRAINED"
+                ? "Kết hợp mô hình và điều kiện học trước"
+                : "Gợi ý theo chương trình và nhu cầu học"}
             </strong>
             <p>{result.evidence.reason}</p>
             <p>{result.evidence.note}</p>
@@ -289,14 +303,41 @@ export default function LearningPaths({ auth, data, act, busy }) {
               nhận của khóa.
             </p>
           )}
-          <div className="grid items-start gap-5 xl:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-2">
+            {result.curriculumChanged && (
+              <p
+                role="alert"
+                className="rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+              >
+                Học liệu đã thay đổi từ khi tạo lộ trình. Hãy cập nhật trước khi
+                tiếp tục theo kế hoạch cũ.
+              </p>
+            )}
+            {result.plans.length > 0 && (
+              <div className="min-w-0 space-y-4 xl:col-span-2">
+                <button
+                  disabled={busy}
+                  type="button"
+                  onClick={generate}
+                  className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700 disabled:opacity-50"
+                >
+                  Cập nhật lộ trình theo tiến độ mới
+                </button>
+                <PathComparison plans={result.plans} />
+              </div>
+            )}
             {result.plans.map((plan) => {
-              const current = plan.steps.find((s) => !s.completed),
+              const current = plan.nextLessonId
+                  ? plan.steps.find((s) => s.lessonId === plan.nextLessonId)
+                  : plan.nextLessonId === undefined
+                    ? plan.steps.find((s) => !s.completed)
+                    : null,
                 selected = result.selected_plan_id === plan.id;
               return (
                 <section
+                  id={`plan-card-${plan.id}`}
                   key={plan.id}
-                  className={`space-y-4 rounded-2xl border-2 bg-white p-5 ${selected ? "border-blue-500 shadow-md shadow-blue-100" : "border-slate-100"}`}
+                  className={`min-w-0 scroll-mt-24 space-y-4 rounded-2xl border-2 bg-white p-5 ${selected ? "xl:col-span-2 border-blue-500 shadow-md shadow-blue-100" : "border-slate-100"}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-lg font-bold">{plan.title}</h3>
@@ -307,10 +348,19 @@ export default function LearningPaths({ auth, data, act, busy }) {
                     )}
                   </div>
                   <p className="text-sm text-slate-600">{plan.focus}</p>
+                  {plan.differenceBasis === "STUDY_PACE" && (
+                    <p className="text-xs font-medium text-violet-700">
+                      Giữ thứ tự chương trình · khác nhịp ôn và luyện tập
+                    </p>
+                  )}
+                  <PathProgress plan={plan} />
                   <div className="flex flex-wrap gap-2 text-xs">
                     <span className="rounded-lg bg-slate-100 px-3 py-2">
                       {plan.steps.length} bài ·{" "}
-                      {formatMinutes(plan.estimatedSeconds)}
+                      {formatMinutes(
+                        plan.remainingSeconds ?? plan.estimatedSeconds,
+                      )}{" "}
+                      còn dự kiến
                     </span>
                     <span
                       className={`rounded-lg px-3 py-2 ${plan.fitsBudget ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}
@@ -330,7 +380,11 @@ export default function LearningPaths({ auth, data, act, busy }) {
                     </summary>
                     <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-600">
                       {plan.explanation.map((t) => (
-                        <li key={t}>{t}</li>
+                        <li key={t}>
+                          {t.replace(/(\d+) giây/g, (_, seconds) =>
+                            formatMinutes(Number(seconds)),
+                          )}
+                        </li>
                       ))}
                     </ul>
                   </details>
@@ -349,66 +403,80 @@ export default function LearningPaths({ auth, data, act, busy }) {
                       <small>{result.explanation.notice}</small>
                     </div>
                   )}
-                  <ol className="space-y-3">
-                    {plan.steps.map((s) => (
-                      <li
-                        className="rounded-xl border border-slate-100 p-3"
-                        key={s.lessonId}
-                      >
-                        <div className="flex gap-2">
-                          {s.completed ? (
-                            <CheckCircle2
-                              size={19}
-                              className="shrink-0 text-emerald-500"
-                            />
-                          ) : (
-                            <BookOpen
-                              size={19}
-                              className="shrink-0 text-blue-500"
-                            />
-                          )}
-                          <div>
-                            <Link
-                              className="text-sm font-semibold text-blue-700 hover:underline"
-                              to={`/learn/${result.course_id}/${s.lessonId}`}
-                            >
-                              {s.order}. {s.title}
-                            </Link>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {kinds[s.kind]} · Mức {s.difficulty}/3 ·{" "}
-                              {formatMinutes(s.estimatedSeconds)}
-                            </p>
+                  <WeeklyPlan
+                    plan={plan}
+                    courseId={result.course_id}
+                    selected={selected}
+                    stale={result.curriculumChanged}
+                  />
+                  <details
+                    open={selected}
+                    className="rounded-xl border border-slate-100 p-3"
+                  >
+                    <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+                      Các bài học và căn cứ gợi ý ({plan.steps.length} bài)
+                    </summary>
+                    <ol className="mt-3 space-y-3">
+                      {plan.steps.map((s) => (
+                        <li
+                          className="rounded-xl border border-slate-100 p-3"
+                          key={s.lessonId}
+                        >
+                          <div className="flex gap-2">
+                            {s.completed ? (
+                              <CheckCircle2
+                                size={19}
+                                className="shrink-0 text-emerald-500"
+                              />
+                            ) : (
+                              <BookOpen
+                                size={19}
+                                className="shrink-0 text-blue-500"
+                              />
+                            )}
+                            <div>
+                              <Link
+                                className="text-sm font-semibold text-blue-700 hover:underline"
+                                to={`/learn/${result.course_id}/${s.lessonId}`}
+                              >
+                                {s.order}. {s.title}
+                              </Link>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {kinds[s.kind]} · Mức {s.difficulty}/3 ·{" "}
+                                {formatMinutes(s.estimatedSeconds)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <details className="mt-2 text-xs text-slate-600">
-                          <summary className="cursor-pointer">
-                            Căn cứ chọn bài & đầu ra
-                          </summary>
-                          {s.reasons.map((t) => (
-                            <p key={t} className="mt-2">
-                              {t}
-                            </p>
-                          ))}
-                          {s.outcomes.map((t) => (
-                            <p key={t} className="mt-2">
-                              Đầu ra: {t}
-                            </p>
-                          ))}
-                          {s.sources.map((source, i) => (
-                            <a
-                              key={i}
-                              className="mt-2 block text-blue-700 underline"
-                              target="_blank"
-                              rel="noreferrer"
-                              href={source.url}
-                            >
-                              {source.provider}: {source.title}
-                            </a>
-                          ))}
-                        </details>
-                      </li>
-                    ))}
-                  </ol>
+                          <details className="mt-2 text-xs text-slate-600">
+                            <summary className="cursor-pointer">
+                              Căn cứ chọn bài & đầu ra
+                            </summary>
+                            {s.reasons.map((t) => (
+                              <p key={t} className="mt-2">
+                                {t}
+                              </p>
+                            ))}
+                            {s.outcomes.map((t) => (
+                              <p key={t} className="mt-2">
+                                Đầu ra: {t}
+                              </p>
+                            ))}
+                            {s.sources.map((source, i) => (
+                              <a
+                                key={i}
+                                className="mt-2 block text-blue-700 underline"
+                                target="_blank"
+                                rel="noreferrer"
+                                href={source.url}
+                              >
+                                {source.provider}: {source.title}
+                              </a>
+                            ))}
+                          </details>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                   {!plan.coversWholeCourse && (
                     <p className="text-xs text-amber-700">
                       Chưa gồm {plan.omittedLessonCount} bài còn lại. Muốn chứng
@@ -419,10 +487,10 @@ export default function LearningPaths({ auth, data, act, busy }) {
                     <button
                       type="button"
                       className={button}
-                      disabled={busy || selected}
+                      disabled={busy || selected || result.curriculumChanged}
                       onClick={() =>
                         act(async () =>
-                          setResult(
+                          applyResult(
                             await api.platform(
                               `/path-options/${result.path_set_id}/selection`,
                               auth.accessToken,
@@ -435,7 +503,7 @@ export default function LearningPaths({ auth, data, act, busy }) {
                     >
                       Chọn phương án
                     </button>
-                    {selected && current && (
+                    {selected && current && !result.curriculumChanged && (
                       <Link
                         className={button}
                         to={`/learn/${result.course_id}/${current.lessonId}`}
