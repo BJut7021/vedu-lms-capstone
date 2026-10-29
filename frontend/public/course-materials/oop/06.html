@@ -1,0 +1,25 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>06 · Đa hình và lớp trừu tượng · VEDU</title><style>body{margin:0;background:#eef3fb;color:#17243e;font:16px/1.8 system-ui,sans-serif}main{max-width:920px;margin:24px auto;padding:28px;background:white;border-radius:20px;border-top:6px solid #2563eb}h1{font-size:28px;line-height:1.4}p{white-space:pre-line;overflow-wrap:anywhere}small{color:#53657a}button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:8px}@media(max-width:600px){main{margin:12px;padding:20px}h1{font-size:22px}}@media print{button{display:none}body{background:white}}</style><main><small>VEDU Learning Management System · Phiếu tự học</small><h1>06 · Đa hình và lớp trừu tượng</h1><button onclick="window.print()">In / lưu PDF</button><p>MỤC TIÊU
+Cài đặt override và gọi hành vi qua kiểu lớp cha.
+
+ĐỐI CHIẾU ĐỀ CƯƠNG
+Chương 3, mục 3.2 đến 3.3
+
+KIẾN THỨC CỐT LÕI
+Phương thức virtual cho phép lớp con override. Phương thức abstract yêu cầu lớp con cụ thể cài đặt. Lệnh gọi qua tham chiếu cha dùng triển khai override của kiểu thực tế; new che phương thức có quy tắc khác. Lớp abstract không thể tạo trực tiếp.
+
+BÀI TẬP NHỎ
+1. Cho A.F() virtual trả 1, B : A override F() trả 2. A x = new B(); x.F() trả gì? Giải thích.
+2. Tạo abstract Hinh với abstract DienTich(); cài đặt HinhVuong và HinhTron.
+
+THỰC HÀNH CUỐI BÀI
+Xây dựng abstract PhongTro có Ma, SoDien và SoNuoc không âm, abstract TinhTien(). PhongA tính 1400 + 2*SoDien + 8*SoNuoc + 50*SoLuotKhach; PhongB tính 2000 + 2*SoDien + 8*SoNuoc + 5*KgGiat. Các số tiền tính bằng nghìn đồng. Dùng List&lt;PhongTro&gt; để in và tính tổng, không dùng if theo loại trong vòng lặp tính tiền.
+
+TIÊU CHÍ TỰ KIỂM TRA (10 điểm)
+• Mô hình và yêu cầu: 2 điểm
+• Xử lý hoặc lập luận chính xác: 4 điểm
+• Kiểm tra dữ liệu và trường hợp biên: 2 điểm
+• Trình bày và minh chứng: 2 điểm
+
+Hãy lưu sản phẩm trên máy và đối chiếu tiêu chí. Bài thực hành này chưa được chấm tự động; có thể hỏi giảng viên ở Hỏi đáp. Hoàn thành bài đọc không đồng nghĩa đã đạt năng lực thực hành.
+
+Nguồn: học liệu gốc và bài tập bổ sung từ RAR nhóm cung cấp; xem mục Tài liệu để mở PDF nguyên bản và nguồn ngoài.</p></main></html>

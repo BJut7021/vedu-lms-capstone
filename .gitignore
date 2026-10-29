@@ -12,9 +12,38 @@ obj/
 # Environment variables & Configs
 .env
 .env.local
+.env.vedu-*
 
 # IDE & OS specific files
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
 .DS_Store
 Thumbs.db
+ml-core/data/
+ml-core/artifacts/
+backend/media/
+.work/
+
+# Local working files
+/output/
+/tmp/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+
+# Docker and database backups
+/.work/
+/uploads/
+/media/
+*.dump
+*.backup
+*.zip
+*.rar
+*.sqlite
+*.db
+
+# Review course PDFs before publishing
+/data/learning/software-course-assets/
