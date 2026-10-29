@@ -1,17 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
+import ManualCheckout from "./ManualCheckout";
+
 export function Checkout({ auth }) {
-  const { courseId } = useParams(),
-    [status, setStatus] = useState(null),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+  const { courseId } = useParams();
+  const [response, setResponse] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const token = auth?.accessToken;
+  const status =
+    response && String(response.courseId) === String(courseId)
+      ? response
+      : null;
   const refresh = useCallback(
     () =>
       api
         .platform(`/checkout/${courseId}`, token)
-        .then(setStatus)
+        .then((s) => {
+          setResponse(s);
+          setError("");
+        })
         .catch((e) => setError(e.message)),
     [courseId, token],
   );
@@ -34,23 +43,39 @@ export function Checkout({ auth }) {
       </main>
     );
   return (
-    <main className="mx-auto max-w-xl space-y-5 px-4 py-14">
+    <main className="mx-auto max-w-5xl space-y-5 px-4 py-10">
       <Link className="text-blue-600" to={`/courses/${courseId}`}>
         ← Khóa học
       </Link>
-      <h1 className="text-3xl font-black">Thanh toán khóa học</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="rounded-xl bg-pink-600 px-3 py-2 font-black text-white">
+          MoMo
+        </span>
+        <h1 className="text-2xl font-black sm:text-3xl">Thanh toán học phí</h1>
+      </div>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">
           {error}
         </p>
       )}
+      {!status && !error && (
+        <p role="status" className="text-slate-500">
+          Đang tải thông tin học phí…
+        </p>
+      )}
       {status && (
-        <div className="space-y-5 rounded-2xl border bg-white p-6">
+        <div className="space-y-5 rounded-2xl border bg-white p-5 sm:p-6">
           <h2 className="text-xl font-bold">{status.title}</h2>
-          <p className="text-2xl font-black text-blue-600">
+          <p className="text-2xl font-black text-pink-600">
             {status.amount.toLocaleString("vi-VN")} {status.currency}
           </p>
-          <p>Trạng thái: {status.status}</p>
+          <p className="text-sm text-slate-600">
+            {status.paid
+              ? "Đã mở quyền học"
+              : status.manualRequest?.status === "REVIEW"
+                ? "Đang chờ đối soát học phí"
+                : "Chưa xác nhận thanh toán"}
+          </p>
           {status.paid ? (
             <>
               <p className="text-emerald-700">Quyền học đã mở.</p>
@@ -61,19 +86,24 @@ export function Checkout({ auth }) {
                 Vào khóa học
               </Link>
             </>
+          ) : status.paymentMode !== "gateway" || status.manualRequest ? (
+            <ManualCheckout
+              status={status}
+              auth={auth}
+              courseId={courseId}
+              refresh={refresh}
+            />
           ) : (
-            <>
-              <p className="text-sm text-slate-600">
+            <div className="space-y-4">
+              <p className="text-sm leading-6 text-slate-600">
                 {status.sandbox
-                  ? "Chế độ Sandbox: thử nghiệm, không thu tiền thật."
-                  : "Thanh toán qua MoMo."}{" "}
-                Quyền học chỉ mở sau callback có chữ ký hợp lệ. Tham số trên URL
-                quay về không xác nhận thanh toán.
+                  ? "MoMo Sandbox: giao dịch thử nghiệm, không thu tiền thật."
+                  : "Thanh toán qua cổng MoMo."}{" "}
+                Quyền học mở sau khi backend xác minh kết quả thanh toán.
               </p>
               {!status.configured && (
                 <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-                  Nhóm chưa bổ sung khóa Sandbox trong .env. Chức năng được cấu
-                  hình sẵn; không thể tạo phiên thanh toán MoMo lúc này.
+                  Cổng MoMo chưa được cấu hình. Vui lòng liên hệ hỗ trợ.
                 </p>
               )}
               <button
@@ -83,13 +113,13 @@ export function Checkout({ auth }) {
                   setBusy(true);
                   setError("");
                   try {
-                    const r = await api.platform(
+                    const result = await api.platform(
                       `/checkout/${courseId}`,
-                      auth.accessToken,
+                      token,
                       {},
                     );
-                    if (r.payUrl) window.location.assign(r.payUrl);
-                    else refresh();
+                    if (result.payUrl) window.location.assign(result.payUrl);
+                    else await refresh();
                   } catch (e) {
                     setError(e.message);
                   } finally {
@@ -99,7 +129,7 @@ export function Checkout({ auth }) {
               >
                 Thanh toán MoMo
               </button>
-            </>
+            </div>
           )}
           <button
             className="block text-sm font-bold text-blue-600"

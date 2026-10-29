@@ -1,5 +1,38 @@
 [
   {
+    "id": 76,
+    "title": "Phân tích thiết kế hệ thống",
+    "topic": "Phân tích & Thiết kế hệ thống",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về hệ thống thông tin",
+      "02 · Xác định yêu cầu",
+      "03 · Mô hình hóa nghiệp vụ",
+      "04 · Mô hình hóa chức năng",
+      "05 · Mô hình hóa cấu trúc",
+      "06 · Thiết kế lớp và dữ liệu",
+      "07 · Thiết kế chức năng hệ thống"
+    ]
+  },
+  {
+    "id": 75,
+    "title": "Lập trình hướng đối tượng",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Ôn C# và phương pháp hướng đối tượng",
+      "02 · Lớp đối tượng và đóng gói",
+      "03 · Constructor nạp chồng và thành phần tĩnh",
+      "04 · Danh sách generic XML và mô hình lớp",
+      "05 · Kế thừa và quan hệ giữa các lớp",
+      "06 · Đa hình và lớp trừu tượng",
+      "07 · Interface và hợp đồng hành vi",
+      "08 · Tổ chức ứng dụng theo ba lớp",
+      "09 · Nguyên lý đóng mở Liskov và đảo phụ thuộc",
+      "10 · Ba nhóm mẫu thiết kế"
+    ]
+  },
+  {
     "id": 69,
     "title": "Mạng máy tính",
     "topic": "Mạng máy tính",
@@ -14,8 +47,7 @@
       "07 · Tầng mạng và giao thức IP",
       "08 · Tầng vận chuyển – TCP/UDP",
       "09 · Tầng ứng dụng",
-      "10 · Xây dựng hệ thống mạng cơ bản",
-      "Thi cuối khóa — Mạng máy tính"
+      "10 · Xây dựng hệ thống mạng cơ bản"
     ]
   },
   {
@@ -37,8 +69,7 @@
       "11 · Phương pháp đếm – Phép đếm – Giải tích tổ hợp",
       "12 · Phương pháp đếm",
       "13 · Quan hệ (phần 1)",
-      "14 · Quan hệ (phần 2)",
-      "Thi cuối khóa — Cấu trúc rời rạc"
+      "14 · Quan hệ (phần 2)"
     ]
   },
   {
@@ -52,8 +83,7 @@
       "Ôn tập: phân loại năm tình huống số",
       "Tình huống: link tài liệu bị gửi nhầm",
       "Dự án: bộ quy tắc làm việc số cho nhóm",
-      "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư",
-      "Kiểm tra vận dụng — Kỹ năng số thực hành — Tệp, cộng tác và an toàn email"
+      "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư"
     ]
   },
   {
@@ -67,8 +97,7 @@
       "Ôn tập: giản lược slide quá tải",
       "Video nguồn: làm quen PowerPoint",
       "Dự án: pitch đề xuất trong 300 giây",
-      "Mở rộng: khả năng tiếp cận và bản bàn giao",
-      "Kiểm tra vận dụng — PowerPoint thực hành — Thuyết trình dự án rõ ràng"
+      "Mở rộng: khả năng tiếp cận và bản bàn giao"
     ]
   },
   {
@@ -82,8 +111,7 @@
       "Ôn tập: phát hiện lỗi bảng tính",
       "Video nguồn: làm quen Excel",
       "Dự án: báo cáo bán hàng mini có kiểm soát",
-      "Mở rộng: tổng hợp theo nhóm và PivotTable",
-      "Kiểm tra vận dụng — Excel thực hành — Quản lý chi phí và báo cáo bán hàng"
+      "Mở rộng: tổng hợp theo nhóm và PivotTable"
     ]
   },
   {
@@ -97,8 +125,7 @@
       "Ôn tập: sửa năm lỗi thường gặp",
       "Video nguồn: làm quen Word",
       "Dự án: hồ sơ đề xuất hoạt động nhóm",
-      "Mở rộng: nhận xét và kiểm soát bản sửa",
-      "Kiểm tra vận dụng — Word thực hành — Báo cáo và hồ sơ văn phòng"
+      "Mở rộng: nhận xét và kiểm soát bản sửa"
     ]
   },
   {

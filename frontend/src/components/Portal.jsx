@@ -34,6 +34,7 @@ import CourseImage from "./CourseImage";
 import Notifications from "./Notifications";
 import Avatar from "./Avatar";
 import Profile from "./Profile";
+import PaymentReview from "./PaymentReview";
 
 const roleLabels = {
   STUDENT: "Học viên",
@@ -504,9 +505,28 @@ export default function Portal({
               {notice}
             </div>
           )}
-          {activePage === "profile" &&
-          !auth.user.isGuest &&
-          role !== "ADMIN" ? (
+          {activePage === "orders" && role === "ADMIN" ? (
+            <div className="space-y-6">
+              <PaymentReview auth={auth} />
+              <details className="rounded-2xl border border-slate-200 bg-white p-4">
+                <summary className="cursor-pointer font-bold text-slate-700">
+                  Toàn bộ đơn hàng của hệ thống
+                </summary>
+                <div className="mt-4">
+                  {renderAdminPage({
+                    activePage,
+                    data,
+                    catalog,
+                    auth,
+                    busy,
+                    runAction,
+                  })}
+                </div>
+              </details>
+            </div>
+          ) : activePage === "profile" &&
+            !auth.user.isGuest &&
+            role !== "ADMIN" ? (
             <Profile auth={auth} onUserUpdated={onUserUpdated} />
           ) : [
               "security",
@@ -831,7 +851,21 @@ function renderStudentPage({
             {data.orders.map((order) => (
               <tr key={order.orderId}>
                 <td className="px-3 py-4 font-bold">#{order.orderId}</td>
-                <td className="px-3 py-4">{order.courseName}</td>
+                <td className="px-3 py-4">
+                  <p>{order.courseName}</p>
+                  <Link
+                    className="mt-2 inline-block text-xs font-bold text-blue-700"
+                    to={
+                      order.status === "PAID"
+                        ? `/courses/${order.courseId}`
+                        : `/checkout/${order.courseId}`
+                    }
+                  >
+                    {order.status === "PAID"
+                      ? "Vào khóa học"
+                      : "Xem thanh toán / đối soát"}
+                  </Link>
+                </td>
                 <td className="px-3 py-4 font-bold">
                   {number(order.amount).toLocaleString("vi-VN")}{" "}
                   {order.currency}
@@ -848,7 +882,7 @@ function renderStudentPage({
         ) : (
           <Empty
             title="Chưa có đơn hàng"
-            description="Các khóa học demo hiện miễn phí nên không phát sinh thanh toán."
+            description="Đơn hàng xuất hiện khi bạn chọn mua khóa học có học phí."
           />
         )}
       </Panel>

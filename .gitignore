@@ -12,6 +12,7 @@ obj/
 # Environment variables & Configs
 .env
 .env.local
+.env.vedu-*
 
 # IDE & OS specific files
 .vscode/*

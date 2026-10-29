@@ -2,6 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Vedu: Update shared team server (keep data)",
+      "type": "shell",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\update-team-server.ps1",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
       "label": "Vedu: Full Docker demo (with ML)",
       "type": "shell",
       "command": "docker compose up --build -d",

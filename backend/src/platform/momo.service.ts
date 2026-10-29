@@ -93,6 +93,14 @@ export class MomoService {
       );
       if (order.status === 'PAID')
         throw new BadRequestException('Đơn hàng đã thanh toán');
+      const [manual] = await m.query(
+        'SELECT 1 FROM payment.manual_requests WHERE order_id=$1',
+        [o.id],
+      );
+      if (manual)
+        throw new BadRequestException(
+          'Đơn đã chọn chuyển khoản hoặc thu phí trực tiếp. Vui lòng hoàn tất đối soát.',
+        );
       const [pending] = await m.query(
         "SELECT request_id,provider_order_id,pay_url FROM payment.momo_requests WHERE order_id=$1 AND status='PENDING' ORDER BY created_at DESC LIMIT 1",
         [o.id],
@@ -199,7 +207,9 @@ export class MomoService {
       'resultCode',
       'transId',
     ];
-    const fields: Record<string, string | number | null | undefined> = { accessKey: cfg.accessKey };
+    const fields: Record<string, string | number | null | undefined> = {
+      accessKey: cfg.accessKey,
+    };
     for (const k of keys) {
       if (
         body[k] === undefined ||

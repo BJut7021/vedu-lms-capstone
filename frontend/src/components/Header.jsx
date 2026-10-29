@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Brand from "./Brand";
 import Avatar from "./Avatar";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ChevronDown, Menu, X, BookOpen } from "lucide-react";
+import CourseSearch from "./CourseSearch";
+import { Link, useSearchParams } from "react-router-dom";
+import { Compass, ChevronDown, Menu, X, BookOpen } from "lucide-react";
 
 export default function Header({
   onOpenAuth,
@@ -12,25 +13,29 @@ export default function Header({
   onDashboard,
   onHome,
   topics = [],
-  classroom = false,
   onRefreshCatalog,
 }) {
-  const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [query, setQuery] = useState(params.get("q") || "");
   const [menuOpen, setMenuOpen] = useState(false);
   const [topicsOpen, setTopicsOpen] = useState(false);
-  const search = (event) => {
-    event.preventDefault();
-    setMenuOpen(false);
-    navigate(
-      `/courses?${new URLSearchParams(query.trim() ? { q: query.trim() } : {})}`,
-    );
-  };
+  const accountMenu = useRef(null);
+  useEffect(() => {
+    const outside = (event) => {
+      if (accountMenu.current && !accountMenu.current.contains(event.target))
+        accountMenu.current.open = false;
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, []);
   const closeMenus = () => {
     setMenuOpen(false);
     setTopicsOpen(false);
+    if (accountMenu.current) accountMenu.current.open = false;
   };
+  const pathLink =
+    user?.role === "STUDENT" && !user.isGuest
+      ? "/student/learning-path"
+      : "/student/login?next=learning-path";
   return (
     <header className="sticky top-0 z-40 border-b border-blue-100/70 bg-white/95 backdrop-blur-xl">
       <div className="border-b border-slate-100 bg-slate-50">
@@ -56,7 +61,7 @@ export default function Header({
           </div>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 sm:gap-5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 lg:gap-3 sm:px-6 lg:px-8">
         <button
           onClick={onHome}
           className="flex shrink-0 items-center gap-1.5 text-left sm:gap-2.5"
@@ -66,7 +71,7 @@ export default function Header({
         </button>
         <nav
           aria-label="Điều hướng chính"
-          className="hidden shrink-0 items-center gap-5 whitespace-nowrap text-sm font-semibold text-slate-600 lg:flex"
+          className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-sm font-semibold text-slate-600 lg:flex"
         >
           <Link
             onClick={closeMenus}
@@ -109,40 +114,53 @@ export default function Header({
               </div>
             )}
           </div>
+          <Link
+            to={pathLink}
+            onClick={closeMenus}
+            className="flex items-center gap-1.5 text-blue-700"
+          >
+            <Compass size={17} />
+            Lộ trình gợi ý
+          </Link>
           <Link to="/support" className="hover:text-blue-600">
             Hỗ trợ
           </Link>
         </nav>
-        <form
-          role="search"
-          onSubmit={search}
-          className="relative hidden min-w-[160px] flex-1 md:block"
+        <Link
+          to={pathLink}
+          onClick={closeMenus}
+          aria-label="Sinh lộ trình gợi ý"
+          className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-blue-50 p-2 text-sm font-bold text-blue-700 lg:hidden"
         >
-          <Search
-            size={18}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+          <Compass size={20} />
+          <span className="hidden sm:inline">Lộ trình</span>
+        </Link>
+        <div className="hidden min-w-[130px] max-w-[330px] flex-1 md:block">
+          <CourseSearch
+            key={params.get("q") || "desktop"}
+            onNavigate={closeMenus}
+            onRefresh={onRefreshCatalog}
           />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onFocus={onRefreshCatalog}
-            aria-label="Tìm khóa học, chủ đề hoặc giảng viên"
-            placeholder="Bạn muốn học gì hôm nay?"
-            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-16 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-          />
-          <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white px-2.5 py-1.5 text-xs font-bold text-blue-600">
-            Tìm
-          </button>
-        </form>
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-          {user && classroom ? (
-            <details className="group relative">
+          {user ? (
+            <details
+              ref={accountMenu}
+              className="group relative"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
               <summary
                 aria-label={`Menu tài khoản ${user.fullName}`}
+                title={user.fullName}
                 className="flex cursor-pointer list-none items-center gap-2 rounded-full p-1.5 text-sm font-semibold text-slate-800 marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden"
               >
                 <Avatar user={user} className="h-9 w-9" />
-                <span className="hidden max-w-32 truncate sm:block">
+                <span className="max-w-16 truncate sm:max-w-32">
                   {user.fullName}
                 </span>
                 <ChevronDown
@@ -154,48 +172,42 @@ export default function Header({
                 <p className="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
                   {user.username}
                 </p>
-                {!user.isGuest && (
-                  <Link
-                    to={`/${user.role.toLowerCase()}/profile`}
-                    className="block rounded-xl px-3 py-2.5 text-sm hover:bg-blue-50"
-                    onClick={(event) => {
-                      event.currentTarget.closest("details").open = false;
-                    }}
-                  >
-                    Hồ sơ & ảnh đại diện
-                  </Link>
-                )}
+                {!user.isGuest &&
+                  ["STUDENT", "TEACHER"].includes(user.role) && (
+                    <Link
+                      to={`/${user.role.toLowerCase()}/profile`}
+                      className="block rounded-xl px-3 py-2.5 text-sm hover:bg-blue-50"
+                      onClick={(event) => {
+                        event.currentTarget.closest("details").open = false;
+                      }}
+                    >
+                      Hồ sơ & ảnh đại diện
+                    </Link>
+                  )}
                 <button
-                  onClick={onDashboard}
+                  onClick={(event) => {
+                    event.currentTarget.closest("details").open = false;
+                    closeMenus();
+                    onDashboard();
+                  }}
                   className="block w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-blue-50"
                 >
-                  Không gian học tập
+                  {user.role === "STUDENT"
+                    ? "Không gian học tập"
+                    : "Bảng điều khiển"}
                 </button>
                 <button
-                  onClick={onLogout}
+                  onClick={(event) => {
+                    event.currentTarget.closest("details").open = false;
+                    closeMenus();
+                    onLogout();
+                  }}
                   className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                 >
                   Đăng xuất
                 </button>
               </div>
             </details>
-          ) : user ? (
-            <>
-              <button
-                onClick={onDashboard}
-                aria-label="Mở không gian học tập"
-                className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-2.5 text-sm font-bold text-blue-700"
-              >
-                <Avatar user={user} className="h-7 w-7" />
-                <span className="hidden xl:block">Không gian học tập</span>
-              </button>
-              <button
-                onClick={onLogout}
-                className="hidden px-2 text-sm font-semibold text-slate-600 sm:block"
-              >
-                Đăng xuất
-              </button>
-            </>
           ) : (
             <>
               <button
@@ -226,22 +238,12 @@ export default function Header({
         </div>
       </div>
       <div className="mx-auto max-w-7xl px-4 pb-3 md:hidden">
-        <form
-          role="search"
-          onSubmit={search}
-          className="flex gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2"
-        >
-          <Search size={18} className="my-auto shrink-0 text-slate-400" />
-          <input
-            aria-label="Tìm khóa học trên điện thoại"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onFocus={onRefreshCatalog}
-            placeholder="Tìm khóa học, giảng viên..."
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-          />
-          <button className="px-2 text-sm font-bold text-blue-600">Tìm</button>
-        </form>
+        <CourseSearch
+          key={params.get("q") || "mobile"}
+          mobile
+          onNavigate={closeMenus}
+          onRefresh={onRefreshCatalog}
+        />
       </div>
       {menuOpen && (
         <nav

@@ -287,9 +287,65 @@ export class PlatformService {
       return r;
     });
   }
+  async updateOverview(actor: Actor, courseId: number, data: any) {
+    await this.access.manageCourse(actor, courseId);
+    const text = (key: string, limit: number) =>
+      typeof data?.[key] === 'string' && data[key].length <= limit;
+    if (
+      !text('audience', 2000) ||
+      !text('preparation', 3000) ||
+      !text('practiceNote', 3000) ||
+      !Array.isArray(data.outcomes) ||
+      data.outcomes.length > 30 ||
+      data.outcomes.some(
+        (s: unknown) => typeof s !== 'string' || !s.trim() || s.length > 500,
+      )
+    )
+      throw new BadRequestException(
+        'Thông tin giới thiệu không hợp lệ: tối đa 30 chuẩn đầu ra, mỗi dòng 500 ký tự.',
+      );
+    const rid = data.syllabusResourceId;
+    if (rid != null) {
+      if (!Number.isSafeInteger(rid) || rid <= 0)
+        throw new BadRequestException('Đề cương không hợp lệ');
+      const [r] = await this.db.query(
+        `SELECT r.* FROM lms.lesson_resources r JOIN lms.lessons l USING(lesson_id) WHERE r.resource_id=$1 AND l.course_id=$2 AND l.is_published AND NOT l.is_deleted AND r.resource_type IN ('PDF','DOCUMENT','LINK')`,
+        [rid, courseId],
+      );
+      if (
+        !r ||
+        !/^(?:vedu-file:[a-f0-9-]{36}\.pdf|https:\/\/\S+|\/course-materials\/[a-z]+\/\d+\.html)$/.test(
+          r.resource_url,
+        )
+      )
+        throw new BadRequestException(
+          'Chỉ chọn đề cương từ tài liệu hợp lệ của bài đã công bố trong khóa này.',
+        );
+    }
+    await this.db.query(
+      `INSERT INTO lms.course_overviews(course_id,audience,preparation,outcomes,practice_note,syllabus_resource_id) VALUES($1,$2,$3,$4::jsonb,$5,$6) ON CONFLICT(course_id) DO UPDATE SET audience=EXCLUDED.audience,preparation=EXCLUDED.preparation,outcomes=EXCLUDED.outcomes,practice_note=EXCLUDED.practice_note,syllabus_resource_id=EXCLUDED.syllabus_resource_id,updated_at=now()`,
+      [
+        courseId,
+        data.audience.trim(),
+        data.preparation.trim(),
+        JSON.stringify(data.outcomes.map((s: string) => s.trim())),
+        data.practiceNote.trim(),
+        rid ?? null,
+      ],
+    );
+    return { message: 'Đã cập nhật giới thiệu và đề cương trước khi học' };
+  }
   async courseContent(actor: Actor, courseId: number) {
     await this.access.manageCourse(actor, courseId);
     return {
+      overview: await this.courses.overview(courseId),
+      overviewSettings:
+        (
+          await this.db.query(
+            'SELECT * FROM lms.course_overviews WHERE course_id=$1',
+            [courseId],
+          )
+        )[0] ?? null,
       pedagogy: await this.db.query(
         'SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',
         [courseId],

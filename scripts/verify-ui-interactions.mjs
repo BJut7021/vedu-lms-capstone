@@ -62,6 +62,7 @@ try {
     Routes,
     Route,
     useParams,
+    useLocation,
   } = require("react-router-dom");
   const { api } = await server.ssrLoadModule("/src/services/api.js");
   const { default: LearningPaths } = await server.ssrLoadModule(
@@ -299,6 +300,44 @@ try {
       .getAttribute("href") === "/student/profile",
   );
   cleanup();
+  for (const classroom of [false, true]) {
+    let openedDashboard = false;
+    render(
+      React.createElement(
+        MemoryRouter,
+        null,
+        React.createElement(Header, {
+          user: {
+            fullName: "Học viên kiểm thử",
+            username: "studenttest",
+            role: "STUDENT",
+            avatarUrl: "/api/users/avatars/profile.jpg",
+          },
+          classroom,
+          onDashboard: () => {
+            openedDashboard = true;
+          },
+          onLogout: () => {},
+          onHome: () => {},
+        }),
+      ),
+    );
+    check(
+      `${classroom ? "Classroom" : "Homepage and course introduction"} uses the same learner name and avatar menu`,
+      !!screen.getByLabelText("Menu tài khoản Học viên kiểm thử") &&
+        !!screen.getByText("Học viên kiểm thử") &&
+        !screen.queryByLabelText("Mở không gian học tập"),
+    );
+    fireEvent.click(screen.getByLabelText("Menu tài khoản Học viên kiểm thử"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Không gian học tập", exact: true }),
+    );
+    check(
+      `${classroom ? "Classroom" : "Public page"} account menu opens dashboard and closes`,
+      openedDashboard && !document.querySelector("details").open,
+    );
+    cleanup();
+  }
   const { default: Profile } = await server.ssrLoadModule(
     "/src/components/Profile.jsx",
   );
@@ -384,6 +423,48 @@ try {
     "/src/components/CourseDetail.jsx",
   );
   const { formatMinutes } = await server.ssrLoadModule("/src/services/time.js");
+  render(
+    React.createElement(CourseDetail, {
+      course: {
+        ...course,
+        overview: {
+          audience: "Người đã biết lập trình cơ bản",
+          preparation: "Cài C# để thực hành",
+          outcomes: ["Xây dựng lớp và đối tượng", "Vận dụng kế thừa"],
+          lessonCount: 2,
+          assessments: [
+            {
+              title: "Thi cuối khóa",
+              passingScore: 7,
+              maxAttempts: 5,
+              durationSeconds: 1200,
+              requiresCompletedLessons: true,
+            },
+          ],
+          syllabus: { type: "PDF", url: "/api/courses/75/syllabus" },
+          practiceNote: "Bài thực hành tự luyện.",
+        },
+      },
+      onBack: () => {},
+      onStartLearning: () => {},
+      onStartQuiz: () => {},
+    }),
+  );
+  check(
+    "Course introduction shows published outcomes, preparation and real assessment rules before enrollment",
+    !!screen.getByText("Vận dụng kế thừa") &&
+      !!screen.getByText("Cài C# để thực hành") &&
+      screen.getByText(/Đạt từ 7\/10/).textContent.includes("20 phút"),
+  );
+  check(
+    "Syllabus preview and original-document link are available before starting",
+    document.querySelector("iframe").getAttribute("src") ===
+      "/api/courses/75/syllabus" &&
+      screen
+        .getByRole("link", { name: "Mở PDF đề cương" })
+        .getAttribute("href") === "/api/courses/75/syllabus",
+  );
+  cleanup();
   check(
     "Course minutes preserve short and fractional durations",
     formatMinutes(900) === "15 phút" &&
@@ -518,6 +599,383 @@ try {
     !unknown.primary &&
       unknown.fallback !== resolveCourseCover(networkCourse).fallback,
   );
+  const { default: ManualCheckout } = await server.ssrLoadModule(
+    "/src/components/ManualCheckout.jsx",
+  );
+  const originalPlatform = api.platform;
+  let reported,
+    refreshed = 0;
+  api.platform = async (path, token, body) => {
+    reported = { path, body };
+    return { message: "Đã gửi yêu cầu đối soát" };
+  };
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(ManualCheckout, {
+        status: { amount: 10000, configured: false, manualRequest: null },
+        auth: { accessToken: "test" },
+        courseId: 7,
+        refresh: async () => {
+          refreshed++;
+        },
+      }),
+    ),
+  );
+  check(
+    "MoMo QR waits for receiver configuration and exposes no bank or cash option",
+    screen.getByRole("button", { name: /Xem QR MoMo/ }).disabled &&
+      !screen.queryByRole("button", {
+        name: /Thanh toán trực tiếp|QR chuyển khoản/,
+      }),
+  );
+  cleanup();
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(ManualCheckout, {
+        status: {
+          amount: 10000,
+          configured: true,
+          manualRequest: {
+            id: "request1",
+            orderId: 10,
+            method: "MOMO_WALLET",
+            wallet: {
+              receiverName: "Ví kiểm thử",
+              receiverPhone: "0000000000",
+            },
+            qrDataUrl: "data:image/png;base64,AA==",
+            reference: "VEDUTEST0001",
+            status: "PENDING",
+          },
+        },
+        auth: { accessToken: "test" },
+        courseId: 7,
+        refresh: async () => {
+          refreshed++;
+        },
+      }),
+    ),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Tôi đã chuyển MoMo — gửi đối soát" }),
+  );
+  await waitFor(() => assert.equal(refreshed, 1));
+  check(
+    "Learner payment report calls review request and never self-unlocks classroom",
+    reported.path === "/payments/manual/request1/report" &&
+      !("paid" in reported.body) &&
+      !screen.queryByRole("link", { name: "Vào khóa học" }),
+  );
+  cleanup();
+  const { default: MomoWalletSettings } = await server.ssrLoadModule(
+    "/src/components/MomoWalletSettings.jsx",
+  );
+  const originalConfigureWallet = api.configureMomoWallet;
+  const originalCreateUrl = URL.createObjectURL,
+    originalRevokeUrl = URL.revokeObjectURL;
+  URL.createObjectURL = () => "blob:isolated-qr-test";
+  URL.revokeObjectURL = () => {};
+  let walletSaved;
+  api.platform = async () => ({ mode: "personal", wallet: null });
+  api.configureMomoWallet = async (body, file, token) => {
+    walletSaved = { body, file, token };
+    return {
+      message: "Đã lưu QR MoMo",
+      mode: "personal",
+      wallet: { ...body, qrDataUrl: "data:image/png;base64,AA==" },
+    };
+  };
+  render(
+    React.createElement(MomoWalletSettings, {
+      auth: { accessToken: "admin-test" },
+      onSaved: async () => {},
+    }),
+  );
+  await screen.findByText("Chưa có QR nhận tiền");
+  check(
+    "MoMo recipient setup requires explicit confirmation",
+    screen.getByRole("button", { name: "Lưu QR nhận học phí MoMo" }).disabled,
+  );
+  const qrInput = screen.getByLabelText(/Ảnh QR Nhận tiền từ MoMo/);
+  fireEvent.change(qrInput, {
+    target: {
+      files: [new File(["invalid"], "bad.txt", { type: "text/plain" })],
+    },
+  });
+  check(
+    "MoMo recipient setup rejects invalid image files before upload",
+    !!screen.getByRole("alert").textContent.includes("PNG/JPG/WebP"),
+  );
+  fireEvent.change(screen.getByLabelText("Tên chủ ví MoMo"), {
+    target: { value: "Ví kiểm thử" },
+  });
+  fireEvent.change(screen.getByLabelText("Số điện thoại nhận tiền MoMo"), {
+    target: { value: "0000000000" },
+  });
+  fireEvent.change(qrInput, {
+    target: {
+      files: [new File(["image fixture"], "qr.png", { type: "image/png" })],
+    },
+  });
+  fireEvent.click(screen.getByRole("checkbox"));
+  await waitFor(() =>
+    assert.equal(
+      screen.getByRole("button", { name: "Lưu QR nhận học phí MoMo" }).disabled,
+      false,
+    ),
+  );
+  fireEvent.submit(
+    screen
+      .getByRole("button", { name: "Lưu QR nhận học phí MoMo" })
+      .closest("form"),
+  );
+  await waitFor(() => assert.ok(walletSaved));
+  check(
+    "MoMo setup submits receiver identity, selected QR and confirmation as admin",
+    walletSaved.body.receiverName === "Ví kiểm thử" &&
+      walletSaved.body.confirmReceivingQr === true &&
+      walletSaved.file.name === "qr.png" &&
+      walletSaved.token === "admin-test",
+  );
+  cleanup();
+  api.configureMomoWallet = originalConfigureWallet;
+  URL.createObjectURL = originalCreateUrl;
+  URL.revokeObjectURL = originalRevokeUrl;
+  api.platform = originalPlatform;
+  const { PathComparison, WeeklyPlan, PathProgress } =
+    await server.ssrLoadModule("/src/components/PathPlanTools.jsx");
+  const planned = {
+    id: "fast",
+    title: "Ứng dụng nhanh",
+    estimatedSeconds: 2700,
+    remainingSeconds: 1800,
+    reviewSeconds: 0,
+    practiceSeconds: 300,
+    estimatedWeeks: 1,
+    fitsBudget: true,
+    recommended: true,
+    progress: { completed: 1, total: 2, percent: 50 },
+    nextLessonId: 12,
+    schedule: {
+      weeks: [
+        {
+          week: 1,
+          estimatedSeconds: 1800,
+          withinTarget: true,
+          tasks: [
+            {
+              lessonId: 12,
+              title: "Bài tiếp theo",
+              activity: "LEARN",
+              estimatedSeconds: 1800,
+            },
+          ],
+        },
+      ],
+      unscheduledSeconds: 0,
+    },
+  };
+  render(React.createElement(PathComparison, { plans: [planned] }));
+  check(
+    "Plan comparison clearly separates remaining study time and practice estimates",
+    screen.getByRole("table").textContent.includes("30 phút") &&
+      screen.getByRole("table").textContent.includes("5 phút"),
+  );
+  cleanup();
+  render(React.createElement(PathProgress, { plan: planned }));
+  check(
+    "Plan progress bar reflects server completion percentage",
+    screen.getByRole("progressbar").getAttribute("aria-valuenow") === "50",
+  );
+  cleanup();
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(WeeklyPlan, {
+        plan: planned,
+        courseId: 7,
+        selected: true,
+        stale: false,
+      }),
+    ),
+  );
+  check(
+    "Weekly schedule resumes the server-selected next eligible lesson",
+    screen
+      .getByRole("link", { name: /Học bài tiếp theo/ })
+      .getAttribute("href") === "/learn/7/12" &&
+      screen
+        .getByText(/Học bài:/)
+        .closest("li")
+        .textContent.includes("30 phút"),
+  );
+  cleanup();
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(WeeklyPlan, {
+        plan: planned,
+        courseId: 7,
+        selected: true,
+        stale: true,
+      }),
+    ),
+  );
+  check(
+    "Stale curriculum never offers the old schedule resume action",
+    !screen.queryByRole("link", { name: /Học bài tiếp theo/ }),
+  );
+  cleanup();
+  api.platform = originalPlatform;
+  const { default: CourseSearch } = await server.ssrLoadModule(
+    "/src/components/CourseSearch.jsx",
+  );
+  const originalSuggestions = api.courseSuggestions;
+  let searched = [];
+  api.courseSuggestions = async (query) => {
+    searched.push(query);
+    return query === "ex"
+      ? [
+          { id: 65, title: "Excel thực hành" },
+          { id: 80, title: "Excel phân tích" },
+        ]
+      : [];
+  };
+  function SearchLocation() {
+    const location = useLocation();
+    return React.createElement(
+      "p",
+      { "data-testid": "search-location" },
+      location.pathname,
+    );
+  }
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(CourseSearch),
+      React.createElement(SearchLocation),
+    ),
+  );
+  const searchBox = screen.getByRole("combobox");
+  fireEvent.focus(searchBox);
+  fireEvent.change(searchBox, { target: { value: "x" } });
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  check(
+    "Navbar autocomplete does not query or show a list for one character",
+    searched.length === 0 && !screen.queryByRole("listbox"),
+  );
+  fireEvent.change(searchBox, { target: { value: "ex" } });
+  await screen.findByRole("option", { name: "Excel thực hành" });
+  check(
+    "Navbar shows clickable related course suggestions after two characters",
+    screen.getAllByRole("option").length === 2 && searched.includes("ex"),
+  );
+  fireEvent.keyDown(searchBox, { key: "ArrowDown" });
+  fireEvent.keyDown(searchBox, { key: "Enter" });
+  check(
+    "Autocomplete Enter opens the highlighted course directly",
+    screen.getByTestId("search-location").textContent === "/courses/65",
+  );
+  fireEvent.focus(searchBox);
+  fireEvent.change(searchBox, { target: { value: "qzx" } });
+  await screen.findByText("Không có khóa học phù hợp.");
+  check(
+    "Unrelated autocomplete text never displays all catalog courses",
+    screen.queryAllByRole("option").length === 0,
+  );
+  fireEvent.keyDown(searchBox, { key: "Escape" });
+  check(
+    "Autocomplete Escape closes the suggestion panel",
+    !screen.queryByRole("listbox"),
+  );
+  cleanup();
+  api.courseSuggestions = originalSuggestions;
+  const { default: PaymentReview } = await server.ssrLoadModule(
+    "/src/components/PaymentReview.jsx",
+  );
+  let reviewSent;
+  api.platform = async (path, token, body) => {
+    if (body) {
+      reviewSent = body;
+      return { message: "Đã xác nhận" };
+    }
+    if (path === "/payments/momo/wallet")
+      return {
+        mode: "personal",
+        wallet: {
+          receiverName: "Ví kiểm thử",
+          receiverPhone: "0000000000",
+          qrDataUrl: "data:image/png;base64,AA==",
+        },
+      };
+    return {
+      walletConfigured: true,
+      requests: [
+        {
+          id: "simple-momo",
+          orderId: 41,
+          course: "Khóa kiểm thử",
+          learner: "Học viên kiểm thử",
+          method: "MOMO_WALLET",
+          reference: "VEDUTEST41",
+          amount: 449000,
+          status: "REVIEW",
+          orderStatus: "PENDING",
+          learnerNote: "#154131562196",
+        },
+      ],
+    };
+  };
+  render(
+    React.createElement(PaymentReview, { auth: { accessToken: "admin-test" } }),
+  );
+  await screen.findByText("Khóa kiểm thử");
+  check(
+    "Admin payment review avoids retyping amount and reference",
+    !screen.queryByLabelText("Số tiền thực nhận") &&
+      !screen.queryByLabelText("Nội dung/mã đơn đã đối chiếu"),
+  );
+  check(
+    "Admin payment review suggests a transaction ID from a plain learner note",
+    screen.getByLabelText("Mã giao dịch MoMo đã nhận tiền").value ===
+      "154131562196",
+  );
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Tôi đã kiểm tra trong MoMo/ }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Xác nhận nhận tiền & mở khóa" }),
+  );
+  await waitFor(() => assert.ok(reviewSent));
+  check(
+    "Simplified approval sends the exact server amount and reference",
+    reviewSent.receivedAmount === 449000 &&
+      reviewSent.receivedReference === "VEDUTEST41" &&
+      reviewSent.verified === true,
+  );
+  cleanup();
+  api.platform = originalPlatform;
+  const { default: MomoQrImage } = await server.ssrLoadModule(
+    "/src/components/MomoQrImage.jsx",
+  );
+  render(
+    React.createElement(MomoQrImage, { src: "data:image/png;base64,AA==" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Phóng to QR" }));
+  check(
+    "Learner QR supports a large accessible scan dialog",
+    !!screen.getByRole("dialog", { name: "QR MoMo phóng to" }),
+  );
+  fireEvent.keyDown(document, { key: "Escape" });
+  check("Escape closes the enlarged QR", !screen.queryByRole("dialog"));
+  cleanup();
   writeFileSync(
     new URL("../docs/validation/ui-interactions.json", import.meta.url),
     JSON.stringify(

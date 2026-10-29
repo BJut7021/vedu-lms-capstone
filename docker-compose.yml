@@ -74,13 +74,14 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
-      CORS_ORIGINS: http://localhost:${VEDU_WEB_PORT}
+      CORS_ORIGINS: ${VEDU_CORS_ORIGINS:-http://localhost:8080}
       NODE_ENV: production
-      WEB_URL: http://localhost:${VEDU_WEB_PORT}
+      WEB_URL: ${VEDU_PUBLIC_URL:-http://localhost:8080}
       MEDIA_DIR: /app/media
       ML_SERVICE_URL: http://ml:8001
       ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-local-vedu-ml-change-me}
       MOMO_ENV: ${MOMO_ENV:-sandbox}
+      MOMO_PAYMENT_MODE: ${MOMO_PAYMENT_MODE:-personal}
       MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
       MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
       MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}

@@ -6,11 +6,19 @@ import { ExamService } from './exam.service';
 import { MomoService } from './momo.service';
 import { RecommendationService } from './recommendation.service';
 import { LearningPathService } from './learning-path.service';
+import { ManualPaymentService } from './manual-payment.service';
 @Global()
 @Module({
   imports: [CoursesModule],
   controllers: [PlatformController],
-  providers: [PlatformService, ExamService, MomoService, RecommendationService, LearningPathService],
+  providers: [
+    PlatformService,
+    ExamService,
+    MomoService,
+    RecommendationService,
+    LearningPathService,
+    ManualPaymentService,
+  ],
   exports: [ExamService, PlatformService],
 })
 export class PlatformModule {}

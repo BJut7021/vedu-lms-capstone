@@ -30,6 +30,11 @@ const savedAuth = () => {
 };
 
 const rolePath = { STUDENT: "/student", TEACHER: "/teacher", ADMIN: "/admin" };
+const loginDestination = (role, search) =>
+  role === "STUDENT" &&
+  new URLSearchParams(search).get("next") === "learning-path"
+    ? "/student/learning-path"
+    : rolePath[role];
 
 function CoursePage({ auth, header }) {
   const { courseId } = useParams();
@@ -263,8 +268,9 @@ function QuizPage({ auth }) {
 
 function RoleAuthRoute({ role, tab, auth, onAuthenticated }) {
   const navigate = useNavigate();
+  const location = useLocation();
   if (auth?.user?.role === role && !auth.user.isGuest)
-    return <Navigate to={rolePath[role]} replace />;
+    return <Navigate to={loginDestination(role, location.search)} replace />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50">
       <AuthModal
@@ -388,7 +394,7 @@ export default function App() {
     };
     localStorage.setItem("vedu.auth", JSON.stringify(nextAuth));
     setAuth(nextAuth);
-    navigate(rolePath[result.user.role]);
+    navigate(result.user.isGuest ? rolePath[result.user.role] : loginDestination(result.user.role, location.search));
   };
   const handleLogout = async () => {
     const refreshToken = auth?.refreshToken;

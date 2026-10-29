@@ -24,6 +24,7 @@ import { Public } from '../auth/public.decorator';
 import { PlatformService } from './platform.service';
 import { ExamService } from './exam.service';
 import { MomoService } from './momo.service';
+import { ManualPaymentService } from './manual-payment.service';
 import { RecommendationService } from './recommendation.service';
 import { LearningPathService } from './learning-path.service';
 type AuthRequest = { user: Actor };
@@ -33,6 +34,7 @@ export class PlatformController {
     private readonly service: PlatformService,
     private readonly exams: ExamService,
     private readonly momo: MomoService,
+    private readonly manualPayments: ManualPaymentService,
     private readonly recommendations: RecommendationService,
     private readonly paths: LearningPathService,
   ) {}
@@ -53,6 +55,13 @@ export class PlatformController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.service.courseContent(r.user, id);
+  }
+  @Patch('courses/:id/overview') @Roles('ADMIN', 'TEACHER') updateOverview(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: any,
+  ) {
+    return this.service.updateOverview(r.user, id, b);
   }
   @Post('courses/:id/sections') @Roles('ADMIN', 'TEACHER') section(
     @Req() r: AuthRequest,
@@ -295,18 +304,55 @@ export class PlatformController {
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.momo.status(r.user, id);
+    return this.manualPayments.status(r.user, id);
   }
   @Post('checkout/:id') @Roles('STUDENT') checkout(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.momo.checkout(r.user, id);
+    return process.env.MOMO_PAYMENT_MODE === 'gateway'
+      ? this.momo.checkout(r.user, id)
+      : this.manualPayments.create(r.user, id, 'MOMO_WALLET');
+  }
+  @Get('payments/momo/wallet') @Roles('ADMIN') momoWallet(@Req() r: AuthRequest) {
+    return this.manualPayments.walletSettings(r.user);
+  }
+  @Post('payments/momo/wallet') @Roles('ADMIN')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 4 * 1024 * 1024, files: 1 } }))
+  configureMomoWallet(@Req() r: AuthRequest, @Body() b: any, @UploadedFile() file?: { buffer: Buffer }) {
+    return this.manualPayments.configureWallet(r.user, b, file);
   }
   @Public() @Post('payments/momo/ipn') @HttpCode(204) async ipn(
     @Body() b: any,
   ) {
     await this.momo.ipn(b);
+  }
+  @Post('checkout/:id/manual') @Roles('STUDENT') manualCheckout(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: any,
+  ) {
+    return this.manualPayments.create(r.user, id, b.method);
+  }
+  @Post('payments/manual/:id/report') @Roles('STUDENT') reportPayment(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+    @Body() b: any,
+  ) {
+    return this.manualPayments.report(r.user, id, b.note ?? '');
+  }
+  @Get('payments/manual') @Roles('ADMIN') manualPaymentList(
+    @Req() r: AuthRequest,
+    @Query('status') status?: string,
+  ) {
+    return this.manualPayments.list(r.user, status);
+  }
+  @Post('payments/manual/:id/review') @Roles('ADMIN') reviewPayment(
+    @Req() r: AuthRequest,
+    @Param('id') id: string,
+    @Body() b: any,
+  ) {
+    return this.manualPayments.review(r.user, id, b);
   }
   @Post('ml/train') @Roles('ADMIN') train(
     @Req() r: AuthRequest,

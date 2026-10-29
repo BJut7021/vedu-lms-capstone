@@ -1,0 +1,44 @@
+{
+  "checkedAt": "2026-10-28T11:14:58.535Z",
+  "checks": [
+    "Both new courses are discoverable and free",
+    "oop: public curriculum reveals no lesson text or private file URL",
+    "oop: classroom requires enrollment",
+    "oop: unrelated teacher cannot manage content",
+    "oop: guide, all lessons, exercises and prerequisite metadata present",
+    "oop: original syllabus, slides and practice PDFs attached",
+    "oop: every original PDF opens intact; anonymous and unrelated teacher denied",
+    "oop: final exam locked before lesson completion",
+    "oop: certificate locked before completion",
+    "oop: quiz has required questions and no answer correctness flags",
+    "oop: final quiz submits and grades correctly",
+    "oop: completed course issues a verifiable certificate",
+    "oop: certificate PDF downloads",
+    "systems: public curriculum reveals no lesson text or private file URL",
+    "systems: classroom requires enrollment",
+    "systems: unrelated teacher cannot manage content",
+    "systems: guide, all lessons, exercises and prerequisite metadata present",
+    "systems: original syllabus, slides and practice PDFs attached",
+    "systems: every original PDF opens intact; anonymous and unrelated teacher denied",
+    "systems: final exam locked before lesson completion",
+    "systems: certificate locked before completion",
+    "systems: quiz has required questions and no answer correctness flags",
+    "systems: final quiz submits and grades correctly",
+    "systems: completed course issues a verifiable certificate",
+    "systems: certificate PDF downloads",
+    "Test learners are excluded from public catalog and course participant counts",
+    "Repeat import keeps stable lesson identifiers without duplicates",
+    "No supplied instructor answer files are published as static assets"
+  ],
+  "courses": [
+    {
+      "id": 75,
+      "key": "oop"
+    },
+    {
+      "id": 76,
+      "key": "systems"
+    }
+  ],
+  "notes": "Isolated is_test_account learners used for completion/quiz/certificate; existing learner progress unchanged. Correct answers read only by this test from PostgreSQL, never exposed by student API."
+}
