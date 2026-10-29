@@ -1,0 +1,738 @@
+{
+  "checkedAt": "2026-10-28T11:07:26.063Z",
+  "courseCount": 52,
+  "uniqueFiles": 52,
+  "totalBytes": 1048746,
+  "checks": [
+    {
+      "id": 76,
+      "title": "Phân tích thiết kế hệ thống",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-76.webp",
+      "bytes": 19954,
+      "sha256": "ffddffe0090677d487846241eae273e5e500f37e0258822b9b925976922474e8",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Tổng quan về hệ thống thông tin",
+        "02 · Xác định yêu cầu",
+        "03 · Mô hình hóa nghiệp vụ",
+        "04 · Mô hình hóa chức năng",
+        "05 · Mô hình hóa cấu trúc",
+        "06 · Thiết kế lớp và dữ liệu",
+        "07 · Thiết kế chức năng hệ thống"
+      ]
+    },
+    {
+      "id": 75,
+      "title": "Lập trình hướng đối tượng",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-75.webp",
+      "bytes": 17484,
+      "sha256": "8262e44cf4e5b402f16b742d4fd6de9410acc96b77bcab680239dac3b2d49197",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Ôn C# và phương pháp hướng đối tượng",
+        "02 · Lớp đối tượng và đóng gói",
+        "03 · Constructor nạp chồng và thành phần tĩnh",
+        "04 · Danh sách generic XML và mô hình lớp",
+        "05 · Kế thừa và quan hệ giữa các lớp",
+        "06 · Đa hình và lớp trừu tượng",
+        "07 · Interface và hợp đồng hành vi",
+        "08 · Tổ chức ứng dụng theo ba lớp",
+        "09 · Nguyên lý đóng mở Liskov và đảo phụ thuộc",
+        "10 · Ba nhóm mẫu thiết kế"
+      ]
+    },
+    {
+      "id": 69,
+      "title": "Mạng máy tính",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-69.webp",
+      "bytes": 87272,
+      "sha256": "8316dac36f0c89342a6deac3f192a46687fb655929b9de214cc7fc216ed18aaa",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Tổng quan về mạng máy tính",
+        "02 · Mô hình OSI và giao thức truyền thông",
+        "03 · Địa chỉ IP",
+        "04 · VLSM và Subnetting",
+        "05 · Tầng vật lý – Physical",
+        "06 · Ethernet và Switching",
+        "07 · Tầng mạng và giao thức IP",
+        "08 · Tầng vận chuyển – TCP/UDP",
+        "09 · Tầng ứng dụng",
+        "10 · Xây dựng hệ thống mạng cơ bản"
+      ]
+    },
+    {
+      "id": 68,
+      "title": "Cấu trúc rời rạc",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-68.webp",
+      "bytes": 144080,
+      "sha256": "3edf9f457a7052bb71566632115fefa213564a5733762c59d768b5c1db61a07b",
+      "lessonTitles": [
+        "00 · Hướng dẫn bắt đầu & đề cương",
+        "01 · Tổng quan về đồ thị",
+        "02 · Biểu diễn đồ thị",
+        "03 · Các bài toán về đồ thị (phần 1)",
+        "04 · Các bài toán về đồ thị (phần 2)",
+        "05 · Bài toán tìm đường đi ngắn nhất",
+        "06 · Bài toán tìm cây khung nhỏ nhất",
+        "07 · Logic học – Mệnh đề và dạng mệnh đề",
+        "08 · Logic học – Các luật suy diễn",
+        "09 · Logic học – Vị từ",
+        "10 · Phương pháp đếm – Tập hợp – Ánh xạ",
+        "11 · Phương pháp đếm – Phép đếm – Giải tích tổ hợp",
+        "12 · Phương pháp đếm",
+        "13 · Quan hệ (phần 1)",
+        "14 · Quan hệ (phần 2)"
+      ]
+    },
+    {
+      "id": 67,
+      "title": "Kỹ năng số thực hành — Tệp, cộng tác và an toàn email",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-67.webp",
+      "bytes": 75902,
+      "sha256": "aaec7fbd62a4a108b799347564610b6d57bf1f35f4f4b9f587d17a279fec787e",
+      "lessonTitles": [
+        "Tổ chức tệp và bản sao lưu",
+        "Email công việc và nhận diện phishing",
+        "Thực hành: ma trận quyền chia sẻ",
+        "Ôn tập: phân loại năm tình huống số",
+        "Tình huống: link tài liệu bị gửi nhầm",
+        "Dự án: bộ quy tắc làm việc số cho nhóm",
+        "Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư"
+      ]
+    },
+    {
+      "id": 66,
+      "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-66.webp",
+      "bytes": 17592,
+      "sha256": "108879bda64937fa90b447f25b0d9203f7aa66072868958d628a2abf0823d610",
+      "lessonTitles": [
+        "Thông điệp và cấu trúc câu chuyện",
+        "Bố cục, tương phản và nguồn hình ảnh",
+        "Thực hành: biến bảng số thành thông điệp",
+        "Ôn tập: giản lược slide quá tải",
+        "Video nguồn: làm quen PowerPoint",
+        "Dự án: pitch đề xuất trong 300 giây",
+        "Mở rộng: khả năng tiếp cận và bản bàn giao"
+      ]
+    },
+    {
+      "id": 65,
+      "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-65.webp",
+      "bytes": 18190,
+      "sha256": "bde3e922f90e2736c37e4debde19377357dc9790eca0ca8fc8f42ae7298a487b",
+      "lessonTitles": [
+        "Dữ liệu dạng bảng và kiểu dữ liệu",
+        "Công thức, SUM và tham chiếu ô",
+        "Thực hành: theo dõi ngân sách hoạt động",
+        "Ôn tập: phát hiện lỗi bảng tính",
+        "Video nguồn: làm quen Excel",
+        "Dự án: báo cáo bán hàng mini có kiểm soát",
+        "Mở rộng: tổng hợp theo nhóm và PivotTable"
+      ]
+    },
+    {
+      "id": 64,
+      "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-64.webp",
+      "bytes": 17230,
+      "sha256": "ff049507f21c84fa6c2b828a73aadc4e647f530c2aa00f1d2e6b0ce84a1d1760",
+      "lessonTitles": [
+        "Tạo tài liệu và quản lý phiên bản",
+        "Cấu trúc báo cáo bằng Styles",
+        "Thực hành: biên bản họp và bảng phân công",
+        "Ôn tập: sửa năm lỗi thường gặp",
+        "Video nguồn: làm quen Word",
+        "Dự án: hồ sơ đề xuất hoạt động nhóm",
+        "Mở rộng: nhận xét và kiểm soát bản sửa"
+      ]
+    },
+    {
+      "id": 55,
+      "title": "Office 365 — Nội dung tham chiếu Kaggle",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-55.webp",
+      "bytes": 16342,
+      "sha256": "e3057d96459ca4ab603db787750d5cad98cae99f65158f34e27ae4ec9268b4d0",
+      "lessonTitles": [
+        "What is OneDrive for Business?",
+        "Add, restore, delete documents on OneDrive",
+        "Share documents",
+        "Recycle bin",
+        "Sync OneDrive for Business to your computer (Windows 10 - 1709)",
+        "Work with documents in a synced library folder (Windows 10 - 1709)",
+        "Change location where you sync libraries on your computer (Windows 10 - 1709)",
+        "Introduction and how to use Outlook Online",
+        "Create a new message, with attachments and options",
+        "Search and built-in filters"
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Digital thực hành 10",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-43.webp",
+      "bytes": 6082,
+      "sha256": "548fd732734ba5634aeb0d80db6914944b81622a9d619a859d7853d4c179f92c",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Digital thực hành 09",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-42.webp",
+      "bytes": 6568,
+      "sha256": "829ae23466b96089b000458e44a7a0e1b9413ee2c8db0109f8e8120aac58c898",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Digital thực hành 08",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-41.webp",
+      "bytes": 6662,
+      "sha256": "a408d1617bed76e43591eca26f57b23faf5e196a6ee4f1968e080e0941871c6e",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Digital thực hành 07",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-40.webp",
+      "bytes": 6318,
+      "sha256": "77b1336e7c4637eab752622141f8a7b091f05bf54deb913c6a230f5467b9cd86",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Digital thực hành 06",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-39.webp",
+      "bytes": 6310,
+      "sha256": "5677ed9f206e4f6996c9c58e26ab2f86d1a431fc9798847c0f582424ccec0deb",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Digital thực hành 05",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-38.webp",
+      "bytes": 6440,
+      "sha256": "5da2825ef6b3a90886d5341bfaf65378f3d0a8f04a60328135f92d175a0209f4",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Digital thực hành 04",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-37.webp",
+      "bytes": 6750,
+      "sha256": "0be613f644739c85450a7af9180f37a19cb00ac6cd86c5a003defcb68db70bdb",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Digital thực hành 03",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-36.webp",
+      "bytes": 6420,
+      "sha256": "46e53b8363a7c77ad4c58c56e957d1ded8405ced02543d77ab82d46b81950771",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Digital thực hành 02",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-35.webp",
+      "bytes": 7124,
+      "sha256": "6b241e04de7807e0971d7db058b1a12adce75871ad371ff460cc9357a5971c26",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Digital thực hành 01",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-34.webp",
+      "bytes": 6746,
+      "sha256": "49db20e8fe2679214f7ceb71057f384286d75c4779de8224147d4154a891077a",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Database thực hành 10",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-33.webp",
+      "bytes": 6684,
+      "sha256": "ccc6418d58b9707edb62930211fe078b5f6996c15708f8a64fba606a36ce85a3",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Database thực hành 09",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-32.webp",
+      "bytes": 7144,
+      "sha256": "043063631950349ee24123551d28622a57ea44df500369e5003412b4f2eb3d58",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Database thực hành 08",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-31.webp",
+      "bytes": 7136,
+      "sha256": "6a243976f2a96d29c52de9279fb8b1ee5e905742f79553373e668daf175e7fd5",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Database thực hành 07",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-30.webp",
+      "bytes": 7006,
+      "sha256": "eea3371600ec02274ef602acacdb19e7da0b3dd0df01e830852e0eb3479ceb4c",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Database thực hành 06",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-29.webp",
+      "bytes": 7100,
+      "sha256": "cf978526201f3f8382eede38bc7b2fb0184cafe9c2a6059353a86424d66829c8",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Database thực hành 05",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-28.webp",
+      "bytes": 7220,
+      "sha256": "a90548f5427a8b9886d5e3b368dd6652a29a967115dc0cc338107e2a3583570b",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Database thực hành 04",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-27.webp",
+      "bytes": 6946,
+      "sha256": "9f51486876be51ccb0bb392782c7f84c5e7d55e4f623694123edd0a2b541f383",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Database thực hành 03",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-26.webp",
+      "bytes": 7214,
+      "sha256": "59dfad89e2eb6958524b0563a4d58fef2185c4db1bcb364a0f6d32e6f6e9c1e2",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Database thực hành 02",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-25.webp",
+      "bytes": 6992,
+      "sha256": "ab1cf6ac293dfd163044fa7487b63a4cc3005bf6ab09f7e83eb447d0f7cd9d59",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Database thực hành 01",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-24.webp",
+      "bytes": 7194,
+      "sha256": "509a3f4a59d859c704c2c6dc0881eb795a187615d1bb8b19f41ccc5dc110eff7",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 23,
+      "title": "AI thực hành 10",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-23.webp",
+      "bytes": 6172,
+      "sha256": "a0b266bcb292d5a7f6264f1fb32550c1680faf26edae9c4a8fcf82c188993802",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 22,
+      "title": "AI thực hành 09",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-22.webp",
+      "bytes": 7870,
+      "sha256": "dde8c9d9b0f9561b1d34c88f2f255126f08241e0aeee0c859f97a40be26658de",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 21,
+      "title": "AI thực hành 08",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-21.webp",
+      "bytes": 7374,
+      "sha256": "c31e0cf379963cfe0cba4922d7e958e3aa9b86fdca1bbe06983795b045b01799",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 20,
+      "title": "AI thực hành 07",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-20.webp",
+      "bytes": 6098,
+      "sha256": "9e9f71c5297e03875f4ccf77f4cd9bcc1a4be83c148d071e4707b6645ec6fa4d",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 19,
+      "title": "AI thực hành 06",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-19.webp",
+      "bytes": 7480,
+      "sha256": "c29d006ac09aedc1d44ee8e548c9fef9f9faf84ea2dbd652e0b1894419c71e37",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "AI thực hành 05",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-18.webp",
+      "bytes": 7510,
+      "sha256": "3b0ce2fdf28330ead8c13d03ef79e8aa1b267d66766cc930502b39e90f5f7226",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 17,
+      "title": "AI thực hành 04",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-17.webp",
+      "bytes": 6298,
+      "sha256": "0aecce10a996a914930a15d3ed5f3721d715eac9eafe11b2909261353ce267ee",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 16,
+      "title": "AI thực hành 03",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-16.webp",
+      "bytes": 7262,
+      "sha256": "fb9d51a3b12b02d1bc1102e6aef7a1fc641511fa47d5e708e5afd5490af2b585",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 15,
+      "title": "AI thực hành 02",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-15.webp",
+      "bytes": 7356,
+      "sha256": "3634cf9c72a4da1d1b723ff959328b1590c503e098c9beeb3c7558bd787c07e1",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 14,
+      "title": "AI thực hành 01",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-14.webp",
+      "bytes": 6304,
+      "sha256": "67a433b32dfd8fa266149fd07ca4615456243280dd6b4ccb95abaf4cd912fd1d",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Web thực hành 10",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-13.webp",
+      "bytes": 7586,
+      "sha256": "ed2ee8371fb5019c7875e30c5ec594d2465233219b9f478fbcaa2da5921e702d",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Web thực hành 09",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-12.webp",
+      "bytes": 7152,
+      "sha256": "53bfeafe6f90822f87d5f7bd09a1b756dad9d706c4f83d091346f619de71c5c3",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Web thực hành 08",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-11.webp",
+      "bytes": 8046,
+      "sha256": "dd4c533eb4c1975eb27601aab081a3854f0d4492bd065439084978797ebca857",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Web thực hành 07",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-10.webp",
+      "bytes": 6712,
+      "sha256": "458d7fd119e6c5e4b8613d27bf660c2f1cf32aab3073515c3665fd3277d00b4c",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Web thực hành 06",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-9.webp",
+      "bytes": 7636,
+      "sha256": "02e168684e6fa77e0d32187a801c4002a08944db0827cbf7c4f32e6db207e62d",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Web thực hành 05",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-8.webp",
+      "bytes": 6960,
+      "sha256": "db9328df9d0cda673dd3e1c98d3e78d0e7e60a12173d438464dd7d5ceb008a5d",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Web thực hành 04",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-7.webp",
+      "bytes": 8014,
+      "sha256": "6da4e8a826dea7d833cd9f244da3cf52cf2c5e4f9886210ecce9d12f85704583",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Web thực hành 03",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-6.webp",
+      "bytes": 6860,
+      "sha256": "675c8352d1518b957a1172bb96aadb02253f4e87d0e61c8c1748d52175dab7fd",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Web thực hành 02",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-5.webp",
+      "bytes": 7626,
+      "sha256": "f12ed2505e2dbcdb2209cad1d68cf0a835711d12eccc4c78a40d380f275e5ee7",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Web thực hành 01",
+      "source": "Original code-native editorial artwork",
+      "file": "/images/course-covers/v2/course-4.webp",
+      "bytes": 6642,
+      "sha256": "af3cf1a11df928b3d4089f67036c7c1af3e228653714d11a22998274d689b2a1",
+      "lessonTitles": [
+        "Bài 1. Video nhập môn",
+        "Bài 2. Tài liệu thực hành",
+        "Bài 3. Quiz kiểm tra"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "PostgreSQL và thiết kế dữ liệu LMS",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-3.webp",
+      "bytes": 154728,
+      "sha256": "0291085d3b1b2027f91c686c887ffec61c16416201f864f4888de0d9b706cb05",
+      "lessonTitles": [
+        "1. Tổ chức schema theo domain",
+        "2. Ràng buộc, function và trigger"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Khai phá dữ liệu chuỗi hành vi với HUSPM",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-2.webp",
+      "bytes": 98434,
+      "sha256": "1d61c168e351bcb836a60f59c0a10c8f94e44e2672437da02730dc92855d4074",
+      "lessonTitles": [
+        "1. Chuỗi hành vi học tập và utility",
+        "2. Pipeline HUSPM trong Vedu"
+      ]
+    },
+    {
+      "id": 1,
+      "title": "Lập trình Web với React và Node.js",
+      "source": "AI-assisted editorial illustration",
+      "file": "/images/course-covers/v2/course-1.webp",
+      "bytes": 102524,
+      "sha256": "4c61a7238855b9d72f13045130fe8d8cd300a537846a85bfa89b2a9993533960",
+      "lessonTitles": [
+        "1. Giới thiệu kiến trúc Vedu LMS",
+        "2. React state và kết nối REST API",
+        "3. Quiz kiểm tra kiến thức tích hợp"
+      ]
+    }
+  ]
+}

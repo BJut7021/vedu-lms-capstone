@@ -1,0 +1,28 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>07 · Thiết kế chức năng hệ thống · VEDU</title><style>body{margin:0;background:#eef3fb;color:#17243e;font:16px/1.8 system-ui,sans-serif}main{max-width:920px;margin:24px auto;padding:28px;background:white;border-radius:20px;border-top:6px solid #2563eb}h1{font-size:28px;line-height:1.4}p{white-space:pre-line;overflow-wrap:anywhere}small{color:#53657a}button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:8px}@media(max-width:600px){main{margin:12px;padding:20px}h1{font-size:22px}}@media print{button{display:none}body{background:white}}</style><main><small>VEDU Learning Management System · Phiếu tự học</small><h1>07 · Thiết kế chức năng hệ thống</h1><button onclick="window.print()">In / lưu PDF</button><p>MỤC TIÊU
+Hiện thực hóa use case bằng lớp thiết kế và biểu đồ tương tác ba tầng.
+
+ĐỐI CHIẾU ĐỀ CƯƠNG
+Chương 7 trong đề cương
+
+KIẾN THỨC CỐT LÕI
+Presentation nhận thao tác và hiển thị kết quả; Business thực thi quy tắc; Data Access truy cập dữ liệu. Các tầng không thay thế kiểm tra phân quyền. Không để UI gọi thẳng bảng dữ liệu rồi bỏ qua nghiệp vụ.
+
+TÌNH HUỐNG XUYÊN SUỐT
+Một LMS phục vụ sinh viên, giảng viên và quản trị viên. Mỗi lớp học phần có một giảng viên; sinh viên tham gia nhiều lớp thông qua bản ghi ghi danh có trạng thái hoạt động. Mỗi bài tập thuộc đúng một lớp, có thời hạn và trạng thái công bố. Sinh viên chỉ được nộp khi đã đăng nhập, ghi danh còn hoạt động, bài đã công bố và thời gian máy chủ không vượt hạn. Mỗi sinh viên nộp tối đa một lần cho mỗi bài; không hỗ trợ nộp lại trong tình huống này. Tệp chỉ nhận PDF, tối đa 10 MB. Giảng viên phụ trách lớp chấm từ 0 đến 10 và ghi nhận xét. Sinh viên chỉ xem bài nộp và điểm của mình. Quản trị viên quản lý tài khoản, lớp và ghi danh. Phạm vi không có học phí, thi trực tuyến có giám sát hoặc ứng dụng di động.
+
+BÀI TẬP NHỎ
+1. Phân công trách nhiệm cho SubmissionPage, SubmissionService, SubmissionRepository và FileStore.
+2. Vẽ sequence diagram UC-NOP với nhánh thành công, quá hạn và trùng bài.
+
+THỰC HÀNH CUỐI BÀI
+Nộp sequence diagram, class diagram thiết kế tối thiểu 4 lớp, phác thảo UI và 6 ca kiểm thử UC-NOP. Chỉ ra FR→use case→service→bảng→test.
+
+TIÊU CHÍ TỰ KIỂM TRA (10 điểm)
+• Sequence đúng luồng: 4 điểm
+• Phân tầng và lớp thiết kế: 2 điểm
+• UI và ngoại lệ: 2 điểm
+• Kiểm thử và truy vết: 2 điểm
+
+Hãy lưu sản phẩm trên máy và đối chiếu tiêu chí. Bài thực hành này chưa được chấm tự động; có thể hỏi giảng viên ở Hỏi đáp. Hoàn thành bài đọc không đồng nghĩa đã đạt năng lực thực hành.
+
+Nguồn: học liệu gốc và bài tập bổ sung từ RAR nhóm cung cấp; xem mục Tài liệu để mở PDF nguyên bản và nguồn ngoài.</p></main></html>

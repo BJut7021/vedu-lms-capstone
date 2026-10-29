@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-28T18:01:53.222Z",
+  "checks": [
+    "Learner checkout creates a cash receipt request and waits for staff confirmation",
+    "Admin can enter verified receipt details and approve the correct order",
+    "Learner refresh observes paid state and an open-course action",
+    "Learner generates, compares and selects an OOP schedule with weekly learning/review/practice"
+  ],
+  "mobile": {
+    "width": 390,
+    "scrollWidth": 390
+  },
+  "errors": [],
+  "notes": "Flagged test users; no real funds transferred. Test receipt is closed as a simulated refund and course hidden after checks."
+}

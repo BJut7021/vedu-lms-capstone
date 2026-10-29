@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-28T11:09:47.108Z",
+  "checks": [
+    "Every reviewed course has its own file",
+    "All catalog images decode with wide composition and efficient WebP",
+    "No repeated image bytes",
+    "No exact perceptual duplicate in the illustration area",
+    "All 52 deployed URLs serve the intended image",
+    "Entire cover library stays under 2 MB"
+  ],
+  "count": 52,
+  "totalBytes": 1048746,
+  "closestVisualPairs": [
+    {
+      "a": 32,
+      "b": 26,
+      "distance": 25
+    },
+    {
+      "a": 31,
+      "b": 25,
+      "distance": 28
+    },
+    {
+      "a": 33,
+      "b": 27,
+      "distance": 30
+    },
+    {
+      "a": 30,
+      "b": 24,
+      "distance": 30
+    },
+    {
+      "a": 23,
+      "b": 17,
+      "distance": 35
+    },
+    {
+      "a": 20,
+      "b": 14,
+      "distance": 37
+    },
+    {
+      "a": 12,
+      "b": 6,
+      "distance": 39
+    },
+    {
+      "a": 41,
+      "b": 37,
+      "distance": 42
+    },
+    {
+      "a": 11,
+      "b": 9,
+      "distance": 42
+    },
+    {
+      "a": 43,
+      "b": 35,
+      "distance": 46
+    },
+    {
+      "a": 42,
+      "b": 36,
+      "distance": 46
+    },
+    {
+      "a": 41,
+      "b": 35,
+      "distance": 46
+    }
+  ],
+  "notes": "Perceptual difference is a duplicate screen, not proof that different lessons have different curricular outcomes. Native series covers illustrate introductory subjects only."
+}

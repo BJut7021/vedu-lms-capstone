@@ -1,0 +1,6 @@
+# Shared web listener for LAN/VPN; PostgreSQL and direct API remain loopback-only.
+# Docker Desktop cannot bind to every Windows/VPN adapter IP directly.
+services:
+  frontend:
+    ports: !override
+      - "0.0.0.0:${VEDU_WEB_PORT}:80"
