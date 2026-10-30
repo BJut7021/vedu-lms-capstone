@@ -281,9 +281,22 @@ export class PlatformService {
         [lessonId, type, data.title.trim(), url],
       );
       await m.query(
-        'UPDATE lms.lessons SET is_published=true,video_duration_seconds=COALESCE($2,video_duration_seconds),estimated_duration_seconds=CASE WHEN $2::numeric IS NOT NULL THEN CEIL($2)::int ELSE estimated_duration_seconds END WHERE lesson_id=$1',
-        [lessonId, videoDuration],
-      );
+  `
+  UPDATE lms.lessons
+  SET
+    video_duration_seconds = COALESCE(
+      $2,
+      video_duration_seconds
+    ),
+    estimated_duration_seconds = CASE
+      WHEN $2::numeric IS NOT NULL
+      THEN CEIL($2)::int
+      ELSE estimated_duration_seconds
+    END
+  WHERE lesson_id = $1
+  `,
+  [lessonId, videoDuration],
+);
       return r;
     });
   }
