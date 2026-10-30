@@ -211,6 +211,119 @@ export const api = {
       headers: withToken(token),
       body: JSON.stringify(data),
     }),
+
+      teacherCourseContent: (courseId, token) =>
+    request(`/platform/courses/${courseId}/content`, {
+      headers: withToken(token),
+    }),
+
+  updateTeacherLesson: (lessonId, data, token) =>
+    request(`/platform/lessons/${lessonId}`, {
+      method: "PATCH",
+      headers: withToken(token),
+      body: JSON.stringify(data),
+    }),
+
+      viewTeacherPdf: async (courseId, lessonId, resourceId, token) => {
+    const response = await fetch(
+      `${API_BASE_URL}/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources/${resourceId}/file`,
+      {
+        headers: withToken(token),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Không thể mở file PDF.");
+    }
+
+    return response.blob();
+  },
+
+      getTeacherLessonResources: (courseId, lessonId, token) =>
+    request(
+      `/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources`,
+      {
+        headers: withToken(token),
+      }
+    ),
+
+      updateTeacherLessonResource: (
+    courseId,
+    lessonId,
+    resourceId,
+    data,
+    token
+  ) =>
+    request(
+      `/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources/${resourceId}`,
+      {
+        method: "PATCH",
+        headers: withToken(token),
+        body: JSON.stringify(data),
+      }
+    ),
+
+  deleteTeacherLessonResource: (
+    courseId,
+    lessonId,
+    resourceId,
+    token
+  ) =>
+    request(
+      `/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources/${resourceId}`,
+      {
+        method: "DELETE",
+        headers: withToken(token),
+      }
+    ),
+
+  addTeacherLessonResource: (courseId, lessonId, data, token) =>
+    request(
+      `/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources`,
+      {
+        method: "POST",
+        headers: withToken(token),
+        body: JSON.stringify(data),
+      }
+    ),
+
+      replaceTeacherPdf: async (
+    courseId,
+    lessonId,
+    resourceId,
+    title,
+    file,
+    token
+  ) => {
+    const form = new FormData();
+    form.append("title", title);
+
+    if (file) {
+      form.append("file", file);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/portal/teacher/courses/${courseId}/lessons/${lessonId}/resources/${resourceId}/replace-pdf`,
+      {
+        method: "PATCH",
+        headers: withToken(token),
+        body: form,
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        Array.isArray(result.message)
+          ? result.message.join(", ")
+          : result.message || "Không thể thay thế PDF."
+      );
+    }
+
+    return result;
+  },
+
   createTeacherLesson: (courseId, data, token) =>
     request(`/portal/teacher/courses/${courseId}/lessons`, {
       method: "POST",

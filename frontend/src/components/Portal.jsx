@@ -64,7 +64,6 @@ const menus = {
     ["learners", "Danh sách học viên", Users],
     ["gradebook", "Sổ điểm", ClipboardCheck],
     ["analytics", "Phân tích học tập", BarChart3],
-    ["content", "Tài liệu & video", FileClock],
     ["discussions", "Hỏi đáp khóa học", CircleHelp],
     ["ticket-chat", "Ticket được phân công", CircleHelp],
     ["reports", "Báo cáo & xuất file", BarChart3],
@@ -1067,6 +1066,1542 @@ function renderStudentPage({
   );
 }
 
+function TeacherLessonBuilder({
+  data,
+  courseForm,
+  setCourseForm,
+  lessonForm,
+  setLessonForm,
+  busy,
+  runAction,
+  token,
+}) {
+  const [showCourseForm, setShowCourseForm] = useState(false);
+  const [courseLessons, setCourseLessons] = useState([]);
+const [selectedLessonId, setSelectedLessonId] = useState(null);
+const [lessonLoading, setLessonLoading] = useState(false);
+const [lessonError, setLessonError] = useState("");
+const [lessonPublished, setLessonPublished] = useState(false);
+
+const isEditing = selectedLessonId !== null;
+
+const loadCourseLessons = async (courseId) => {
+  if (!courseId) {
+    setCourseLessons([]);
+    return;
+  }
+
+  setLessonLoading(true);
+  setLessonError("");
+
+  try {
+    const result = await api.teacherCourseContent(courseId, token);
+    setCourseLessons(result.lessons || []);
+  } catch (error) {
+    setCourseLessons([]);
+    setLessonError(error.message);
+  } finally {
+    setLessonLoading(false);
+  }
+};
+
+useEffect(() => {
+  let cancelled = false;
+
+  if (!lessonForm.courseId) {
+    setCourseLessons([]);
+    return;
+  }
+
+  setLessonLoading(true);
+  setLessonError("");
+
+  api.teacherCourseContent(lessonForm.courseId, token)
+    .then((result) => {
+      if (!cancelled) {
+        setCourseLessons(result.lessons || []);
+      }
+    })
+    .catch((error) => {
+      if (!cancelled) {
+        setCourseLessons([]);
+        setLessonError(error.message);
+      }
+    })
+    .finally(() => {
+      if (!cancelled) setLessonLoading(false);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [lessonForm.courseId, token]);
+
+const editLesson = (lesson) => {
+  setSelectedLessonId(Number(lesson.lesson_id));
+
+  setLessonForm({
+    courseId: String(lesson.course_id),
+    title: lesson.title || "",
+    content: lesson.content || "",
+    durationSeconds: Number(
+      lesson.estimated_duration_seconds || 0
+    ),
+    sectionId: lesson.section_id || null,
+  });
+
+  setLessonPublished(Boolean(lesson.is_published));
+  setShowPreview(false);
+  setShowSuccess(false);
+  setActiveTab("content");
+};
+
+const startNewLesson = () => {
+  setSelectedLessonId(null);
+  setLessonPublished(false);
+
+  setLessonForm((previous) => ({
+    courseId: previous.courseId,
+    title: "",
+    content: "",
+    durationSeconds: 600,
+  }));
+
+  setShowSuccess(false);
+  setShowPreview(false);
+  setActiveTab("content");
+};
+  const [activeTab, setActiveTab] = useState("content");
+  const [showPreview, setShowPreview] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [lessonResources, setLessonResources] = useState([]);
+const [resourceLoading, setResourceLoading] = useState(false);
+const [resourceSaving, setResourceSaving] = useState(false);
+const [pdfFile, setPdfFile] = useState(null);
+const [replacementPdf, setReplacementPdf] = useState(null);
+const [pdfTitle, setPdfTitle] = useState("");
+const [pdfUploading, setPdfUploading] = useState(false);
+const [pdfUploadError, setPdfUploadError] = useState("");
+const [pdfUploadSuccess, setPdfUploadSuccess] = useState("");
+const [editingResourceId, setEditingResourceId] = useState(null);
+const [deletingResourceId, setDeletingResourceId] = useState(null);
+const [resourceError, setResourceError] = useState("");
+const [resourceSuccess, setResourceSuccess] = useState("");
+
+const [resourceForm, setResourceForm] = useState({
+  resourceType: "VIDEO",
+  title: "",
+  resourceUrl: "",
+});
+
+useEffect(() => {
+  setEditingResourceId(null);
+  setResourceForm({
+    resourceType: "VIDEO",
+    title: "",
+    resourceUrl: "",
+  });
+  setResourceError("");
+  setResourceSuccess("");
+}, [selectedLessonId]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  if (!selectedLessonId || !lessonForm.courseId) {
+    setLessonResources([]);
+    setResourceError("");
+    return;
+  }
+
+  const loadResources = async () => {
+    setResourceLoading(true);
+    setResourceError("");
+
+    try {
+      const result = await api.getTeacherLessonResources(
+        lessonForm.courseId,
+        selectedLessonId,
+        token
+      );
+
+      if (!cancelled) {
+        setLessonResources(Array.isArray(result) ? result : []);
+      }
+    } catch (error) {
+      if (!cancelled) {
+        setLessonResources([]);
+        setResourceError(error.message || "Không tải được tài liệu.");
+      }
+    } finally {
+      if (!cancelled) setResourceLoading(false);
+    }
+  };
+
+  loadResources();
+
+  return () => {
+    cancelled = true;
+  };
+}, [selectedLessonId, lessonForm.courseId, token]);
+
+const viewLessonResource = async (resource) => {
+  const url = String(resource.resourceUrl || "");
+
+  if (url.startsWith("vedu-file:")) {
+    const previewWindow = window.open("", "_blank");
+
+    if (!previewWindow) {
+      setResourceError("Trình duyệt đã chặn cửa sổ xem PDF.");
+      return;
+    }
+
+    try {
+      const blob = await api.viewTeacherPdf(
+        lessonForm.courseId,
+        selectedLessonId,
+        resource.resourceId,
+        token
+      );
+
+      const blobUrl = URL.createObjectURL(
+        new Blob([blob], { type: "application/pdf" })
+      );
+
+      previewWindow.location.href = blobUrl;
+
+      // Giải phóng URL tạm sau khi cửa sổ có thời gian tải PDF.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+    } catch (error) {
+  console.error("Lỗi mở PDF:", error);
+
+  setResourceError(
+    error.message || "Không thể mở tài liệu PDF."
+  );
+
+  if (previewWindow && !previewWindow.closed) {
+    previewWindow.document.body.innerHTML = `
+      <div style="font-family:Arial;padding:32px">
+        <h2>Không thể mở tài liệu PDF</h2>
+        <p>Yêu cầu tải tài liệu thất bại.</p>
+        <p>Quay lại VEDU để kiểm tra thông báo lỗi.</p>
+      </div>
+    `;
+  }
+}
+
+    return;
+  }
+
+  if (/^https:\/\//i.test(url)) {
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else {
+    setResourceError("Đường dẫn tài liệu không hợp lệ.");
+  }
+};
+
+const editLessonResource = (resource) => {
+  setEditingResourceId(resource.resourceId);
+  setReplacementPdf(null);
+
+  setResourceForm({
+    resourceType: resource.resourceType || "VIDEO",
+    title: resource.title || "",
+    resourceUrl: resource.resourceUrl || "",
+  });
+
+  setResourceError("");
+  setResourceSuccess("");
+
+  // Cuộn tới biểu mẫu tài liệu
+  document.getElementById("vedu-resource-form")
+    ?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+};
+
+const cancelEditResource = () => {
+  setEditingResourceId(null);
+  setReplacementPdf(null);
+
+  setResourceForm({
+    resourceType: "VIDEO",
+    title: "",
+    resourceUrl: "",
+  });
+
+  setResourceError("");
+  setResourceSuccess("");
+};
+
+const uploadLessonPdf = async () => {
+  if (!selectedLessonId || !lessonForm.courseId) {
+    setPdfUploadError("Hãy chọn bài học trước khi upload.");
+    return;
+  }
+
+  if (!pdfFile) {
+    setPdfUploadError("Vui lòng chọn file PDF.");
+    return;
+  }
+
+  const maxSize = 20 * 1024 * 1024;
+
+  if (
+    pdfFile.type !== "application/pdf" &&
+    !pdfFile.name.toLowerCase().endsWith(".pdf")
+  ) {
+    setPdfUploadError("Chỉ hỗ trợ file PDF.");
+    return;
+  }
+
+  if (pdfFile.size > maxSize) {
+    setPdfUploadError("File PDF không được vượt quá 20 MB.");
+    return;
+  }
+
+  const title = pdfTitle.trim();
+
+  if (title.length < 2 || title.length > 200) {
+    setPdfUploadError("Tên tài liệu phải có từ 2 đến 200 ký tự.");
+    return;
+  }
+
+  setPdfUploading(true);
+  setPdfUploadError("");
+  setPdfUploadSuccess("");
+
+  try {
+    await api.uploadResource(
+      selectedLessonId,
+      {
+        type: "PDF",
+        title: title,
+      },
+      pdfFile,
+      token
+    );
+
+    const result = await api.getTeacherLessonResources(
+      lessonForm.courseId,
+      selectedLessonId,
+      token
+    );
+
+    setLessonResources(
+      Array.isArray(result) ? result : []
+    );
+
+    setPdfFile(null);
+    setPdfTitle("");
+
+    setPdfUploadSuccess(
+      "Đã upload file PDF lên VEDU thành công."
+    );
+  } catch (error) {
+    setPdfUploadError(
+      error.message || "Upload PDF thất bại."
+    );
+  } finally {
+    setPdfUploading(false);
+  }
+};
+
+const saveReplacementPdf = async () => {
+  if (editingResourceId === null || !selectedLessonId) return;
+
+  const title = resourceForm.title.trim();
+
+  if (title.length < 2 || title.length > 200) {
+    setResourceError("Tên tài liệu phải có từ 2 đến 200 ký tự.");
+    return;
+  }
+
+  if (replacementPdf) {
+    if (
+      !replacementPdf.name.toLowerCase().endsWith(".pdf") ||
+      replacementPdf.size > 20 * 1024 * 1024
+    ) {
+      setResourceError("Chỉ chọn PDF tối đa 20 MB.");
+      return;
+    }
+  }
+
+  setResourceSaving(true);
+  setResourceError("");
+  setResourceSuccess("");
+
+  try {
+    await api.replaceTeacherPdf(
+      lessonForm.courseId,
+      selectedLessonId,
+      editingResourceId,
+      title,
+      replacementPdf,
+      token
+    );
+
+    const updated = await api.getTeacherLessonResources(
+      lessonForm.courseId,
+      selectedLessonId,
+      token
+    );
+
+    setLessonResources(Array.isArray(updated) ? updated : []);
+    setReplacementPdf(null);
+    cancelEditResource();
+
+    setResourceSuccess("Đã cập nhật file PDF thành công.");
+  } catch (error) {
+    setResourceError(error.message || "Không thể cập nhật PDF.");
+  } finally {
+    setResourceSaving(false);
+  }
+};
+
+const saveLessonResource = async (event) => {
+  event.preventDefault();
+
+  if (!selectedLessonId || !lessonForm.courseId) {
+    setResourceError("Hãy chọn bài học trước.");
+    return;
+  }
+
+  const title = resourceForm.title.trim();
+  const resourceUrl = resourceForm.resourceUrl.trim();
+
+  if (title.length < 2 || title.length > 200 || !resourceUrl) {
+    setResourceError("Vui lòng nhập tên tài liệu từ 2 đến 200 ký tự và đường dẫn.");
+    return;
+  }
+
+  try {
+    const url = new URL(resourceUrl);
+    if (url.protocol !== "https:") {
+      throw new Error("Invalid URL");
+    }
+  } catch {
+    setResourceError("Đường dẫn phải là URL HTTPS hợp lệ.");
+    return;
+  }
+
+  setResourceSaving(true);
+  setResourceError("");
+  setResourceSuccess("");
+
+  try {
+    if (editingResourceId !== null) {
+      await api.updateTeacherLessonResource(
+        lessonForm.courseId,
+        selectedLessonId,
+        editingResourceId,
+        {
+          resourceType: resourceForm.resourceType,
+          title,
+          resourceUrl,
+        },
+        token
+      );
+    } else {
+      await api.addTeacherLessonResource(
+        lessonForm.courseId,
+        selectedLessonId,
+        {
+          resourceType: resourceForm.resourceType,
+          title,
+          resourceUrl,
+        },
+        token
+      );
+    }
+
+    const updated = await api.getTeacherLessonResources(
+      lessonForm.courseId,
+      selectedLessonId,
+      token
+    );
+
+    setLessonResources(Array.isArray(updated) ? updated : []);
+
+    const wasEditing = editingResourceId !== null;
+    cancelEditResource();
+
+    setResourceSuccess(
+      wasEditing
+        ? "Đã cập nhật tài liệu thành công."
+        : "Đã thêm tài liệu thành công."
+    );
+  } catch (error) {
+    setResourceError(
+      error.message || "Không thể lưu tài liệu."
+    );
+  } finally {
+    setResourceSaving(false);
+  }
+};
+
+const deleteLessonResource = async (resource) => {
+  if (!selectedLessonId || !lessonForm.courseId) {
+    setResourceError("Chưa chọn bài học.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Bạn có chắc muốn xóa tài liệu "${resource.title || "Không có tên"}" không?\n\nThao tác này không thể hoàn tác.`
+  );
+
+  if (!confirmed) return;
+
+  setDeletingResourceId(resource.resourceId);
+  setResourceError("");
+  setResourceSuccess("");
+
+  try {
+    await api.deleteTeacherLessonResource(
+      lessonForm.courseId,
+      selectedLessonId,
+      resource.resourceId,
+      token
+    );
+
+    const updated = await api.getTeacherLessonResources(
+      lessonForm.courseId,
+      selectedLessonId,
+      token
+    );
+
+    setLessonResources(Array.isArray(updated) ? updated : []);
+
+    if (
+      String(editingResourceId) ===
+      String(resource.resourceId)
+    ) {
+      cancelEditResource();
+    }
+
+    setResourceSuccess("Đã xóa tài liệu thành công.");
+  } catch (error) {
+    setResourceError(
+      error.message || "Không thể xóa tài liệu."
+    );
+  } finally {
+    setDeletingResourceId(null);
+  }
+};
+
+  const selectedCourse = data.courses.find(
+    (item) => String(item.courseId) === String(lessonForm.courseId)
+  );
+
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+
+  const updateLesson = (field, value) => {
+    setShowSuccess(false);
+    setLessonForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const changeLessonPublishStatus = async (publish) => {
+  if (!selectedLessonId || !lessonForm.courseId) {
+    setLessonError("Vui lòng chọn một bài học đã lưu.");
+    return;
+  }
+
+  const title = lessonForm.title.trim();
+  const content = lessonForm.content || "";
+  const duration = Number(lessonForm.durationSeconds);
+
+  if (
+    !title ||
+    !Number.isInteger(duration) ||
+    duration < 0 ||
+    duration > 86400
+  ) {
+    setLessonError(
+      "Vui lòng nhập tên bài và thời lượng hợp lệ."
+    );
+    return;
+  }
+
+  if (publish && !content.trim() && lessonResources.length === 0) {
+    setLessonError(
+      "Bài học cần có nội dung hoặc tài liệu trước khi công bố."
+    );
+    return;
+  }
+
+  const message = publish
+    ? "Bạn muốn công bố bài học này?"
+    : "Bạn muốn chuyển bài học này về bản nháp?";
+
+  if (!window.confirm(message)) return;
+
+  setLessonError("");
+
+  const ok = await runAction(
+    () =>
+      api.updateTeacherLesson(
+        selectedLessonId,
+        {
+          title,
+          content,
+          durationSeconds: duration,
+          sectionId: lessonForm.sectionId || null,
+          isPublished: publish,
+        },
+        token
+      ),
+    publish
+      ? "Đã công bố bài học thành công."
+      : "Đã chuyển bài học về bản nháp."
+  );
+
+  if (ok) {
+    setLessonPublished(publish);
+    setShowSuccess(false);
+    await loadCourseLessons(lessonForm.courseId);
+  }
+};
+
+  const createLesson = async (event) => {
+  event.preventDefault();
+
+  if (!lessonForm.courseId || !lessonForm.title.trim()) {
+    return;
+  }
+
+  const duration = Number(lessonForm.durationSeconds);
+
+  if (!Number.isInteger(duration) || duration < 0 || duration > 86400) {
+    setLessonError("Thời lượng phải từ 0 đến 1440 phút.");
+    return;
+  }
+
+  const ok = await runAction(
+    () => {
+      if (isEditing) {
+        return api.updateTeacherLesson(
+          selectedLessonId,
+          {
+            title: lessonForm.title.trim(),
+            content: lessonForm.content || "",
+            durationSeconds: duration,
+            isPublished: lessonPublished,
+            sectionId: lessonForm.sectionId || null,
+          },
+          token
+        );
+      }
+
+      return api.createTeacherLesson(
+        lessonForm.courseId,
+        {
+          title: lessonForm.title.trim(),
+          content: lessonForm.content || "",
+          durationSeconds: duration,
+        },
+        token
+      );
+    },
+    isEditing
+      ? "Đã cập nhật bài học thành công."
+      : "Đã tạo bài học thành công."
+  );
+
+  if (ok) {
+    const courseId = lessonForm.courseId;
+
+    if (!isEditing) {
+      startNewLesson();
+    }
+
+    setShowSuccess(true);
+    await loadCourseLessons(courseId);
+  }
+};
+
+  return (
+    <div className="space-y-6">
+
+      {/* HEADER */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-white p-6">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
+            VEDU / Không gian giảng viên
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black text-slate-900">
+            Trình soạn bài học
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Tạo và quản lý nội dung giảng dạy dễ dàng hơn.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowCourseForm(!showCourseForm)}
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700"
+        >
+          <Plus size={18} />
+          Tạo khóa học mới
+        </button>
+      </div>
+
+      {/* TẠO KHÓA HỌC */}
+      {showCourseForm && (
+        <Panel
+          title="Tạo khóa học mới"
+          subtitle="Khóa học được lưu ở trạng thái nháp"
+        >
+          <form
+            className="grid gap-4 md:grid-cols-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+
+              const ok = await runAction(
+                () => api.createTeacherCourse(courseForm, token),
+                "Đã tạo khóa học nháp."
+              );
+
+              if (ok) {
+                setCourseForm({
+                  name: "",
+                  description: "",
+                  topic: "",
+                  price: 0,
+                });
+
+                setShowCourseForm(false);
+              }
+            }}
+          >
+            <label className="text-sm font-bold">
+              Tên khóa học *
+              <input
+                required
+                className={inputClass}
+                value={courseForm.name}
+                onChange={(e) =>
+                  setCourseForm({
+                    ...courseForm,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <label className="text-sm font-bold">
+              Chủ đề
+              <input
+                className={inputClass}
+                value={courseForm.topic}
+                onChange={(e) =>
+                  setCourseForm({
+                    ...courseForm,
+                    topic: e.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <label className="text-sm font-bold md:col-span-2">
+              Mô tả khóa học
+              <textarea
+                rows={3}
+                className={inputClass}
+                value={courseForm.description}
+                onChange={(e) =>
+                  setCourseForm({
+                    ...courseForm,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <label className="text-sm font-bold">
+              Học phí (VND)
+              <input
+                type="number"
+                min="0"
+                className={inputClass}
+                value={courseForm.price}
+                onChange={(e) =>
+                  setCourseForm({
+                    ...courseForm,
+                    price: e.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50"
+              >
+                Lưu khóa học
+              </button>
+            </div>
+          </form>
+        </Panel>
+      )}
+
+      {/* GIAO DIỆN HAI CỘT */}
+      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+
+        {/* CỘT TRÁI */}
+        <aside className="space-y-4">
+          <Panel
+            title="Khóa học của bạn"
+            subtitle="Chọn khóa học để thêm bài"
+          >
+            <div className="space-y-3">
+              {data.courses.map((course) => {
+  const active =
+    String(lessonForm.courseId) ===
+    String(course.courseId);
+
+  return (
+    <div key={course.courseId} className="space-y-2">
+
+      {/* NÚT CHỌN KHÓA HỌC */}
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedLessonId(null);
+          setLessonPublished(false);
+
+          setLessonForm((previous) => ({
+            ...previous,
+            courseId: String(course.courseId),
+            title: "",
+            content: "",
+            durationSeconds: 600,
+            sectionId: null,
+          }));
+
+          setShowPreview(false);
+          setShowSuccess(false);
+          setActiveTab("content");
+        }}
+        className={`w-full rounded-xl border p-4 text-left transition ${
+          active
+            ? "border-blue-500 bg-blue-50"
+            : "border-slate-200 hover:bg-slate-50"
+        }`}
+      >
+        <p className="text-sm font-bold text-slate-900">
+          {course.courseName}
+        </p>
+
+        <p className="mt-2 text-xs text-slate-500">
+          {course.lessonCount ?? 0} bài học
+        </p>
+      </button>
+
+      {/* DANH SÁCH BÀI HỌC */}
+      {active && (
+        <div className="space-y-2 border-l-2 border-blue-100 pl-3">
+
+          {/* NÚT TẠO BÀI MỚI */}
+          <button
+            type="button"
+            onClick={startNewLesson}
+            className="w-full rounded-lg border border-dashed border-blue-300 px-3 py-3 text-left text-sm font-bold text-blue-600 hover:bg-blue-50"
+          >
+            + Thêm bài học mới
+          </button>
+
+          {/* TRẠNG THÁI TẢI */}
+          {lessonLoading && (
+            <p className="text-xs text-slate-500">
+              Đang tải danh sách bài học...
+            </p>
+          )}
+
+          {/* THÔNG BÁO LỖI */}
+          {lessonError && (
+            <p className="text-xs text-red-600">
+              {lessonError}
+            </p>
+          )}
+
+          {/* DANH SÁCH BÀI */}
+          {!lessonLoading &&
+            courseLessons.map((lesson) => {
+              const selected =
+                selectedLessonId === Number(lesson.lesson_id);
+
+              return (
+                <button
+                  key={lesson.lesson_id}
+                  type="button"
+                  onClick={() => editLesson(lesson)}
+                  className={`w-full rounded-lg border px-3 py-3 text-left transition ${
+                    selected
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-slate-800">
+                    {lesson.title}
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    {lesson.is_published
+                      ? "Đã công bố"
+                      : "Bản nháp"}
+                  </p>
+                </button>
+              );
+            })}
+
+          {/* CHƯA CÓ BÀI HỌC */}
+          {!lessonLoading &&
+            !lessonError &&
+            courseLessons.length === 0 && (
+              <p className="px-2 py-3 text-xs text-slate-500">
+                Khóa học này chưa có bài học nào.
+              </p>
+            )}
+        </div>
+      )}
+    </div>
+  );
+})}
+
+              {data.courses.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  Bạn chưa có khóa học nào.
+                </p>
+              )}
+            </div>
+          </Panel>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <p className="font-bold text-amber-900">
+              Lưu ý khi tạo bài học
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-amber-800">
+              Bài học mới được tạo ở trạng thái chưa công bố.
+              Bạn cần hoàn thiện nội dung và công bố bài trước
+              khi khóa học được quản trị viên duyệt.
+            </p>
+          </div>
+        </aside>
+
+        {/* CỘT PHẢI */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          {/* HEADER BÀI HỌC */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-6">
+            <div>
+              <h3 className="text-xl font-black text-slate-900">
+  {isEditing ? "Chỉnh sửa bài học" : "Thêm bài học mới"}
+</h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                {selectedCourse?.courseName ||
+                  "Vui lòng chọn khóa học"}
+              </p>
+            </div>
+
+            <span
+  className={`rounded-full px-4 py-2 text-xs font-bold ${
+    lessonPublished
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-amber-100 text-amber-700"
+  }`}
+>
+  {lessonPublished ? "Đã công bố" : "Chưa công bố"}
+</span>
+          </div>
+
+          <form onSubmit={createLesson}>
+            <div className="space-y-6 p-6">
+
+              {/* TÊN BÀI */}
+              <label className="block text-sm font-bold text-slate-800">
+                Tên bài học *
+                <input
+                  required
+                  maxLength={255}
+                  className={inputClass}
+                  placeholder="Ví dụ: Bài 1 - Giới thiệu mạng máy tính"
+                  value={lessonForm.title}
+                  onChange={(e) =>
+                    updateLesson("title", e.target.value)
+                  }
+                />
+              </label>
+
+              {/* THỜI LƯỢNG */}
+              <label className="block max-w-xs text-sm font-bold text-slate-800">
+                Thời lượng dự kiến (phút)
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className={inputClass}
+                  value={
+                    lessonForm.durationSeconds === ""
+                      ? ""
+                      : Number(lessonForm.durationSeconds) / 60
+                  }
+                  onChange={(e) =>
+                    updateLesson(
+                      "durationSeconds",
+                      e.target.value === ""
+                        ? ""
+                        : Math.round(Number(e.target.value) * 60)
+                    )
+                  }
+                />
+              </label>
+
+              {/* TAB */}
+              <div className="flex flex-wrap gap-2 border-b border-slate-200">
+                {[
+                  ["content", "Nội dung bài học"],
+                  ["resources", "Tài liệu & video"],
+                  
+                ].map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setActiveTab(id)}
+                    className={`border-b-2 px-4 py-3 text-sm font-bold ${
+                      activeTab === id
+                        ? "border-blue-600 text-blue-700"
+                        : "border-transparent text-slate-500"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* NỘI DUNG */}
+              {activeTab === "content" && (
+                <label className="block text-sm font-bold">
+                  Nội dung bài học
+                  <textarea
+                    rows={12}
+                    className={inputClass}
+                    placeholder="Nhập lý thuyết, ví dụ và hướng dẫn học tập..."
+                    value={lessonForm.content}
+                    onChange={(e) =>
+                      updateLesson("content", e.target.value)
+                    }
+                  />
+                </label>
+              )}
+
+              {/* TÀI LIỆU */}
+                {activeTab === "resources" && (
+  <div className="space-y-6">
+
+    {/* CHƯA CHỌN BÀI HỌC */}
+    {!isEditing ? (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <h4 className="font-bold text-amber-900">
+          Chưa chọn bài học
+        </h4>
+
+        <p className="mt-2 text-sm text-amber-800">
+          Hãy tạo và lưu bài học trước, sau đó chọn lại
+          bài học bên trái để thêm video hoặc tài liệu.
+        </p>
+      </div>
+    ) : (
+      <>
+        {/* DANH SÁCH TÀI LIỆU */}
+        <div className="space-y-3">
+          <h4 className="font-bold text-slate-900">
+            Tài liệu đã thêm ({lessonResources.length})
+          </h4>
+
+          {resourceLoading && (
+            <p className="text-sm text-slate-500">
+              Đang tải tài liệu...
+            </p>
+          )}
+
+          {!resourceLoading &&
+            !resourceError &&
+            lessonResources.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center">
+                <p className="text-sm text-slate-500">
+                  Bài học này chưa có tài liệu nào.
+                </p>
+              </div>
+            )}
+
+          {!resourceLoading &&
+  lessonResources.map((resource) => (
+    <div
+      key={resource.resourceId}
+      className="rounded-xl border border-slate-200 bg-white p-4"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+
+        {/* THÔNG TIN TÀI LIỆU */}
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-800">
+            {resource.title || "Tài liệu không có tên"}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            {resource.resourceType}
+          </p>
+        </div>
+
+        {/* CÁC NÚT THAO TÁC */}
+        <div className="flex flex-wrap gap-2">
+          <button
+  type="button"
+  onClick={() => viewLessonResource(resource)}
+  className="rounded-lg border border-blue-200 px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50"
+>
+  Xem tài liệu
+</button>
+
+          <button
+            type="button"
+            onClick={() => editLessonResource(resource)}
+            disabled={resourceSaving || deletingResourceId !== null}
+            className="rounded-lg border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+          >
+            Sửa
+          </button>
+
+          <button
+            type="button"
+            onClick={() => deleteLessonResource(resource)}
+            disabled={resourceSaving || deletingResourceId !== null}
+            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {deletingResourceId === resource.resourceId
+              ? "Đang xóa..."
+              : "Xóa"}
+          </button>
+        </div>
+      </div>
+    </div>
+  ))}
+
+  {/* UPLOAD PDF TRỰC TIẾP */}
+<div className="rounded-2xl border border-blue-200 bg-white p-6">
+
+  <div className="mb-5">
+    <h4 className="text-lg font-black text-slate-900">
+      Upload tài liệu PDF
+    </h4>
+
+    <p className="mt-2 text-sm text-slate-500">
+      Chọn file PDF từ máy tính để thêm trực tiếp vào bài học.
+    </p>
+  </div>
+
+  {/* KHU VỰC CHỌN FILE */}
+  <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 p-6 text-center">
+
+    <div className="mb-3 text-4xl">
+      📄
+    </div>
+
+    <p className="font-bold text-slate-800">
+      Chọn file PDF từ máy tính
+    </p>
+
+    <p className="mt-2 text-xs text-slate-500">
+      Chỉ hỗ trợ PDF, dung lượng tối đa 20 MB
+    </p>
+
+    <input
+      type="file"
+      accept=".pdf,application/pdf"
+      disabled={pdfUploading}
+      onChange={(event) => {
+        const file = event.target.files?.[0] || null;
+
+        setPdfFile(file);
+        setPdfUploadError("");
+        setPdfUploadSuccess("");
+
+        if (file) {
+          setPdfTitle(
+            file.name.replace(/\.pdf$/i, "")
+          );
+        } else {
+          setPdfTitle("");
+        }
+      }}
+      className="mt-4 block w-full rounded-lg border border-slate-200 bg-white p-3 text-sm"
+    />
+
+  </div>
+
+  {/* THÔNG TIN FILE ĐÃ CHỌN */}
+  {pdfFile && (
+    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+
+      <p className="font-bold text-slate-800">
+        {pdfFile.name}
+      </p>
+
+      <p className="mt-2 text-xs text-slate-500">
+        Dung lượng:{" "}
+        {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+      </p>
+
+      <label className="mt-4 block text-sm font-bold text-slate-800">
+        Tên tài liệu
+
+        <input
+          type="text"
+          maxLength={200}
+          value={pdfTitle}
+          onChange={(event) =>
+            setPdfTitle(event.target.value)
+          }
+          className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-500"
+          placeholder="Nhập tên tài liệu PDF"
+        />
+      </label>
+
+    </div>
+  )}
+
+  {/* THÔNG BÁO LỖI */}
+  {pdfUploadError && (
+    <div
+      role="alert"
+      className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-600"
+    >
+      {pdfUploadError}
+    </div>
+  )}
+
+  {/* THÔNG BÁO THÀNH CÔNG */}
+  {pdfUploadSuccess && (
+    <div
+      role="status"
+      className="mt-4 rounded-xl bg-green-50 p-4 text-sm font-semibold text-green-700"
+    >
+      {pdfUploadSuccess}
+    </div>
+  )}
+
+  {/* NÚT UPLOAD */}
+  <button
+    type="button"
+    disabled={!pdfFile || pdfUploading || resourceSaving}
+    onClick={uploadLessonPdf}
+    className="mt-5 w-full rounded-xl bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    {pdfUploading
+      ? "Đang upload PDF..."
+      : "Upload PDF lên bài học"}
+  </button>
+
+</div>
+
+{editingResourceId !== null &&
+ resourceForm.resourceType === "PDF" &&
+ resourceForm.resourceUrl.startsWith("vedu-file:") && (
+  <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+    <h4 className="text-lg font-bold text-slate-900">
+      Thay thế file PDF
+    </h4>
+
+    <p className="mt-2 text-sm text-slate-600">
+      Đổi tên tài liệu hoặc chọn PDF mới để thay thế file hiện tại.
+    </p>
+
+    <label className="mt-4 block text-sm font-bold">
+      Tên tài liệu
+      <input
+        type="text"
+        value={resourceForm.title}
+        onChange={(event) =>
+          setResourceForm((previous) => ({
+            ...previous,
+            title: event.target.value,
+          }))
+        }
+        className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3"
+      />
+    </label>
+
+    <label className="mt-4 block text-sm font-bold">
+      Chọn file PDF mới (không bắt buộc)
+      <input
+        type="file"
+        accept=".pdf,application/pdf"
+        onChange={(event) =>
+          setReplacementPdf(event.target.files?.[0] || null)
+        }
+        className="mt-2 block w-full rounded-xl border border-slate-200 bg-white p-3"
+      />
+    </label>
+
+    {resourceError && (
+      <p role="alert" className="mt-3 text-sm text-red-600">
+        {resourceError}
+      </p>
+    )}
+
+    <div className="mt-5 flex flex-wrap gap-3">
+      <button
+        type="button"
+        disabled={resourceSaving}
+        onClick={saveReplacementPdf}
+        className="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50"
+      >
+        {resourceSaving ? "Đang lưu..." : "Lưu thay đổi PDF"}
+      </button>
+
+      <button
+        type="button"
+        onClick={cancelEditResource}
+        disabled={resourceSaving}
+        className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-bold"
+      >
+        Hủy
+      </button>
+    </div>
+  </div>
+)}
+
+        </div>
+
+        {/* FORM THÊM TÀI LIỆU */}
+        {!(
+  editingResourceId !== null &&
+  resourceForm.resourceType === "PDF" &&
+  resourceForm.resourceUrl.startsWith("vedu-file:")
+) && (
+        <div
+  id="vedu-resource-form"
+  className="rounded-xl border border-blue-100 bg-blue-50 p-5"
+>
+          <h4 className="text-lg font-bold text-slate-900">
+  {editingResourceId !== null
+    ? "Chỉnh sửa tài liệu"
+    : "Thêm video hoặc liên kết"}
+</h4>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Thêm video bài giảng hoặc tài liệu học tập bằng liên kết.
+          </p>
+
+          <div className="mt-5 space-y-4">
+
+            {/* LOẠI TÀI LIỆU */}
+            <label className="block text-sm font-bold text-slate-800">
+              Loại tài liệu
+              <select
+  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+  value={
+    resourceForm.resourceType === "PDF"
+      ? "VIDEO"
+      : resourceForm.resourceType
+  }
+  onChange={(event) =>
+    setResourceForm((previous) => ({
+      ...previous,
+      resourceType: event.target.value,
+    }))
+  }
+>
+  <option value="VIDEO">Video bài giảng</option>
+  <option value="LINK">Liên kết học liệu</option>
+</select>
+            </label>
+
+            {/* TÊN TÀI LIỆU */}
+            <label className="block text-sm font-bold text-slate-800">
+              Tên tài liệu
+              <input
+                type="text"
+                maxLength={200}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                placeholder="Ví dụ: Video bài 1 - Mạng máy tính"
+                value={resourceForm.title}
+                onChange={(event) =>
+                  setResourceForm((previous) => ({
+                    ...previous,
+                    title: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            {/* ĐƯỜNG DẪN */}
+            <label className="block text-sm font-bold text-slate-800">
+              Đường dẫn tài liệu
+              <input
+                type="url"
+                maxLength={2048}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
+                placeholder="https://..."
+                value={resourceForm.resourceUrl}
+                onChange={(event) =>
+                  setResourceForm((previous) => ({
+                    ...previous,
+                    resourceUrl: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            {/* THÔNG BÁO */}
+            {resourceError && (
+              <p role="alert" className="text-sm text-red-600">
+                {resourceError}
+              </p>
+            )}
+
+            {resourceSuccess && (
+              <p role="status" className="text-sm text-green-700">
+                {resourceSuccess}
+              </p>
+            )}
+
+            {/* NÚT LƯU */}
+            <button
+              type="button"
+              disabled={resourceSaving || resourceLoading}
+              onClick={saveLessonResource}
+              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {resourceSaving
+  ? "Đang lưu..."
+  : editingResourceId !== null
+  ? "Lưu thay đổi"
+  : "+ Thêm tài liệu"}
+            </button>
+
+            {editingResourceId !== null && (
+  <button
+    type="button"
+    onClick={cancelEditResource}
+    disabled={resourceSaving}
+    className="ml-3 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+  >
+    Hủy chỉnh sửa
+  </button>
+)}
+          </div>
+        </div>
+)}
+      </>
+    )}
+  </div>
+)}
+
+              
+
+              {/* XEM TRƯỚC */}
+              {showPreview && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold">
+                      Xem trước bài học
+                    </h4>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(false)}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <h5 className="mt-4 text-lg font-bold">
+                    {lessonForm.title || "Chưa nhập tên bài"}
+                  </h5>
+
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7">
+                    {lessonForm.content || "Chưa có nội dung"}
+                  </p>
+                </div>
+              )}
+
+              {showSuccess && (
+                <p
+                  role="status"
+                  className="rounded-xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700"
+                >
+                  Bài học đã được lưu thành công.
+                </p>
+              )}
+            </div>
+
+            {/* NÚT THAO TÁC */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 p-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("content");
+                  setShowPreview(!showPreview);
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700"
+              >
+                {showPreview ? "Đóng xem trước" : "Xem trước"}
+              </button>
+
+              <button
+                type="submit"
+                disabled={
+                  busy ||
+                  !selectedCourse ||
+                  !lessonForm.title.trim()
+                }
+                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-40"
+              >
+                {busy
+  ? "Đang lưu..."
+  : isEditing
+  ? "Lưu thay đổi"
+  : "Tạo bài học"}
+              </button>
+              {isEditing && (
+  <button
+    type="button"
+    disabled={busy || lessonLoading}
+    onClick={() =>
+      changeLessonPublishStatus(!lessonPublished)
+    }
+    className={`rounded-xl px-5 py-3 text-sm font-bold text-white transition disabled:opacity-50 ${
+      lessonPublished
+        ? "bg-amber-500 hover:bg-amber-600"
+        : "bg-emerald-600 hover:bg-emerald-700"
+    }`}
+  >
+    {lessonPublished
+      ? "Chuyển về nháp"
+      : "Công bố bài học"}
+  </button>
+)}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function renderTeacherPage({
   activePage,
   data,
@@ -1204,178 +2739,21 @@ function renderTeacherPage({
         {data.courses.length ? courseRows : <Empty />}
       </Panel>
     );
-  if (activePage === "builder")
-    return (
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Panel
-          title="Tạo khóa học mới"
-          subtitle="Khóa mới được lưu ở trạng thái DRAFT"
-        >
-          <form
-            className="space-y-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const ok = await runAction(
-                () => api.createTeacherCourse(courseForm, token),
-                "Đã tạo khóa học nháp.",
-              );
-              if (ok)
-                setCourseForm({
-                  name: "",
-                  description: "",
-                  topic: "",
-                  price: 0,
-                });
-            }}
-          >
-            <label className="block text-sm font-bold">
-              Tên khóa học
-              <input
-                required
-                value={courseForm.name}
-                onChange={(event) =>
-                  setCourseForm({ ...courseForm, name: event.target.value })
-                }
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold">
-              Chủ đề
-              <input
-                maxLength={80}
-                value={courseForm.topic}
-                onChange={(event) =>
-                  setCourseForm({ ...courseForm, topic: event.target.value })
-                }
-                placeholder="Ví dụ: Thiết kế, Ngoại ngữ, Lập trình..."
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold">
-              Mô tả
-              <textarea
-                value={courseForm.description}
-                onChange={(event) =>
-                  setCourseForm({
-                    ...courseForm,
-                    description: event.target.value,
-                  })
-                }
-                className="mt-1.5 min-h-28 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold">
-              Học phí (VND)
-              <input
-                min="0"
-                type="number"
-                value={courseForm.price}
-                onChange={(event) =>
-                  setCourseForm({ ...courseForm, price: event.target.value })
-                }
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <button
-              disabled={busy}
-              className="w-full rounded-xl bg-blue-600 py-2.5 font-bold text-white"
-            >
-              Lưu bản nháp
-            </button>
-          </form>
-        </Panel>
-        <Panel
-          title="Thêm bài học"
-          subtitle="Bài mới được tạo ở trạng thái chưa xuất bản"
-        >
-          <form
-            className="space-y-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const ok = await runAction(
-                () =>
-                  api.createTeacherLesson(
-                    lessonForm.courseId,
-                    lessonForm,
-                    token,
-                  ),
-                "Đã thêm bài học vào khóa học.",
-              );
-              if (ok) setLessonForm({ ...lessonForm, title: "", content: "" });
-            }}
-          >
-            <label className="block text-sm font-bold">
-              Khóa học
-              <select
-                required
-                value={lessonForm.courseId}
-                onChange={(event) =>
-                  setLessonForm({ ...lessonForm, courseId: event.target.value })
-                }
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              >
-                <option value="">Chọn khóa học</option>
-                {data.courses.map((course) => (
-                  <option key={course.courseId} value={course.courseId}>
-                    {course.courseName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-bold">
-              Tên bài học
-              <input
-                required
-                value={lessonForm.title}
-                onChange={(event) =>
-                  setLessonForm({ ...lessonForm, title: event.target.value })
-                }
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold">
-              Nội dung
-              <textarea
-                value={lessonForm.content}
-                onChange={(event) =>
-                  setLessonForm({ ...lessonForm, content: event.target.value })
-                }
-                className="mt-1.5 min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold">
-              Thời lượng (phút)
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={
-                  lessonForm.durationSeconds === ""
-                    ? ""
-                    : Number(lessonForm.durationSeconds) / 60
-                }
-                onChange={(event) =>
-                  setLessonForm({
-                    ...lessonForm,
-                    durationSeconds:
-                      event.target.value === ""
-                        ? ""
-                        : Math.round(Number(event.target.value) * 60),
-                  })
-                }
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal"
-              />
-            </label>
-            <button
-              disabled={busy}
-              className="w-full rounded-xl bg-violet-600 py-2.5 font-bold text-white"
-            >
-              Thêm bài học
-            </button>
-          </form>
-        </Panel>
-      </div>
-    );
+  
+    if (activePage === "builder")
+  return (
+    <TeacherLessonBuilder
+      data={data}
+      courseForm={courseForm}
+      setCourseForm={setCourseForm}
+      lessonForm={lessonForm}
+      setLessonForm={setLessonForm}
+      busy={busy}
+      runAction={runAction}
+      token={token}
+    />
+  );
+
   if (activePage === "quiz-bank")
     return (
       <Panel

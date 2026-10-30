@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
+import { resolve } from 'path';
+import { randomUUID } from 'crypto';
+import { mkdir, writeFile, unlink } from 'fs/promises';
+
 import { UserRole } from '../entities/user.entity';
 
 type FeedbackInput = {
@@ -541,6 +545,468 @@ export class PortalService {
       [status, courseId, teacherId],
     );
     return rows[0];
+  }
+
+    async replaceTeacherPdf(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+    resourceId: number,
+    titleInput?: string,
+    file?: { buffer: Buffer },
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    const title = String(titleInput || '').trim();
+
+    if (title.length < 2 || title.length > 200) {
+      throw new BadRequestException(
+        'Tên tài liệu phải có từ 2 đến 200 ký tự',
+      );
+    }
+
+    if (
+      file &&
+      (
+        !file.buffer ||
+        file.buffer.length === 0 ||
+        file.buffer.length > 20 * 1024 * 1024 ||
+        file.buffer.subarray(0, 5).toString() !== '%PDF-'
+      )
+    ) {
+      throw new BadRequestException('File PDF không hợp lệ hoặc quá 20 MB');
+    }
+
+    const existing = await this.dataSource.query(
+      `
+      SELECT r.resource_id, r.resource_url
+      FROM lms.lesson_resources r
+      JOIN lms.lessons l ON l.lesson_id = r.lesson_id
+      WHERE r.resource_id = $1
+        AND r.lesson_id = $2
+        AND l.course_id = $3
+        AND l.is_deleted = FALSE
+        AND r.resource_type = 'PDF'
+        AND r.resource_url LIKE 'vedu-file:%'
+      `,
+      [resourceId, lessonId, courseId],
+    );
+
+    if (!existing.length) {
+      throw new NotFoundException(
+        'Không tìm thấy PDF đã upload',
+      );
+    }
+
+    let newUrl: string | null = null;
+    let newPath: string | null = null;
+
+    if (file) {
+      const fileName = `${randomUUID()}.pdf`;
+      const directory = resolve(
+        process.env.MEDIA_DIR || './media',
+      );
+
+      await mkdir(directory, { recursive: true });
+
+      newPath = resolve(directory, fileName);
+      await writeFile(newPath, file.buffer);
+
+      newUrl = `vedu-file:${fileName}`;
+    }
+
+    try {
+      const rows = await this.dataSource.query(
+        `
+        UPDATE lms.lesson_resources AS r
+        SET
+          title = $1,
+          resource_url = COALESCE($2, r.resource_url)
+        FROM lms.lessons AS l
+        WHERE r.resource_id = $3
+          AND r.lesson_id = $4
+          AND r.resource_type = 'PDF'
+          AND r.resource_url LIKE 'vedu-file:%'
+          AND l.lesson_id = r.lesson_id
+          AND l.course_id = $5
+          AND l.is_deleted = FALSE
+        RETURNING
+          r.resource_id AS "resourceId",
+          r.title,
+          r.resource_url AS "resourceUrl",
+          r.resource_type AS "resourceType"
+        `,
+        [title, newUrl, resourceId, lessonId, courseId],
+      );
+
+      if (!rows.length) {
+        throw new NotFoundException(
+          'Không tìm thấy tài liệu cần thay thế',
+        );
+      }
+
+      return rows[0];
+    } catch (error) {
+      if (newPath) {
+        await unlink(newPath).catch(() => {});
+      }
+
+      throw error;
+    }
+  }
+
+    async getTeacherPdfFile(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+    resourceId: number,
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    const rows = await this.dataSource.query(
+      `
+      SELECT r.resource_url, r.resource_type
+      FROM lms.lesson_resources r
+      JOIN lms.lessons l ON l.lesson_id = r.lesson_id
+      WHERE r.resource_id = $1
+        AND r.lesson_id = $2
+        AND l.course_id = $3
+        AND l.is_deleted = FALSE
+      `,
+      [resourceId, lessonId, courseId],
+    );
+
+    if (!rows.length) {
+      throw new NotFoundException('Không tìm thấy tài liệu');
+    }
+
+    const resource = rows[0];
+    const url = String(resource.resource_url || "");
+
+    if (
+      resource.resource_type !== 'PDF' ||
+      !/^vedu-file:[a-f0-9-]{36}\.pdf$/.test(url)
+    ) {
+      throw new BadRequestException(
+        'Đây không phải file PDF được upload lên VEDU',
+      );
+    }
+
+    const fileName = url.slice('vedu-file:'.length);
+
+    return {
+      path: resolve(process.env.MEDIA_DIR || './media', fileName),
+    };
+  }
+
+    // Kiểm tra bài học thuộc khóa học giảng viên quản lý
+  private async assertTeacherLessonAccess(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+  ) {
+    await this.assertCourseOwner(teacherId, courseId);
+
+    const lessons = await this.dataSource.query(
+      `
+      SELECT lesson_id
+      FROM lms.lessons
+      WHERE lesson_id = $1
+        AND course_id = $2
+        AND is_deleted = FALSE
+      `,
+      [lessonId, courseId],
+    );
+
+    if (!lessons.length) {
+      throw new NotFoundException(
+        'Không tìm thấy bài học trong khóa học này',
+      );
+    }
+  }
+
+  // Lấy tài liệu theo bài học
+  async getTeacherLessonResources(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    return this.dataSource.query(
+      `
+      SELECT
+        resource_id AS "resourceId",
+        lesson_id AS "lessonId",
+        resource_type AS "resourceType",
+        title,
+        resource_url AS "resourceUrl",
+        display_order AS "displayOrder"
+      FROM lms.lesson_resources
+      WHERE lesson_id = $1
+      ORDER BY display_order ASC, resource_id ASC
+      `,
+      [lessonId],
+    );
+  }
+
+  // Thêm video hoặc liên kết học liệu
+  async addTeacherLessonResource(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+    input: {
+      resourceType: string;
+      title: string;
+      resourceUrl: string;
+    },
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    const type =
+      typeof input?.resourceType === 'string'
+        ? input.resourceType.trim().toUpperCase()
+        : '';
+
+    const title =
+      typeof input?.title === 'string'
+        ? input.title.trim()
+        : '';
+
+    const url =
+      typeof input?.resourceUrl === 'string'
+        ? input.resourceUrl.trim()
+        : '';
+
+    if (!['VIDEO', 'PDF', 'DOCUMENT', 'LINK'].includes(type)) {
+      throw new BadRequestException(
+        'Loại tài liệu không hợp lệ',
+      );
+    }
+
+    if (title.length < 2 || title.length > 200) {
+      throw new BadRequestException(
+        'Tên tài liệu phải có từ 2 đến 200 ký tự',
+      );
+    }
+
+    if (url.length > 2048) {
+      throw new BadRequestException(
+        'Đường dẫn tài liệu quá dài',
+      );
+    }
+
+    try {
+      const parsedUrl = new URL(url);
+
+      if (
+        parsedUrl.protocol !== 'https:' ||
+        !parsedUrl.hostname
+      ) {
+        throw new Error('Invalid URL');
+      }
+    } catch {
+      throw new BadRequestException(
+        'Đường dẫn tài liệu phải là URL HTTPS hợp lệ',
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const lessons = await manager.query(
+        `
+        SELECT lesson_id
+        FROM lms.lessons
+        WHERE lesson_id = $1
+          AND course_id = $2
+          AND is_deleted = FALSE
+        FOR UPDATE
+        `,
+        [lessonId, courseId],
+      );
+
+      if (!lessons.length) {
+        throw new NotFoundException(
+          'Không tìm thấy bài học',
+        );
+      }
+
+      const rows = await manager.query(
+        `
+        INSERT INTO lms.lesson_resources (
+          lesson_id,
+          resource_type,
+          title,
+          resource_url,
+          display_order
+        )
+        SELECT
+          $1, $2, $3, $4,
+          COALESCE(MAX(display_order), 0) + 1
+        FROM lms.lesson_resources
+        WHERE lesson_id = $1
+        RETURNING
+          resource_id AS "resourceId",
+          lesson_id AS "lessonId",
+          resource_type AS "resourceType",
+          title,
+          resource_url AS "resourceUrl",
+          display_order AS "displayOrder"
+        `,
+        [lessonId, type, title, url],
+      );
+
+      return rows[0];
+    });
+  }
+
+    // Cập nhật tài liệu của bài học
+  async updateTeacherLessonResource(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+    resourceId: number,
+    input: {
+      resourceType: string;
+      title: string;
+      resourceUrl: string;
+    },
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    const type =
+      typeof input?.resourceType === 'string'
+        ? input.resourceType.trim().toUpperCase()
+        : '';
+
+    const title =
+      typeof input?.title === 'string'
+        ? input.title.trim()
+        : '';
+
+    const resourceUrl =
+      typeof input?.resourceUrl === 'string'
+        ? input.resourceUrl.trim()
+        : '';
+
+    if (!['VIDEO', 'PDF', 'DOCUMENT', 'LINK'].includes(type)) {
+      throw new BadRequestException(
+        'Loại tài liệu không hợp lệ',
+      );
+    }
+
+    if (title.length < 2 || title.length > 200) {
+      throw new BadRequestException(
+        'Tên tài liệu phải có từ 2 đến 200 ký tự',
+      );
+    }
+
+    if (resourceUrl.length > 2048) {
+      throw new BadRequestException(
+        'Đường dẫn tài liệu quá dài',
+      );
+    }
+
+    try {
+      const url = new URL(resourceUrl);
+
+      if (url.protocol !== 'https:' || !url.hostname) {
+        throw new Error('Invalid URL');
+      }
+    } catch {
+      throw new BadRequestException(
+        'Đường dẫn phải là URL HTTPS hợp lệ',
+      );
+    }
+
+    const rows = await this.dataSource.query(
+      `
+      UPDATE lms.lesson_resources AS r
+      SET
+        resource_type = $1,
+        title = $2,
+        resource_url = $3
+      FROM lms.lessons AS l
+      WHERE r.resource_id = $4
+        AND r.lesson_id = $5
+        AND l.lesson_id = r.lesson_id
+        AND l.course_id = $6
+        AND l.is_deleted = FALSE
+      RETURNING
+        r.resource_id AS "resourceId",
+        r.lesson_id AS "lessonId",
+        r.resource_type AS "resourceType",
+        r.title,
+        r.resource_url AS "resourceUrl",
+        r.display_order AS "displayOrder"
+      `,
+      [type, title, resourceUrl, resourceId, lessonId, courseId],
+    );
+
+    if (!rows.length) {
+      throw new NotFoundException(
+        'Không tìm thấy tài liệu cần chỉnh sửa',
+      );
+    }
+
+    return rows[0];
+  }
+
+  // Xóa tài liệu khỏi bài học
+  async deleteTeacherLessonResource(
+    teacherId: number,
+    courseId: number,
+    lessonId: number,
+    resourceId: number,
+  ) {
+    await this.assertTeacherLessonAccess(
+      teacherId,
+      courseId,
+      lessonId,
+    );
+
+    const rows = await this.dataSource.query(
+      `
+      DELETE FROM lms.lesson_resources AS r
+      USING lms.lessons AS l
+      WHERE r.resource_id = $1
+        AND r.lesson_id = $2
+        AND l.lesson_id = r.lesson_id
+        AND l.course_id = $3
+        AND l.is_deleted = FALSE
+      RETURNING r.resource_id
+      `,
+      [resourceId, lessonId, courseId],
+    );
+
+    if (!rows.length) {
+      throw new NotFoundException(
+        'Không tìm thấy tài liệu cần xóa',
+      );
+    }
+
+    return {
+      message: 'Đã xóa tài liệu thành công',
+    };
   }
 
   private async assertCourseOwner(teacherId: number, courseId: number) {
