@@ -2073,7 +2073,7 @@ const deleteLessonResource = async (resource) => {
                 {[
                   ["content", "Nội dung bài học"],
                   ["resources", "Tài liệu & video"],
-                  
+
                 ].map(([id, label]) => (
                   <button
                     key={id}
@@ -2510,7 +2510,7 @@ const deleteLessonResource = async (resource) => {
   </div>
 )}
 
-              
+
 
               {/* XEM TRƯỚC */}
               {showPreview && (
@@ -2739,7 +2739,7 @@ function renderTeacherPage({
         {data.courses.length ? courseRows : <Empty />}
       </Panel>
     );
-  
+
     if (activePage === "builder")
   return (
     <TeacherLessonBuilder
@@ -2922,102 +2922,507 @@ function renderTeacherPage({
 }
 
 function renderAdminPage({ activePage, data, catalog, auth, busy, runAction }) {
-  if (activePage === "dashboard")
+
+  if (activePage === "dashboard") {
+    const totalUsers = number(data.stats.totalUsers);
+    const activeUsers = number(data.stats.activeUsers);
+    const totalCourses = number(data.stats.totalCourses);
+    const publishedCourses = number(data.stats.publishedCourses);
+    const learningEvents = number(data.stats.learningEvents);
+    const openTickets = number(data.stats.openTickets);
+    const unreviewedCourses = number(data.stats.unreviewedCourses);
+    const pendingOrders = number(data.stats.pendingOrders);
+    const miningRuns = data.miningRuns || [];
+    const latestMining = miningRuns[0];
+
+    const activityDaily = Array.isArray(data.activityDaily)
+  ? data.activityDaily
+  : [];
+
+const topCourses = Array.isArray(data.topCourses)
+  ? data.topCourses
+  : [];
+
+const maxEvents = Math.max(
+  1,
+  ...activityDaily.map((item) => Number(item.eventCount) || 0),
+);
+
+const maxStudents = Math.max(
+  1,
+  ...topCourses.map((item) => Number(item.studentCount) || 0),
+);
+
+    const activeRate = totalUsers
+      ? Math.round((activeUsers / totalUsers) * 100)
+      : 0;
+
+    const publishRate = totalCourses
+      ? Math.round((publishedCourses / totalCourses) * 100)
+      : 0;
+
     return (
       <div className="space-y-6">
+        {/* THONG KE TONG QUAN */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <MetricCard
             label="Người dùng"
-            value={number(data.stats.totalUsers)}
-            caption={`${number(data.stats.activeUsers)} đang hoạt động`}
+            value={totalUsers}
+            caption={`${activeUsers} đang hoạt động`}
             icon={Users}
           />
           <MetricCard
             label="Khóa học"
-            value={number(data.stats.totalCourses)}
-            caption="Không tính dữ liệu đã xóa"
+            value={totalCourses}
+            caption={`${publishedCourses} đã công bố`}
             icon={LibraryBig}
             color="violet"
           />
           <MetricCard
             label="Learning events"
-            value={number(data.stats.learningEvents)}
-            caption="Nguồn vào cho HUSPM"
+            value={learningEvents}
+            caption="Dữ liệu học tập đã ghi nhận"
             icon={Activity}
             color="emerald"
           />
           <MetricCard
             label="Mining runs"
-            value={data.miningRuns.length}
-            caption="Lịch sử chạy gần nhất"
+            value={miningRuns.length}
+            caption="Số lần khai thác đã ghi nhận"
             icon={Database}
             color="amber"
           />
           <MetricCard
             label="Ticket mở"
-            value={number(data.stats.openTickets)}
+            value={openTickets}
             caption="Cần được xử lý"
             icon={CircleHelp}
             color="blue"
           />
         </div>
+
+        {/* HOAT DONG VA CONG VIEC */}
+        <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+          <Panel title="Tình hình hoạt động hệ thống">
+            <div className="space-y-6 py-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold text-slate-700">
+                    Tỷ lệ người dùng đang hoạt động
+                  </span>
+                  <span className="font-bold text-blue-700">
+                    {activeRate}%
+                  </span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-blue-600"
+                    style={{
+                      width: `${Math.min(100, activeRate)}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {activeUsers} / {totalUsers} người dùng
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold text-slate-700">
+                    Tỷ lệ khóa học đã công bố
+                  </span>
+                  <span className="font-bold text-violet-700">
+                    {publishRate}%
+                  </span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-violet-600"
+                    style={{
+                      width: `${Math.min(100, publishRate)}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {publishedCourses} / {totalCourses} khóa học
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="rounded-2xl bg-blue-50 p-5">
+                  <p className="text-sm font-semibold text-blue-700">
+                    Sự kiện học tập
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-blue-900">
+                    {number(learningEvents)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-violet-50 p-5">
+                  <p className="text-sm font-semibold text-violet-700">
+                    Lượt khai thác
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-violet-900">
+                    {miningRuns.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+
+          <Panel title="Công việc cần xử lý">
+            <div className="space-y-3">
+              {[
+                {
+                  title: "Khóa học chưa kiểm duyệt",
+                  subtitle: "Khóa học mang trạng thái UNREVIEWED",
+                  count: unreviewedCourses,
+                  href: "/admin/catalog",
+                  icon: LibraryBig,
+                  color: "text-amber-600",
+                  background: "bg-amber-50",
+                },
+                {
+                  title: "Đơn hàng đang chờ",
+                  subtitle: "Đơn hàng có trạng thái PENDING",
+                  count: pendingOrders,
+                  href: "/admin/orders",
+                  icon: ShieldCheck,
+                  color: "text-emerald-600",
+                  background: "bg-emerald-50",
+                },
+                {
+                  title: "Ticket chưa xử lý xong",
+                  subtitle: "Ticket OPEN hoặc IN_PROGRESS",
+                  count: openTickets,
+                  href: "/admin/ticket-chat",
+                  icon: CircleHelp,
+                  color: "text-blue-600",
+                  background: "bg-blue-50",
+                },
+              ].map((task) => {
+                const TaskIcon = task.icon;
+
+                return (
+                  <a
+                    key={task.href}
+                    href={task.href}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40 hover:shadow-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={`shrink-0 rounded-xl p-3 ${task.background}`}
+                      >
+                        <TaskIcon
+                          size={21}
+                          className={task.color}
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800">
+                          {task.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {task.subtitle}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full bg-rose-50 px-3 py-1 text-sm font-black text-rose-600">
+                        {number(task.count)}
+                      </span>
+                      <span className="text-lg text-slate-400">
+                        ›
+                      </span>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </Panel>
+
+        </div>
+
+
+        {/* BIEU DO HOAT DONG VA KHOA HOC NOI BAT */}
+        <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+          <Panel title="Hoạt động học tập trong 30 ngày">
+            {activityDaily.length ? (
+              <div className="space-y-5">
+                <div className="flex flex-wrap gap-5 text-sm">
+                  <span className="flex items-center gap-2 font-semibold text-blue-700">
+                    <span className="h-3 w-3 rounded-full bg-blue-600" />
+                    Sự kiện học tập
+                  </span>
+                  <span className="flex items-center gap-2 font-semibold text-violet-700">
+                    <span className="h-3 w-3 rounded-full bg-violet-500" />
+                    Người học hoạt động
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <svg
+                    viewBox="0 0 700 280"
+                    className="h-auto w-full min-w-[480px]"
+                    role="img"
+                    aria-label="Biểu đồ hoạt động học tập trong 30 ngày"
+                  >
+                    {[0, 1, 2, 3, 4].map((index) => {
+                      const y = 30 + index * 48;
+                      const value = Math.round(
+                        maxEvents * (1 - index / 4)
+                      );
+
+                      return (
+                        <g key={index}>
+                          <line
+                            x1="48"
+                            y1={y}
+                            x2="680"
+                            y2={y}
+                            stroke="#e2e8f0"
+                            strokeDasharray="4 4"
+                          />
+                          <text
+                            x="38"
+                            y={y + 4}
+                            textAnchor="end"
+                            fontSize="12"
+                            fill="#64748b"
+                          >
+                            {value}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    <polyline
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+
+                      points={activityDaily
+                        .map((item, index) => {
+                          const x =
+                            48 +
+                            (index * 632) /
+                              Math.max(activityDaily.length - 1, 1);
+                          const y =
+                            222 -
+                            ((Number(item.eventCount) || 0) /
+                              maxEvents) *
+                              192;
+                          return `${x},${y}`;
+                        })
+                        .join(" ")}
+                    />
+
+                    <polyline
+                      fill="none"
+                      stroke="#a855f7"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={activityDaily
+                        .map((item, index) => {
+                          const x =
+                            48 +
+                            (index * 632) /
+                              Math.max(activityDaily.length - 1, 1);
+                          const y =
+                            222 -
+                            ((Number(item.activeLearners) || 0) /
+                              maxEvents) *
+                              192;
+                          return `${x},${y}`;
+                        })
+                        .join(" ")}
+                    />
+
+                    {activityDaily.map((item, index) => {
+                      if (
+                        index % 5 !== 0 &&
+                        index !== activityDaily.length - 1
+                      ) {
+                        return null;
+                      }
+
+                      const x =
+                        48 +
+                        (index * 632) /
+                          Math.max(activityDaily.length - 1, 1);
+
+                      return (
+                        <text
+                          key={item.day}
+                          x={x}
+                          y="250"
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#64748b"
+                        >
+                          {item.day?.slice(5)}
+                        </text>
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-blue-50 p-4">
+                    <p className="text-xs font-semibold text-blue-700">
+                      Tổng sự kiện trong 30 ngày
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-blue-900">
+                      {number(
+                        activityDaily.reduce(
+                          (sum, item) =>
+                            sum + (Number(item.eventCount) || 0),
+                          0
+                        )
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-violet-50 p-4">
+                    <p className="text-xs font-semibold text-violet-700">
+                      Lượt người học hoạt động theo ngày
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-violet-900">
+                      {number(
+                        activityDaily.reduce(
+                          (sum, item) =>
+                            sum + (Number(item.activeLearners) || 0),
+                          0
+                        )
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Empty />
+            )}
+          </Panel>
+
+          <Panel title="Top 5 khóa học theo lượt ghi danh">
+            {topCourses.length ? (
+              <div className="space-y-5 py-2">
+                {topCourses.map((course, index) => {
+                  const studentCount =
+                    Number(course.studentCount) || 0;
+
+                  const percentage =
+                    (studentCount / maxStudents) * 100;
+
+                  return (
+                    <div key={course.courseId}>
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <span className="text-sm font-bold text-blue-600">
+                            {index + 1}.
+                          </span>
+                          <span className="text-sm font-semibold text-slate-800">
+                            {course.courseName}
+                          </span>
+                        </div>
+
+                        <span className="shrink-0 text-sm font-black text-slate-900">
+                          {number(studentCount)}
+                        </span>
+                      </div>
+
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-600"
+                          style={{
+                            width: `${percentage}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <p className="border-t border-slate-100 pt-4 text-xs text-slate-500">
+                  Thống kê học viên ghi danh có trạng thái
+                  ACTIVE hoặc COMPLETED.
+                </p>
+              </div>
+            ) : (
+              <Empty />
+            )}
+          </Panel>
+        </div>
+
+
+        {/* KHAI THAC MAU VA KHUYEN NGHI */}
         <div className="grid gap-6 xl:grid-cols-2">
-          <Panel title="Trạng thái pipeline">
+          <Panel title="Hệ thống khuyến nghị & khai thác mẫu">
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-xl bg-emerald-50 p-4">
                 <span className="font-bold text-emerald-900">
                   PostgreSQL & audit
                 </span>
-                <Badge tone="green">ONLINE</Badge>
+                <Badge tone="green">Dữ liệu đã tải</Badge>
               </div>
+
               <div className="flex items-center justify-between rounded-xl bg-blue-50 p-4">
                 <span className="font-bold text-blue-900">
                   Recommendation store
                 </span>
-                <Badge tone="blue">READY</Badge>
+                <Badge tone="blue">Hệ thống khuyến nghị</Badge>
               </div>
+
               <div className="flex items-center justify-between rounded-xl bg-amber-50 p-4">
                 <span className="font-bold text-amber-900">
                   Python mining service
                 </span>
                 <Badge tone="blue">
-                  {data.miningRuns.some(
-                    (r) => r.algorithm === "VEDU-PrefixProjection-HUSPM",
+                  {miningRuns.some(
+                    (run) =>
+                      run.algorithm === "VEDU-PrefixProjection-HUSPM"
                   )
-                    ? "ĐÃ CHẠY THẬT"
-                    : "CHƯA HUẤN LUYỆN"}
+                    ? "ĐÃ CÓ LỊCH SỬ"
+                    : "CHƯA CÓ LỊCH SỬ"}
                 </Badge>
               </div>
             </div>
           </Panel>
+
           <Panel title="Mining run gần nhất">
-            {data.miningRuns.length ? (
+            {latestMining ? (
               <div>
-                <p className="text-2xl font-black">
-                  {data.miningRuns[0].algorithm}
+                <p className="text-xl font-black text-slate-900">
+                  {latestMining.algorithm}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Dataset: {data.miningRuns[0].datasetVersion}
+                <p className="mt-2 text-sm text-slate-500">
+                  Dataset: {latestMining.datasetVersion}
                 </p>
+
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <b className="block text-xl">
-                      {data.miningRuns[0].sequenceCount}
-                    </b>
-                    <small>Chuỗi</small>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <b className="block text-xl">
-                      {data.miningRuns[0].eventCount}
-                    </b>
-                    <small>Sự kiện</small>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <b className="block text-xl">
-                      {data.miningRuns[0].patternCount}
-                    </b>
-                    <small>Mẫu</small>
-                  </div>
+                  {[
+                    ["Chuỗi", latestMining.sequenceCount],
+                    ["Sự kiện", latestMining.eventCount],
+                    ["Mẫu", latestMining.patternCount],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-xl bg-slate-50 p-4"
+                    >
+                      <p className="text-xl font-black text-slate-900">
+                        {number(value)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {label}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : (
@@ -3027,6 +3432,8 @@ function renderAdminPage({ activePage, data, catalog, auth, busy, runAction }) {
         </div>
       </div>
     );
+  }
+
   if (activePage === "users")
     return (
       <Panel

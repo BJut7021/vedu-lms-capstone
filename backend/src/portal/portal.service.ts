@@ -36,6 +36,7 @@ export class PortalService {
   }
 
   private async studentOverview(userId: number) {
+
     const [
       statsRows,
       courses,
@@ -46,6 +47,7 @@ export class PortalService {
       orders,
       sessions,
     ] = await Promise.all([
+
       this.dataSource.query(
         `
                     SELECT
@@ -277,23 +279,53 @@ export class PortalService {
 
   private async adminOverview() {
     const [
-      statsRows,
-      users,
-      miningRuns,
-      patterns,
-      settings,
-      audits,
-      tickets,
-      orders,
-    ] = await Promise.all([
+  statsRows,
+  users,
+  miningRuns,
+  patterns,
+  settings,
+  audits,
+  tickets,
+  orders,
+  activityDaily,
+  topCourses,
+] = await Promise.all([
       this.dataSource.query(`
-                    SELECT
-                        (SELECT COUNT(*)::int FROM auth.users) AS "totalUsers",
-                        (SELECT COUNT(*)::int FROM auth.users WHERE is_active = TRUE) AS "activeUsers",
-                        (SELECT COUNT(*)::int FROM lms.courses WHERE is_deleted = FALSE) AS "totalCourses",
-                        (SELECT COUNT(*)::int FROM learning.learning_sequence_logs) AS "learningEvents",
-                        (SELECT COUNT(*)::int FROM support.tickets WHERE status IN ('OPEN','IN_PROGRESS')) AS "openTickets"
-                `),
+    SELECT
+        (SELECT COUNT(*)::int
+         FROM auth.users) AS "totalUsers",
+
+        (SELECT COUNT(*)::int
+         FROM auth.users
+         WHERE is_active = TRUE) AS "activeUsers",
+
+        (SELECT COUNT(*)::int
+         FROM lms.courses
+         WHERE is_deleted = FALSE) AS "totalCourses",
+
+        (SELECT COUNT(*)::int
+         FROM lms.courses
+         WHERE is_deleted = FALSE
+           AND status = 'PUBLISHED') AS "publishedCourses",
+
+        (SELECT COUNT(*)::int
+         FROM learning.learning_sequence_logs) AS "learningEvents",
+
+
+        (SELECT COUNT(*)::int
+         FROM support.tickets
+         WHERE status IN ('OPEN', 'IN_PROGRESS')) AS "openTickets",
+
+        (SELECT COUNT(*)::int
+         FROM lms.courses
+         WHERE is_deleted = FALSE
+           AND review_status = 'UNREVIEWED') AS "unreviewedCourses",
+
+        (SELECT COUNT(*)::int
+         FROM payment.v_order_payment_status
+         WHERE order_status = 'PENDING') AS "pendingOrders"
+
+`),
       this.dataSource.query(`
                     SELECT
                         user_id AS "userId", full_name AS "fullName", email,
@@ -364,20 +396,58 @@ export class PortalService {
                     ORDER BY o.order_id DESC
                     LIMIT 30
                 `),
+
+
+      // Hoạt động học tập trong 30 ngày gần nhất
+      this.dataSource.query(`
+        SELECT
+          TO_CHAR(d.day, 'YYYY-MM-DD') AS "day",
+          COUNT(l.log_id)::int AS "eventCount",
+          COUNT(DISTINCT l.student_id)::int AS "activeLearners"
+        FROM generate_series(
+          CURRENT_DATE - INTERVAL '29 days',
+          CURRENT_DATE,
+          INTERVAL '1 day'
+        ) AS d(day)
+        LEFT JOIN learning.learning_sequence_logs l
+          ON l.occurred_at >= d.day
+         AND l.occurred_at < d.day + INTERVAL '1 day'
+        GROUP BY d.day
+        ORDER BY d.day
+      `),
+
+      // Top 5 khóa học theo số học viên đang ghi danh
+      this.dataSource.query(`
+        SELECT
+          c.course_id AS "courseId",
+          c.course_name AS "courseName",
+          COUNT(DISTINCT e.student_id)::int AS "studentCount"
+        FROM lms.courses c
+        LEFT JOIN enrollment.enrollments e
+          ON e.course_id = c.course_id
+         AND e.status IN ('ACTIVE', 'COMPLETED')
+        WHERE c.is_deleted = FALSE
+        GROUP BY c.course_id, c.course_name
+        ORDER BY "studentCount" DESC, c.course_name
+        LIMIT 5
+      `),
+
     ]);
 
     return {
-      role: 'ADMIN',
-      generatedAt: new Date().toISOString(),
-      stats: statsRows[0],
-      users,
-      miningRuns,
-      patterns,
-      settings,
-      audits,
-      tickets,
-      orders,
-    };
+  role: 'ADMIN',
+  generatedAt: new Date().toISOString(),
+  stats: statsRows[0],
+  users,
+  miningRuns,
+  patterns,
+  settings,
+  audits,
+  tickets,
+  orders,
+  activityDaily,
+  topCourses,
+};
   }
 
   async recommendationFeedback(
