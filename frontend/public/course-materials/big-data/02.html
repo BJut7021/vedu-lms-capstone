@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>02 · Phân tích liên kết: PageRank và HITS</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>02 · Phân tích liên kết: PageRank và HITS</h1><p>PageRank chia điểm của nút cho các cạnh ra. Với ma trận M chuẩn hóa theo cột, p mới = dMp + (1-d)v. Nút không có cạnh ra phân phối lại theo v; cá nhân hóa thay v bằng phân phối ưu tiên có tổng 1. HITS cập nhật authority theo hub đi vào và hub theo authority đi ra, sau đó chuẩn hóa. Liên kết nhân tạo có thể thao túng xếp hạng; không đồng nhất nhiều liên kết với độ tin cậy.
+
+Đọc theo nguồn: C2_Links analysis.pdf
+
+BÀI TẬP NHỎ
+
+1. Cho A→B, A→C, B→C, C→A; p ban đầu=(1/3,1/3,1/3), d=0,85, v đều. Tính một bước PageRank.
+
+2. Nếu C mất toàn bộ cạnh ra, mô tả cách xử lý dangling node; so sánh với tự bỏ điểm của C.
+
+THỰC HÀNH
+
+Với đồ thị trên, tính 3 bước PageRank và tổng điểm mỗi bước; so sánh v đều với v=(0,6;0,2;0,2). Tính một bước HITS từ hub=(1,1,1), chuẩn hóa L2 authority rồi cập nhật hub và chuẩn hóa L2. Giải thích link spam và một biện pháp giảm ảnh hưởng. Nộp bảng tính hoặc mã nguồn và báo cáo.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

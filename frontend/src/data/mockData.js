@@ -2,7 +2,7 @@ export const MOCK_COURSE_DETAIL = {
   id: 1,
   title: 'Lập trình Web với React & Node.js toàn diện',
   description: 'Khóa học trang bị nền tảng full-stack hiện đại từ xây dựng giao diện tương tác với React đến kiến trúc Backend RESTful API và tối ưu cơ sở dữ liệu.',
-  instructor: 'TS. Nguyễn Văn A',
+  instructor: 'Nguyễn Hoàng Phúc',
   instructorTitle: 'Giảng viên Khoa CNTT - HUIT',
   rating: 4.9,
   students: 1250,

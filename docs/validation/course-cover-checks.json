@@ -1,75 +1,75 @@
 {
-  "checkedAt": "2026-10-28T11:09:47.108Z",
+  "checkedAt": "2026-11-01T11:47:15.568Z",
   "checks": [
     "Every reviewed course has its own file",
     "All catalog images decode with wide composition and efficient WebP",
     "No repeated image bytes",
     "No exact perceptual duplicate in the illustration area",
-    "All 52 deployed URLs serve the intended image",
+    "All 21 deployed URLs serve the intended image",
     "Entire cover library stays under 2 MB"
   ],
-  "count": 52,
-  "totalBytes": 1048746,
+  "count": 21,
+  "totalBytes": 556228,
   "closestVisualPairs": [
     {
-      "a": 32,
-      "b": 26,
-      "distance": 25
+      "a": 102,
+      "b": 104,
+      "distance": 48
     },
     {
-      "a": 31,
-      "b": 25,
-      "distance": 28
+      "a": 101,
+      "b": 103,
+      "distance": 58
     },
     {
-      "a": 33,
-      "b": 27,
-      "distance": 30
+      "a": 101,
+      "b": 106,
+      "distance": 58
     },
     {
-      "a": 30,
-      "b": 24,
-      "distance": 30
+      "a": 76,
+      "b": 105,
+      "distance": 59
     },
     {
-      "a": 23,
-      "b": 17,
-      "distance": 35
+      "a": 75,
+      "b": 106,
+      "distance": 61
     },
     {
-      "a": 20,
-      "b": 14,
-      "distance": 37
+      "a": 69,
+      "b": 105,
+      "distance": 64
     },
     {
-      "a": 12,
-      "b": 6,
-      "distance": 39
+      "a": 66,
+      "b": 101,
+      "distance": 66
     },
     {
-      "a": 41,
-      "b": 37,
-      "distance": 42
+      "a": 66,
+      "b": 106,
+      "distance": 66
     },
     {
-      "a": 11,
-      "b": 9,
-      "distance": 42
+      "a": 105,
+      "b": 110,
+      "distance": 66
     },
     {
-      "a": 43,
-      "b": 35,
-      "distance": 46
+      "a": 65,
+      "b": 106,
+      "distance": 67
     },
     {
-      "a": 42,
-      "b": 36,
-      "distance": 46
+      "a": 100,
+      "b": 109,
+      "distance": 67
     },
     {
-      "a": 41,
-      "b": 35,
-      "distance": 46
+      "a": 100,
+      "b": 110,
+      "distance": 67
     }
   ],
   "notes": "Perceptual difference is a duplicate screen, not proof that different lessons have different curricular outcomes. Native series covers illustrate introductory subjects only."

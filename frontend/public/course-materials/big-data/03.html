@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>03 · Cluster, DFS, sharding và replication</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>03 · Cluster, DFS, sharding và replication</h1><p>Cluster gồm nhiều máy phối hợp. High availability hướng tới duy trì dịch vụ; load balancing phân phối tải, hai mục tiêu có thể cùng tồn tại. Trong cách phân loại truyền thống, symmetric có các nút hoạt động và giám sát lẫn nhau; asymmetric có vai trò chủ động/dự phòng. DFS cung cấp truy cập tệp qua nhiều nút. HDFS lưu metadata ở NameNode và block ở DataNode; replication tăng khả năng chịu lỗi nhưng tốn dung lượng. Sharding chia các phần dữ liệu khác nhau; replication giữ bản sao. Khóa shard lệch có thể tạo nút nóng. Song song không nhất thiết chạy trên nhiều máy; phân tán phải xét mạng và lỗi từng phần.
+
+Đọc theo nguồn: Chưa có slide chương 3 trong RAR
+
+BÀI TẬP NHỎ
+
+1. Vẽ phương án chia 12 bản ghi thành 3 shard theo id mod 3, mỗi shard có 2 bản sao trên 2 nút khác nhau.
+
+2. Dữ liệu gốc 120 GB, replication factor=3: tính dung lượng nội dung bản sao, bỏ qua metadata và nén.
+
+THỰC HÀNH
+
+Đề xuất kiến trúc lưu log cho 3 nút, chỉ rõ khóa chia dữ liệu, vị trí các bản sao, đường đọc/ghi và phản ứng khi một nút hỏng. Phân biệt HA với backup, chỉ ra điểm lỗi đơn và giới hạn của mô hình. Nộp sơ đồ cùng bảng đánh đổi.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

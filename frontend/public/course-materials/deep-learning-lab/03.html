@@ -1,0 +1,13 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>03 · CNN</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>03 · CNN</h1><p>BÀI TẬP NHỎ
+
+1. Ảnh (28,28,1) qua Conv2D(16,3,stride=1,padding=valid) rồi MaxPool2D(2): xác định shape.
+
+2. Tính số tham số của Conv2D trên, gồm bias; so sánh với Dense.
+
+THỰC HÀNH
+
+Trên cùng split Fashion-MNIST của ANN, thử CNN Input(28,28,1)–Conv2D(16,3,relu)–MaxPool2D(2)–Flatten–Dense(10,softmax). Giữ quy trình tiền xử lý và ngân sách thử nghiệm tương đương; so sánh tham số, thời gian thực đo, validation/test metrics. Chỉ áp dụng augmentation trên train nếu thử thêm; không kết luận CNN luôn tốt hơn ANN.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

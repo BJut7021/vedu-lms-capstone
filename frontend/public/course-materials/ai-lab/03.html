@@ -1,0 +1,15 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>03 · Heuristic, AKT và A*</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>03 · Heuristic, AKT và A*</h1><p>Chương1; PDF tuần2
+
+BÀI TẬP NHỎ
+
+1. Với đồ thị bài2, h(S)=5,h(A)=5,h(B)=4,h(C)=2,h(G)=0: tính f=g+h khi mở A,B từ S.
+
+2. Phân biệt heuristic admissible và consistent. Vì sao phát hiện goal khi sinh hàng xóm chưa đủ để dừng A*?
+
+THỰC HÀNH
+
+Cài A* có g-score, parent và priority queue; chỉ kết thúc khi lấy goal hợp lệ khỏi frontier, cập nhật đường tốt hơn và xử lý bản ghi cũ. So sánh với UCS khi h=0. Với AKT/AT, ghi rõ biến thể trong tài liệu đang dùng và bảng OPEN/CLOSED, không tự gán mọi tên thành cùng một thuật toán.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

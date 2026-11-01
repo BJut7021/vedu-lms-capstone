@@ -1,0 +1,13 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>05 · RNN</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>05 · RNN</h1><p>BÀI TẬP NHỎ
+
+1. Với đầu vào (32,28,28), giải thích batch, timesteps, features.
+
+2. SimpleRNN(32) với 28 features: tính tham số; nêu shape đầu ra khi return_sequences True/False.
+
+THỰC HÀNH
+
+Biểu diễn mỗi ảnh MNIST thành chuỗi 28 hàng, mỗi hàng 28 giá trị. Giữ test riêng, chia train/validation cố định. Huấn luyện SimpleRNN(32)–Dense(10,softmax); chuẩn hóa /255. Lưu split, seed, phiên bản thư viện, thời gian và learning curves để so sánh LSTM bài sau. Giải thích đây là cách biểu diễn ảnh thành chuỗi, không phải bài dự báo thời gian.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

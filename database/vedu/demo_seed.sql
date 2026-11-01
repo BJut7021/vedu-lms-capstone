@@ -20,7 +20,7 @@ BEGIN
 
     IF v_teacher_id IS NULL THEN
         SELECT auth.fn_create_user(
-            'TS. Nguyễn Văn A',
+            'Nguyễn Hoàng Phúc',
             'teacher@vedu.local',
             crypt('Demo@123', gen_salt('bf', 10)),
             'TEACHER'

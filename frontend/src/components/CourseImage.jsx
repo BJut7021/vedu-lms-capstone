@@ -26,7 +26,7 @@ export default function CourseImage({
           if (src !== art.fallback) setFailed((previous) => [...previous, src]);
         }}
       />
-      {!custom && (
+      {!custom && !(art.precomposed && src === art.src) && (
         <span
           aria-hidden="true"
           className="course-cover-caption"

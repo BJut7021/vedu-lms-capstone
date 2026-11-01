@@ -69,6 +69,12 @@ WHERE lower(email) = 'teacher@vedu.local';
 UPDATE auth.users SET username = COALESCE(NULLIF(username,''),'admin'), phone = COALESCE(NULLIF(phone,''),'0900000003')
 WHERE lower(email) = 'admin@vedu.local';
 
+-- Fictional instructor display name; preserve account identity and any other edited names.
+UPDATE auth.users SET full_name='Nguyễn Hoàng Phúc'
+WHERE role='TEACHER' AND username='teacher'
+AND lower(regexp_replace(full_name,'[[:space:].]','','g'))
+    IN ('tsnguyễnvăna','tsnguyenvana','nguyễnvăna','nguyenvana');
+
 DO $$
 DECLARE
     v_admin_id BIGINT;
@@ -79,6 +85,10 @@ DECLARE
     v_run_id BIGINT;
     v_pattern_id BIGINT;
 BEGIN
+    -- The curated library uses actual study progress; do not inject legacy demo events.
+    IF to_regclass('lms.catalog_revisions') IS NOT NULL THEN
+        IF EXISTS (SELECT 1 FROM lms.catalog_revisions) THEN RETURN; END IF;
+    END IF;
     SELECT user_id INTO v_admin_id
     FROM auth.users
     WHERE lower(email) = 'admin@vedu.local';
@@ -240,6 +250,9 @@ DECLARE
     ];
     v_prefixes TEXT[] := ARRAY['Web', 'AI', 'Database', 'Digital'];
 BEGIN
+    IF to_regclass('lms.catalog_revisions') IS NOT NULL THEN
+        IF EXISTS (SELECT 1 FROM lms.catalog_revisions) THEN RETURN; END IF;
+    END IF;
     SELECT user_id INTO v_teacher_id
     FROM auth.users
     WHERE lower(email) = 'teacher@vedu.local';

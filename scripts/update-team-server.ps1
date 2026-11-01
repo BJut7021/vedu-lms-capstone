@@ -60,6 +60,7 @@ Invoke-Docker compose exec -T db rm -- $containerDump
 Write-Host "Database backup saved under .work\backups\vedu-$stamp.dump"
 Invoke-Docker compose build backend frontend ml
 Invoke-Docker compose run --rm --no-deps demo-seed
+Invoke-Docker compose run --rm --no-deps course-materials
 Invoke-Docker compose up -d --no-deps --force-recreate --wait ml backend frontend
 Write-Host 'Server updated. Accounts, learning progress, payment history, media and model volumes were retained.'
 Write-Host "Team members open the SAME URL: $($settings.VEDU_PUBLIC_URL)"

@@ -1,0 +1,337 @@
+[
+  {
+    "id": "64",
+    "title": "Word thực hành — Báo cáo và hồ sơ văn phòng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tạo tài liệu và quản lý phiên bản",
+      "02 · Cấu trúc báo cáo bằng Styles",
+      "03 · Thực hành: biên bản họp và bảng phân công",
+      "04 · Ôn tập: sửa năm lỗi thường gặp",
+      "05 · Thực hành có hướng dẫn tiếng Việt",
+      "06 · Dự án: hồ sơ đề xuất hoạt động nhóm",
+      "07 · Mở rộng: nhận xét và kiểm soát bản sửa"
+    ]
+  },
+  {
+    "id": "65",
+    "title": "Excel thực hành — Quản lý chi phí và báo cáo bán hàng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Dữ liệu dạng bảng và kiểu dữ liệu",
+      "02 · Công thức, SUM và tham chiếu ô",
+      "03 · Thực hành: theo dõi ngân sách hoạt động",
+      "04 · Ôn tập: phát hiện lỗi bảng tính",
+      "05 · Thực hành có hướng dẫn tiếng Việt",
+      "06 · Dự án: báo cáo bán hàng mini có kiểm soát",
+      "07 · Mở rộng: tổng hợp theo nhóm và PivotTable"
+    ]
+  },
+  {
+    "id": "66",
+    "title": "PowerPoint thực hành — Thuyết trình dự án rõ ràng",
+    "topic": "Tin học văn phòng",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Thông điệp và cấu trúc câu chuyện",
+      "02 · Bố cục, tương phản và nguồn hình ảnh",
+      "03 · Thực hành: biến bảng số thành thông điệp",
+      "04 · Ôn tập: giản lược slide quá tải",
+      "05 · Thực hành có hướng dẫn tiếng Việt",
+      "06 · Dự án: pitch đề xuất trong 300 giây",
+      "07 · Mở rộng: khả năng tiếp cận và bản bàn giao"
+    ]
+  },
+  {
+    "id": "67",
+    "title": "Kỹ năng số thực hành — Tệp, cộng tác và an toàn email",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổ chức tệp và bản sao lưu",
+      "02 · Email công việc và nhận diện phishing",
+      "03 · Thực hành: ma trận quyền chia sẻ",
+      "04 · Ôn tập: phân loại năm tình huống số",
+      "05 · Tình huống: link tài liệu bị gửi nhầm",
+      "06 · Dự án: bộ quy tắc làm việc số cho nhóm",
+      "07 · Mở rộng: tối thiểu hóa dữ liệu và quyền riêng tư"
+    ]
+  },
+  {
+    "id": "68",
+    "title": "Cấu trúc rời rạc",
+    "topic": "Toán học & Tin học",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về đồ thị",
+      "02 · Biểu diễn đồ thị",
+      "03 · Các bài toán về đồ thị (phần 1)",
+      "04 · Các bài toán về đồ thị (phần 2)",
+      "05 · Bài toán tìm đường đi ngắn nhất",
+      "06 · Bài toán tìm cây khung nhỏ nhất",
+      "07 · Logic học – Mệnh đề và dạng mệnh đề",
+      "08 · Logic học – Các luật suy diễn",
+      "09 · Logic học – Vị từ",
+      "10 · Phương pháp đếm – Tập hợp – Ánh xạ",
+      "11 · Phương pháp đếm – Phép đếm – Giải tích tổ hợp",
+      "12 · Phương pháp đếm",
+      "13 · Quan hệ (phần 1)",
+      "14 · Quan hệ (phần 2)"
+    ]
+  },
+  {
+    "id": "69",
+    "title": "Mạng máy tính",
+    "topic": "Mạng máy tính",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về mạng máy tính",
+      "02 · Mô hình OSI và giao thức truyền thông",
+      "03 · Địa chỉ IP",
+      "04 · VLSM và Subnetting",
+      "05 · Tầng vật lý – Physical",
+      "06 · Ethernet và Switching",
+      "07 · Tầng mạng và giao thức IP",
+      "08 · Tầng vận chuyển – TCP/UDP",
+      "09 · Tầng ứng dụng",
+      "10 · Xây dựng hệ thống mạng cơ bản"
+    ]
+  },
+  {
+    "id": "75",
+    "title": "Lập trình hướng đối tượng",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Ôn C# và phương pháp hướng đối tượng",
+      "02 · Lớp đối tượng và đóng gói",
+      "03 · Constructor nạp chồng và thành phần tĩnh",
+      "04 · Danh sách generic XML và mô hình lớp",
+      "05 · Kế thừa và quan hệ giữa các lớp",
+      "06 · Đa hình và lớp trừu tượng",
+      "07 · Interface và hợp đồng hành vi",
+      "08 · Tổ chức ứng dụng theo ba lớp",
+      "09 · Nguyên lý đóng mở Liskov và đảo phụ thuộc",
+      "10 · Ba nhóm mẫu thiết kế"
+    ]
+  },
+  {
+    "id": "76",
+    "title": "Phân tích thiết kế hệ thống",
+    "topic": "Phân tích & Thiết kế hệ thống",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan về hệ thống thông tin",
+      "02 · Xác định yêu cầu",
+      "03 · Mô hình hóa nghiệp vụ",
+      "04 · Mô hình hóa chức năng",
+      "05 · Mô hình hóa cấu trúc",
+      "06 · Thiết kế lớp và dữ liệu",
+      "07 · Thiết kế chức năng hệ thống"
+    ]
+  },
+  {
+    "id": "98",
+    "title": "Cấu trúc dữ liệu và giải thuật",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan cấu trúc dữ liệu và giải thuật",
+      "02 · Phân tích độ phức tạp",
+      "03 · Đệ quy",
+      "04 · Mảng và danh sách tuyến tính",
+      "05 · Danh sách liên kết",
+      "06 · Ngăn xếp (Stack)",
+      "07 · Hàng đợi (Queue)",
+      "08 · Cây nhị phân",
+      "09 · Tìm kiếm",
+      "10 · Sắp xếp"
+    ]
+  },
+  {
+    "id": "99",
+    "title": "Học sâu",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan",
+      "02 · ANN và lan truyền ngược",
+      "03 · Huấn luyện mạng nơron",
+      "04 · CNN và ResNet",
+      "05 · RNN, BPTT, LSTM và GRU"
+    ]
+  },
+  {
+    "id": "100",
+    "title": "Khai phá dữ liệu",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan và tiền xử lý",
+      "02 · Tập phổ biến và luật kết hợp",
+      "03 · Phân lớp dữ liệu",
+      "04 · Gom cụm dữ liệu",
+      "05 · Tương quan, kiểm định và hồi quy"
+    ]
+  },
+  {
+    "id": "101",
+    "title": "Kiểm định phần mềm",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan kiểm thử",
+      "02 · Quy trình và kế hoạch kiểm thử",
+      "03 · Thiết kế test case và test data",
+      "04 · Unit test với NUnit/JUnit",
+      "05 · BDD và Gherkin",
+      "06 · Kiểm thử UI với Selenium IDE",
+      "07 · Kiểm thử API với Postman",
+      "08 · Thực thi, báo lỗi và hồi quy"
+    ]
+  },
+  {
+    "id": "102",
+    "title": "Kỹ thuật lập trình",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Phong cách lập trình, ngoại lệ và tập tin",
+      "02 · Mảng một chiều: tổng, đếm, tìm kiếm, min/max",
+      "03 · Sắp xếp, thêm và xóa phần tử",
+      "04 · Mảng hai chiều và ma trận",
+      "05 · Chuỗi cơ bản, chuẩn hóa và token",
+      "06 · Tìm kiếm, đếm và thay thế chuỗi con",
+      "07 · Đệ quy tuyến tính và nhị phân",
+      "08 · Đệ quy lồng, hỗ tương và ứng dụng"
+    ]
+  },
+  {
+    "id": "103",
+    "title": "Lập trình mã nguồn mở",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · PHP và môi trường",
+      "02 · OOP trong PHP",
+      "03 · JavaScript, DOM và AJAX",
+      "04 · MySQL và PDO",
+      "05 · MySQL nâng cao",
+      "06 · Laravel và MVC",
+      "07 · Routing, Controller và Blade",
+      "08 · Migration, Eloquent và quan hệ",
+      "09 · Validation và phân quyền",
+      "10 · Website tin tức và triển khai"
+    ]
+  },
+  {
+    "id": "104",
+    "title": "Lập trình Python cơ bản",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Giới thiệu Python và lệnh in",
+      "02 · Biến và toán tử",
+      "03 · Điều kiện if/elif/else",
+      "04 · Vòng lặp for và while",
+      "05 · Hàm trong Python",
+      "06 · Chuỗi và thao tác chuỗi",
+      "07 · List và Tuple",
+      "08 · Dictionary và Module",
+      "09 · Class và thao tác tệp"
+    ]
+  },
+  {
+    "id": "105",
+    "title": "Nhập môn Big Data",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tổng quan dữ liệu lớn",
+      "02 · Phân tích liên kết: PageRank và HITS",
+      "03 · Cluster, DFS, sharding và replication",
+      "04 · MapReduce, Spark RDD, DataFrame và luồng",
+      "05 · Phân lớp, hồi quy, lọc cộng tác và phân tích"
+    ]
+  },
+  {
+    "id": "106",
+    "title": "Thực hành Học sâu",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · NumPy, Pandas và TensorFlow",
+      "02 · ANN",
+      "03 · CNN",
+      "04 · Autoencoder",
+      "05 · RNN",
+      "06 · LSTM"
+    ]
+  },
+  {
+    "id": "107",
+    "title": "Thực hành Trí tuệ nhân tạo",
+    "topic": "Khoa học dữ liệu & AI",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Python nền tảng",
+      "02 · BFS, DFS, UCS và giới hạn sâu",
+      "03 · Heuristic, AKT và A*",
+      "04 · Leo đồi và thuật toán di truyền",
+      "05 · Minimax và alpha-beta",
+      "06 · GTS và tô màu đồ thị",
+      "07 · Logic mệnh đề, Vương Hạo và Robinson",
+      "08 · Luật sinh và mạng ngữ nghĩa",
+      "09 · Học máy có giám sát",
+      "10 · Học không giám sát và K-means"
+    ]
+  },
+  {
+    "id": "108",
+    "title": "Thực hành quản trị hệ thống mạng",
+    "topic": "Mạng máy tính",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · DHCP nâng cao",
+      "02 · DNS nâng cao",
+      "03 · IPAM",
+      "04 · iSCSI và MPIO",
+      "05 · File Classification Infrastructure",
+      "06 · BranchCache",
+      "07 · Dynamic Access Control",
+      "08 · Work Folders",
+      "09 · Child domain và forest trust",
+      "10 · AD Sites, Subnets và Replication"
+    ]
+  },
+  {
+    "id": "109",
+    "title": "Thực hành phân tích thiết kế hệ thống",
+    "topic": "Lập trình & Phát triển phần mềm",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Khảo sát và mô hình nghiệp vụ",
+      "02 · Đối tượng nghiệp vụ, tuần tự và cộng tác",
+      "03 · Use case hệ thống và đặc tả",
+      "04 · Class diagram mức phân tích",
+      "05 · Tinh chế lớp và thiết kế dữ liệu",
+      "06 · Thiết kế chức năng ba tầng và bàn giao"
+    ]
+  },
+  {
+    "id": "110",
+    "title": "Kỹ năng số — Tìm kiếm, đánh giá thông tin và sử dụng AI có trách nhiệm",
+    "topic": "Kỹ năng số",
+    "lessonTitles": [
+      "00 · Hướng dẫn bắt đầu & đề cương",
+      "01 · Tìm kiếm thông tin có mục tiêu",
+      "02 · Đánh giá nguồn và thời điểm công bố",
+      "03 · Trích dẫn và sử dụng hình ảnh",
+      "04 · Đọc bảng dữ liệu và biểu đồ",
+      "05 · Sử dụng công cụ AI có kiểm chứng",
+      "06 · Bài thực hành: hồ sơ thông tin đáng tin cậy"
+    ]
+  }
+]

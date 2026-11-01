@@ -49,6 +49,11 @@ for ($attempt = 1; $attempt -le 30; $attempt++) {
         docker compose -f docker-compose.yml -f docker-compose.dev.yml cp database/vedu/content_workflow.sql db:/tmp/content_workflow.sql
         docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T db psql -v ON_ERROR_STOP=1 -U $databaseUser -d $databaseName -f /tmp/content_workflow.sql
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml cp database/vedu/curated_catalog.sql db:/tmp/curated_catalog.sql
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T db psql -v ON_ERROR_STOP=1 -U $databaseUser -d $databaseName -f /tmp/curated_catalog.sql
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm --no-deps course-materials
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Write-Host 'Vedu PostgreSQL is ready at localhost:5432.' -ForegroundColor Green
         Write-Host 'Vedu database is ready. Use the student guest sign-in or your role account.' -ForegroundColor Cyan
         exit 0

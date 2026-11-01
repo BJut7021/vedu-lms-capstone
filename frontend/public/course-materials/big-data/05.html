@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>05 · Phân lớp, hồi quy, lọc cộng tác và phân tích</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>05 · Phân lớp, hồi quy, lọc cộng tác và phân tích</h1><p>Phân lớp dự đoán nhãn rời rạc; hồi quy dự đoán số. Chia train/validation/test trước khi fit bước học từ dữ liệu để tránh rò rỉ. Với dữ liệu thời gian nên cân nhắc chia theo thời gian. Accuracy có thể gây hiểu nhầm khi lớp lệch; xem precision/recall/F1. Hồi quy có thể dùng MAE/RMSE. Lọc cộng tác học từ tương tác user–item, không tự giải quyết cold start; cần baseline và chiến lược dự phòng. Phân tích phải nêu cách làm sạch, nguồn dữ liệu và giới hạn suy luận.
+
+Đọc theo nguồn: Chưa có slide chương 5 trong RAR
+
+BÀI TẬP NHỎ
+
+1. Phân loại: dự báo doanh thu, phát hiện đơn gian lận, gợi ý sản phẩm. Chọn chỉ số đánh giá có lý do.
+
+2. Với TP=8, FP=2, FN=4, TN=86: tính accuracy, precision, recall, F1.
+
+THỰC HÀNH
+
+Đề xuất một pipeline phân lớp/hồi quy hoặc gợi ý sản phẩm: mục tiêu, đặc trưng, chia dữ liệu, baseline, thuật toán, chỉ số và giới hạn. Dùng ratings.csv để minh họa ma trận tương tác và cold start; không tuyên bố chất lượng mô hình từ bộ dữ liệu tí hon. Nộp thiết kế và bảng kết quả thực nghiệm nếu có.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

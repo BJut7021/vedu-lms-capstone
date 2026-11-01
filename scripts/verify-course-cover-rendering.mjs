@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+const require=createRequire(new URL('../frontend/package.json',import.meta.url));
+const {JSDOM}=require('jsdom');
+const dom=new JSDOM('<!doctype html><html><body></body></html>',{url:'http://localhost:8080'});
+for(const key of ['window','document','HTMLElement','Event'])globalThis[key]=dom.window[key];
+Object.defineProperty(globalThis,'navigator',{value:dom.window.navigator,configurable:true});
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const React=require('react'),{render,screen,fireEvent,cleanup}=require('@testing-library/react');
+const {createServer}=await import('../frontend/node_modules/vite/dist/node/index.js');
+const server=await createServer({root:fileURLToPath(new URL('../frontend/',import.meta.url)),server:{middlewareMode:true},appType:'custom'});
+try{
+ const {resolveCourseCover}=await server.ssrLoadModule('/src/services/courseCovers.js');
+ const {default:CourseImage}=await server.ssrLoadModule('/src/components/CourseImage.jsx');
+ const course={id:987654,title:'Word thực hành — Báo cáo và hồ sơ văn phòng'};
+ assert.ok(resolveCourseCover(course).primary.includes('/v3/'));
+ assert.equal(resolveCourseCover(course).primary,resolveCourseCover({...course,id:'64'}).primary);
+ console.log('PASS Imported database IDs and string IDs resolve the same subject artwork');
+ const {container}=render(React.createElement(CourseImage,{course}));
+ const image=screen.getByRole('img',{name:course.title});
+ assert.ok(image.getAttribute('src').includes('/v3/'));
+ assert.equal(container.querySelector('.course-cover-caption'),null);
+ console.log('PASS Full-composition artwork renders without a duplicate text overlay');
+ fireEvent.error(image);
+ assert.ok(image.getAttribute('src').startsWith('data:image/svg+xml'));
+ assert.ok(container.querySelector('.course-cover-caption'));
+ console.log('PASS Failed cover still provides a labelled fallback');
+ cleanup();
+ const custom={...course,image:'https://example.com/teacher-cover.jpg'};
+ render(React.createElement(CourseImage,{course:custom}));
+ assert.equal(screen.getByRole('img').getAttribute('src'),custom.image);
+ console.log('PASS A teacher-uploaded custom image retains priority');
+}finally{cleanup();await server.close();dom.window.close();}

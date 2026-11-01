@@ -10,12 +10,8 @@ const legacyStock = new Set([
   "photo-1633356122544-f134324a6cee",
 ]);
 export function resolveCourseCover(course) {
-  const candidate = manifest[courseIdentity(course)],
-    id = course.id ?? course.courseId;
-  const entry =
-    candidate && (id == null || Number(id) === candidate.courseId)
-      ? candidate
-      : undefined;
+  // Semantic titles remain stable when a teammate imports the catalog with new DB IDs.
+  const entry = manifest[courseIdentity(course)];
   const uploaded = course.image || course.thumbnailUrl || course.thumbnail_url;
   const isOldStock =
     entry && uploaded && [...legacyStock].some((id) => uploaded.includes(id));
