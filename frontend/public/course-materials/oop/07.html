@@ -1,25 +1,12 @@
-<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>07 · Interface và hợp đồng hành vi · VEDU</title><style>body{margin:0;background:#eef3fb;color:#17243e;font:16px/1.8 system-ui,sans-serif}main{max-width:920px;margin:24px auto;padding:28px;background:white;border-radius:20px;border-top:6px solid #2563eb}h1{font-size:28px;line-height:1.4}p{white-space:pre-line;overflow-wrap:anywhere}small{color:#53657a}button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:8px}@media(max-width:600px){main{margin:12px;padding:20px}h1{font-size:22px}}@media print{button{display:none}body{background:white}}</style><main><small>VEDU Learning Management System · Phiếu tự học</small><h1>07 · Interface và hợp đồng hành vi</h1><button onclick="window.print()">In / lưu PDF</button><p>MỤC TIÊU
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>07 · Interface và hợp đồng hành vi</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>07 · Interface và hợp đồng hành vi</h1><p>MỤC TIÊU
 Tách khả năng dùng chung thành interface; sử dụng kiểu interface trong chương trình.
 
-ĐỐI CHIẾU ĐỀ CƯƠNG
-Chương 3, mục 3.4 đến 3.5
-
-KIẾN THỨC CỐT LÕI
+KIẾN THỨC
 Interface biểu diễn hợp đồng hành vi. Một lớp có thể triển khai nhiều interface. Với bài cơ bản, khai báo phương thức rồi cài đặt public tại lớp. Abstract class phù hợp khi cần chia sẻ trạng thái và triển khai. Tránh ép mọi lớp phải hỗ trợ hành vi không có ý nghĩa.
 
-BÀI TẬP NHỎ
-1. Khai báo IInDuoc có string TaoNoiDung(); cho HoaDon triển khai. Viết hàm in nhận IInDuoc.
-2. Một chương trình cần sắp xếp học viên theo điểm. Nêu cách dùng IComparer&lt;SinhVien&gt; và quy tắc xử lý đồng điểm.
+BÀI TẬP
+Khai báo IInDuoc có string TaoNoiDung(); cho HoaDon triển khai. Viết hàm in nhận IInDuoc.
+Một chương trình cần sắp xếp học viên theo điểm. Nêu cách dùng IComparer&lt;SinhVien&gt; và quy tắc xử lý đồng điểm.
 
-THỰC HÀNH CUỐI BÀI
-Xây dựng interface IHoTro có decimal TinhHoTro(). CaPheHat và CaPheXay triển khai IHoTro, CaPheHoaTan không triển khai. Mỗi loại có SoLuong không âm. Hỗ trợ cho hạt là 10*SoLuong, cho xay là 12*SoLuong (nghìn đồng). Tính tổng hỗ trợ qua kiểm tra item is IHoTro, không ép kiểu thiếu kiểm tra.
-
-TIÊU CHÍ TỰ KIỂM TRA (10 điểm)
-• Mô hình và yêu cầu: 2 điểm
-• Xử lý hoặc lập luận chính xác: 4 điểm
-• Kiểm tra dữ liệu và trường hợp biên: 2 điểm
-• Trình bày và minh chứng: 2 điểm
-
-Hãy lưu sản phẩm trên máy và đối chiếu tiêu chí. Bài thực hành này chưa được chấm tự động; có thể hỏi giảng viên ở Hỏi đáp. Hoàn thành bài đọc không đồng nghĩa đã đạt năng lực thực hành.
-
-Nguồn: học liệu gốc và bài tập bổ sung từ RAR nhóm cung cấp; xem mục Tài liệu để mở PDF nguyên bản và nguồn ngoài.</p></main></html>
+THỰC HÀNH
+Xây dựng interface IHoTro có decimal TinhHoTro(). CaPheHat và CaPheXay triển khai IHoTro, CaPheHoaTan không triển khai. Mỗi loại có SoLuong không âm. Hỗ trợ cho hạt là 10*SoLuong, cho xay là 12*SoLuong (nghìn đồng). Tính tổng hỗ trợ qua kiểm tra item is IHoTro, không ép kiểu thiếu kiểm tra.</p></main></html>

@@ -1,0 +1,19 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · Class diagram mức phân tích</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>04 · Class diagram mức phân tích</h1><p>Class diagram miền tập trung vào khái niệm dữ liệu, không trộn Form và Database vào đây. ChiTietMuon chứa hạn trả và ngày trả vì thư viện cho trả riêng từng cuốn. Bội số không diễn đạt được mọi điều kiện, cần ràng buộc văn bản.
+
+PDF trang 43–54; bài tập gốc ở trang 53–54.
+
+Tình huống luyện tập: TÌNH HUỐNG TỰ BIÊN SOẠN: Thư viện quản lý độc giả, đầu sách, từng cuốn sách vật lý, phiếu mượn và chi tiết mượn. Một đầu sách có nhiều cuốn; mỗi cuốn có mã duy nhất. Độc giả xuất trình thẻ, thủ thư kiểm tra thẻ đang hoạt động và chưa hết hạn tại ngày mượn, rồi chọn các cuốn. Mỗi phiếu có từ 1 đến 3 cuốn khác nhau; tổng số cuốn chưa trả của một độc giả không vượt quá 3. Chỉ cuốn không có lượt mượn chưa trả và còn sử dụng mới được mượn. Hạn trả là 14 ngày sau ngày mượn. Được trả từng cuốn, lưu thời điểm trả ở từng chi tiết. Thủ thư lập phiếu và ghi nhận trả; độc giả chỉ yêu cầu phục vụ tại quầy, chưa có tài khoản web. Quản trị quản lý tài khoản thủ thư. Không xét phí phạt, đặt chỗ, gia hạn hoặc mất sách. Thời điểm do máy chủ ghi nhận. Các quy tắc này dùng cho bài bổ sung, không thay thế tình huống gốc trong bài giảng.
+
+BÀI TẬP NHỎ
+
+1. Đề xuất lớp và thuộc tính; giải thích vì sao ngày trả đặt ở ChiTietMuon.
+
+2. Ghi bội số hai đầu của DauSach–CuonSach, DocGia–PhieuMuon, PhieuMuon–ChiTietMuon và CuonSach–ChiTietMuon.
+
+THỰC HÀNH
+
+Vẽ mô hình gồm DocGia, NhanVien, DauSach, CuonSach, PhieuMuon, ChiTietMuon. Ghi ít nhất 5 bất biến, kiểm tra bằng kịch bản mượn 2 cuốn rồi trả 1 cuốn.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

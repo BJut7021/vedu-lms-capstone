@@ -1,4 +1,27 @@
-# VEDU course covers, edition 2 — 2026-10-27
+# VEDU course covers, edition 3 — 2026-11-01
+
+The active 21-course catalog uses original, editable SVG compositions from
+`frontend/src/services/catalogCoverArtwork.js`, rendered to content-hashed WebP
+files under `v3/`. Course-specific scenes depict the learning tasks: office
+documents, spreadsheets, presentations, graph theory, networks, C# objects,
+UML, data structures, neural networks, clustering, testing, C++, PHP, Python,
+data pipelines, training notebooks, search trees and server administration.
+These are editorial illustrations, not documentary photographs or actual
+application screenshots. No image-generation model was used for this edition.
+
+Word, Excel and PowerPoint product icons are unmodified Microsoft assets from:
+
+- https://static2.sharepointonline.com/files/fabric/assets/brand-icons/product/svg/word_48x1.svg
+- https://static2.sharepointonline.com/files/fabric/assets/brand-icons/product/svg/excel_48x1.svg
+- https://static2.sharepointonline.com/files/fabric/assets/brand-icons/product/svg/powerpoint_48x1.svg
+
+Microsoft owns its product names and logos; their presence identifies the tools
+covered by the courses and does not imply Microsoft endorsement. Local source
+icons are stored under `frontend/public/images/brands/`.
+
+The previous edition below is retained as historical attribution for archived assets.
+
+## Archived edition 2
 
 The 52 local WebP assets are original VEDU course illustrations (updated 2026-10-28).
 

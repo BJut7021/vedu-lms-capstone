@@ -1,0 +1,13 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · CNN và ResNet</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>04 · CNN và ResNet</h1><p>BÀI TẬP NHỎ
+
+1. Đầu vào 32×32×3, convolution 16 filters 3×3, stride1, padding valid, có bias; tính output và tham số. Qua maxpool2×2 stride2 cho shape nào?
+
+2. Residual block y=F(x)+x: khi nào cộng trực tiếp được? Nêu cách xử lý nếu số kênh hoặc kích thước không gian khác.
+
+THỰC HÀNH
+
+Vẽ CNN nhỏ và một residual block, ghi shape từng tầng. Cài đặt block hoặc viết mã giả đầy đủ với shortcut projection khi cần; kiểm tra đầu vào (2,32,32,16) và đầu ra mong đợi. So sánh CNN thường và mạng có shortcut trong một kế hoạch thực nghiệm công bằng. Nếu đã chạy, nộp log thật; nếu chỉ thiết kế, ghi rõ.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

@@ -45,15 +45,27 @@ services:
       - /seed/platform_upgrade.sql
       - -f
       - /seed/content_workflow.sql
+      - -f
+      - /seed/curated_catalog.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
       - ./database/vedu/content_workflow.sql:/seed/content_workflow.sql:ro
+      - ./database/vedu/curated_catalog.sql:/seed/curated_catalog.sql:ro
     depends_on:
       db:
         condition: service_healthy
     networks:
       - vedu_private
+
+  course-materials:
+    image: postgres:16-alpine
+    restart: "no"
+    command: ["sh", "-c", "cp -n /catalog/*.pdf /media/"]
+    network_mode: none
+    volumes:
+      - ./data/learning/curated-assets:/catalog:ro
+      - vedu_media:/media
 
   backend:
     build:
@@ -96,6 +108,8 @@ services:
       db:
         condition: service_healthy
       demo-seed:
+        condition: service_completed_successfully
+      course-materials:
         condition: service_completed_successfully
       ml:
         condition: service_healthy

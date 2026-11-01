@@ -1,0 +1,13 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>02 · ANN</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>02 · ANN</h1><p>BÀI TẬP NHỎ
+
+1. Tính số tham số Dense(64) nhận 784 đặc trưng và Dense(10) nhận 64, có bias.
+
+2. Giải thích softmax 10 đầu ra đi với nhãn nguyên và sparse categorical crossentropy; phân biệt loss với accuracy.
+
+THỰC HÀNH
+
+Dùng Fashion-MNIST từ TensorFlow/Keras: giữ test riêng, chia 60.000 mẫu train thành 50.000 train và 10.000 validation với seed cố định. Chuẩn hóa /255; ANN Flatten–Dense(64,relu)–Dense(10,softmax). Huấn luyện tối đa 5 epoch ở lượt thử; chọn cấu hình bằng validation. Báo accuracy, macro-F1, confusion matrix trên test sau khi chốt mô hình; kèm learning curves và ít nhất 5 ảnh dự đoán sai.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

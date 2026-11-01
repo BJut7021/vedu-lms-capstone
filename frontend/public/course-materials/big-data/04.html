@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>04 · MapReduce, Spark RDD, DataFrame và luồng</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>04 · MapReduce, Spark RDD, DataFrame và luồng</h1><p>Map tạo cặp khóa–giá trị, shuffle nhóm theo khóa và reduce tổng hợp. Trong Spark, transformation thường xây kế hoạch; action kích hoạt tính toán. RDD biểu diễn tập dữ liệu phân tán; DataFrame có schema để hệ thống hiểu cấu trúc xử lý. Ví dụ dữ liệu bảng thường thuận tiện với DataFrame và SQL. Xử lý luồng cần phân biệt event time và processing time, xem xét dữ liệu đến trễ, checkpoint và ngữ nghĩa của sink; không mặc định mọi pipeline đều exactly-once.
+
+Đọc theo nguồn: Chuong_4_Xu_ly_du_lieu_lon_tren_Apache_Spark.pdf
+
+BÀI TẬP NHỎ
+
+1. Với sales.csv, viết các cặp (product, quantity×unit_price), nhóm và cộng; không dùng đơn vị tiền ngầm định.
+
+2. Phân loại filter/select và count/show thành transformation hoặc action; giải thích khi nào kết quả được tính.
+
+THỰC HÀNH
+
+Đọc sales.csv bằng schema rõ ràng, kiểm tra quantity&gt;0 và unit_price&gt;=0, tính doanh thu theo sản phẩm bằng RDD hoặc mô phỏng MapReduce rồi DataFrame/Spark SQL. Đối chiếu kết quả. Thiết kế thêm cách xử lý dòng đến trễ theo event_time, nêu chính sách và checkpoint. Nộp mã, kết quả thực chạy, phiên bản môi trường; nếu chưa chạy Spark phải ghi rõ chỉ mô phỏng.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

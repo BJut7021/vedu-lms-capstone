@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>01 · Phong cách lập trình, ngoại lệ và tập tin</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>01 · Phong cách lập trình, ngoại lệ và tập tin</h1><p>Viết chương trình dễ kiểm tra; phân biệt dữ liệu không hợp lệ với lỗi thuật toán. ifstream/ofstream mặc định thường báo lỗi qua trạng thái stream, không tự ném ngoại lệ cho mọi lỗi. Kiểm tra trạng thái và throw rõ ràng; bắt const std::exception&amp; ở nơi có thể xử lý.
+
+Đọc theo nguồn: Chương 1; giáo trình HUFI trang 5–21. Ngoại lệ cần đọc bổ sung R01; tập tin R02.
+
+BÀI TẬP NHỎ
+
+1. Viết hàm chia(a,b), từ chối b=0 bằng invalid_argument; kiểm thử 6/2 và 6/0.
+
+2. Đọc tệp số nguyên; phân biệt không mở được tệp với token không phải số. Không dùng while(!eof()) làm điều kiện đọc.
+
+THỰC HÀNH
+
+Đọc input.txt gồm n (1..100) và đúng n số nguyên trong [-1000,1000], từ chối thiếu/thừa token. Tính tổng bằng long long, ghi output.txt. Nếu lỗi, báo lý do và không ghi kết quả thành công. Chia thành hàm đọc, xử lý, ghi; có try-catch.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

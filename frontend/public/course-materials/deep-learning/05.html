@@ -1,0 +1,13 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>05 · RNN, BPTT, LSTM và GRU</title><style>body{font:17px/1.75 system-ui;color:#17243e;background:#f1f5f9}main{max-width:920px;margin:24px auto;background:white;padding:32px;border-radius:20px}h1{font-size:28px;line-height:1.35}p{white-space:pre-line;overflow-wrap:anywhere}</style><main><small>VEDU · Tự học và thực hành</small><h1>05 · RNN, BPTT, LSTM và GRU</h1><p>BÀI TẬP NHỎ
+
+1. Với h_t=tanh(0,5h_(t−1)+x_t), h_0=0, x_1=1, x_2=0, tính h_1,h_2 đến 4 chữ số. Giải thích trọng số dùng chung theo thời gian.
+
+2. SimpleRNN có d=8 features, h=16 hidden units và một vector bias: tính tham số. Nêu khác biệt trạng thái của LSTM và GRU.
+
+THỰC HÀNH
+
+Thiết kế dự báo một bước cho chuỗi 200 quan sát, dùng 10 quan sát quá khứ. Dành mốc 1–140 cho train, 141–170 validation, 171–200 test theo thời điểm target; chỉ fit scaler trên train. Vẽ sơ đồ unroll và đường truyền gradient qua 3 bước. So sánh RNN/LSTM/GRU, đề xuất xử lý gradient và tiêu chí đánh giá MAE. Không dùng dữ liệu tương lai trong cửa sổ đầu vào.
+
+TỰ KIỂM TRA
+
+Đúng kiến thức và đầu ra: 4 điểm; xử lý biên/ngoại lệ: 2; kiểm thử có bằng chứng: 2; giải thích và nguồn: 2. Bài thực hành dùng luyện tập, chưa chấm sản phẩm tự động.</p></main></html>

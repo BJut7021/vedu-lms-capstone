@@ -1,7 +1,17 @@
 import { createRequire } from "node:module";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync as writeDirect, mkdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+// Windows editors/scanners can briefly lock generated manifests during a rebuild.
+const writeFileSync=(...args)=>{
+  for(let attempt=0; ; attempt++){
+    try{return writeDirect(...args);}catch(error){
+      if(attempt>=5||!['UNKNOWN','EBUSY','EPERM'].includes(error.code))throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,100*(attempt+1));
+    }
+  }
+};
+import { createCatalogArtwork, catalogCoverInfo } from "../frontend/src/services/catalogCoverArtwork.js";
 import {
   createSubjectArtwork,
   subjectCoverInfo,
@@ -34,7 +44,7 @@ const generated = existsSync(generatedFile)
     )
   : [];
 const out = new URL(
-  "../frontend/public/images/course-covers/v2/",
+  "../frontend/public/images/course-covers/v3/",
   import.meta.url,
 );
 mkdirSync(out, { recursive: true });
@@ -62,16 +72,23 @@ const labels = {
 };
 const manifest = {},
   checks = [];
+const officeLogos = Object.fromEntries(['word','excel','powerpoint'].map(name=>[name,'data:image/svg+xml;base64,'+readFileSync(new URL(`../frontend/public/images/brands/${name}.svg`,import.meta.url)).toString('base64')]));
+const font = require('fontkit').openSync('C:/Windows/Fonts/arialbd.ttf');
+const measureText=(s,size)=>font.layout(s).glyphs.reduce((sum,g)=>sum+g.advanceWidth,0)*size/font.unitsPerEm;
+mkdirSync(new URL('../data/course-covers/svg/',import.meta.url),{recursive:true});
 for (const c of catalog) {
-  const specific = subjectCoverInfo(c);
-  const id = c.id,
+  const modern = catalogCoverInfo(c);
+  const vector = modern ? createCatalogArtwork(c,officeLogos,measureText) : null;
+  const specific = modern || subjectCoverInfo(c);
+  const id = Number(c.id),
     photo = generated.find((g) => g.id === id),
-    filename = `course-${id}.webp`,
-    url = `/images/course-covers/v2/${filename}`;
+    filename = `course-${id}-${createHash('sha256').update(vector||c.title).digest('hex').slice(0,8)}.webp`,
+    url = `/images/course-covers/v3/${filename}`;
+  if(vector)writeFileSync(new URL(`../data/course-covers/svg/course-${id}.svg`,import.meta.url),vector);
   const target = new URL(filename, out),
     isCurated = !!reviewed[id] || !!specific;
   if (specific || (photo && existsSync(photo.path)) || !isCurated) {
-    const input = specific
+    const input = vector ? Buffer.from(vector) : specific
       ? Buffer.from(createSubjectArtwork(c))
       : photo && existsSync(photo.path)
         ? photo.path
@@ -102,6 +119,8 @@ for (const c of catalog) {
     subtitle,
     ink,
     photo: isCurated && !specific,
+    precomposed: !!modern,
+    artworkKind: modern?.kind || null,
     series: n || null,
   };
   checks.push({
@@ -144,7 +163,7 @@ for (let start = 0; start < catalog.length; start += 10) {
   for (let i = 0; i < group.length; i++) {
     const c = group[i],
       entry = manifest[courseIdentity(c)];
-    const tile = await sharp(fileURLToPath(new URL(`course-${c.id}.webp`, out)))
+    const tile = await sharp(fileURLToPath(new URL(`../frontend/public${entry.src}`, import.meta.url)))
       .resize(360, 203, { fit: "cover" })
       .toBuffer();
     const label = Buffer.from(
@@ -177,3 +196,8 @@ for (let start = 0; start < catalog.length; start += 10) {
 console.log(
   `Built ${checks.length} distinct covers, ${(checks.reduce((s, c) => s + c.bytes, 0) / 1024 / 1024).toFixed(2)} MB total.`,
 );
+const previewKinds=['word','excel','powerpoint','dsa','deep','networkLab'];
+const previewEntries=previewKinds.map(kind=>Object.values(manifest).find(e=>e.artworkKind===kind)).filter(Boolean);
+const previewTiles=[];
+for(const [i,e] of previewEntries.entries())previewTiles.push({input:await sharp(fileURLToPath(new URL(`../frontend/public${e.src}`,import.meta.url))).resize(400,225).toBuffer(),left:(i%3)*400,top:Math.floor(i/3)*225});
+await sharp({create:{width:1200,height:Math.ceil(previewEntries.length/3)*225,channels:3,background:'#edf2f7'}}).composite(previewTiles).jpeg({quality:92}).toFile(fileURLToPath(new URL('../docs/validation/course-covers-preview.jpg',import.meta.url)));

@@ -1015,6 +1015,17 @@ function Tickets({ auth, data, act, busy }) {
     [body, setBody] = useState(""),
     [status, setStatus] = useState(""),
     [assignee, setAssignee] = useState("");
+  useEffect(() => {
+    if (!ticket?.ticket_id || auth.user.role !== "STUDENT") return;
+    let active = true;
+    const timer = setInterval(() => {
+      api.platform(`/tickets/${ticket.ticket_id}`, auth.accessToken).then((t) => {
+        if (active) setTicket(t);
+      }).catch(() => {});
+    }, 10000);
+    return () => { active = false; clearInterval(timer); };
+  }, [ticket?.ticket_id, auth.accessToken, auth.user.role]);
+  const closed = ticket?.status === "CLOSED";
   const load = () =>
     api.platform(`/tickets/${id}`, auth.accessToken).then((t) => {
       setTicket(t);
@@ -1029,7 +1040,7 @@ function Tickets({ auth, data, act, busy }) {
           type="number"
           min={1}
           value={id}
-          onChange={(e) => setId(e.target.value)}
+          onChange={(e) => { setId(e.target.value); setTicket(null); }}
         />
         <button
           className={button}
@@ -1044,7 +1055,7 @@ function Tickets({ auth, data, act, busy }) {
           <button
             key={t.ticketId}
             className="rounded-lg bg-slate-100 p-2 text-sm"
-            onClick={() => setId(t.ticketId)}
+            onClick={() => { setId(t.ticketId); setTicket(null); }}
           >
             #{t.ticketId} {t.subject}
           </button>
@@ -1089,6 +1100,7 @@ function Tickets({ auth, data, act, busy }) {
             <textarea
               className={field}
               aria-label="Trả lời ticket"
+              disabled={closed}
               maxLength={5000}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -1114,7 +1126,8 @@ function Tickets({ auth, data, act, busy }) {
                 onChange={(e) => setAssignee(e.target.value)}
               />
             )}
-            <button className={button} disabled={busy}>
+            {closed && <p role="status" className="rounded-xl bg-slate-100 p-3 text-sm">Yêu cầu đã đóng. Bạn có thể xem lịch sử; hãy tạo yêu cầu mới nếu cần hỗ trợ thêm.</p>}
+            <button className={button} disabled={busy || (closed && auth.user.role !== "ADMIN")}>
               Lưu và gửi trả lời
             </button>
           </form>

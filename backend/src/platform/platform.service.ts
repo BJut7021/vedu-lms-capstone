@@ -707,6 +707,14 @@ export class PlatformService {
   async updateTicket(actor: Actor, id: number, data: any) {
     await this.ticket(actor, id);
     return this.db.transaction(async (m) => {
+      const [locked] = await m.query('SELECT * FROM support.tickets WHERE ticket_id=$1 FOR UPDATE', [id]);
+      if (!locked || (actor.role !== 'ADMIN' && Number(locked.student_id) !== actor.userId && Number(locked.assigned_to) !== actor.userId))
+        throw new ForbiddenException('Không được truy cập ticket');
+      if (locked.status === 'CLOSED' && data.status && data.status !== 'CLOSED' && actor.role !== 'ADMIN')
+        throw new ForbiddenException('Chỉ quản trị viên có thể mở lại ticket đã đóng');
+      const nextStatus = actor.role === 'ADMIN' && data.status ? data.status : locked.status;
+      if (locked.status === 'CLOSED' && nextStatus === 'CLOSED' && typeof data.message === 'string' && data.message.trim())
+        throw new BadRequestException('Ticket đã đóng. Không thể gửi thêm tin nhắn; hãy tạo yêu cầu hỗ trợ mới.');
       if (data.status || data.assignedTo !== undefined) {
         if (actor.role === 'STUDENT')
           throw new ForbiddenException('Học viên chỉ gửi hội thoại');
@@ -728,11 +736,11 @@ export class PlatformService {
         );
       }
       if (data.message) {
-        if (typeof data.message !== 'string' || data.message.length > 5000)
+        if (typeof data.message !== 'string' || !data.message.trim() || data.message.length > 5000)
           throw new BadRequestException('Nội dung quá dài');
         await m.query(
           'INSERT INTO support.ticket_messages(ticket_id,sender_id,message_text) VALUES($1,$2,$3)',
-          [id, actor.userId, data.message],
+          [id, actor.userId, data.message.trim()],
         );
       }
       return { message: 'Đã cập nhật ticket' };
