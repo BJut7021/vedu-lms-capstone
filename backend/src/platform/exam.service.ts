@@ -32,6 +32,15 @@ export class ExamService {
         );
     }
     return this.db.transaction(async (m) => {
+      await m.query('SELECT pg_advisory_xact_lock(1447384169,$1::integer)', [
+        quizId,
+      ]);
+      const [currentQuiz] = await m.query(
+        'SELECT * FROM assessment.quizzes WHERE quiz_id=$1 AND is_published AND NOT is_deleted',
+        [quizId],
+      );
+      if (!currentQuiz)
+        throw new NotFoundException('Bài thi chưa được công bố');
       await m.query('SELECT pg_advisory_xact_lock($1::integer,$2::integer)', [
         actor.userId,
         quizId,
@@ -45,11 +54,11 @@ export class ExamService {
           'SELECT count(*)::int n FROM assessment.quiz_attempts WHERE quiz_id=$1 AND student_id=$2',
           [quizId, actor.userId],
         );
-        if (count.n >= Number(quiz.max_attempts))
+        if (count.n >= Number(currentQuiz.max_attempts))
           throw new BadRequestException('Đã hết lượt làm bài');
         [a] = await m.query(
           `INSERT INTO assessment.quiz_attempts(quiz_id,course_id,student_id,attempt_no,status) VALUES($1,$2,$3,$4,'IN_PROGRESS') RETURNING *`,
-          [quizId, quiz.course_id, actor.userId, count.n + 1],
+          [quizId, currentQuiz.course_id, actor.userId, count.n + 1],
         );
       }
       const [draft] = await m.query(
@@ -61,7 +70,7 @@ export class ExamService {
         startedAt: a.started_at,
         deadline: new Date(
           new Date(a.started_at).getTime() +
-            Number(quiz.time_limit_seconds ?? 600) * 1000,
+            Number(currentQuiz.time_limit_seconds ?? 600) * 1000,
         ),
         serverTime: new Date(),
         answers: draft?.answers ?? [],

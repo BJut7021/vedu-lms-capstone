@@ -2708,23 +2708,43 @@ function renderTeacherPage({
             </Badge>
           </td>
           <td className="px-3 py-4">
-            <button
-              disabled={busy}
-              onClick={() =>
-                runAction(
-                  () =>
-                    api.updateTeacherCourseStatus(
-                      course.courseId,
-                      course.status === "PUBLISHED" ? "ARCHIVED" : "PUBLISHED",
-                      token,
-                    ),
-                  `Đã cập nhật trạng thái khóa học ${course.courseName}.`,
-                )
-              }
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold hover:bg-slate-50"
-            >
-              {course.status === "PUBLISHED" ? "Lưu trữ" : "Gửi duyệt"}
-            </button>
+            {course.teachingRole === "OWNER" ? (
+              <button
+                disabled={busy || course.reviewStatus === "PENDING"}
+                onClick={() => {
+                  const archiving = course.status === "PUBLISHED";
+                  if (
+                    archiving &&
+                    !window.confirm(
+                      `Lưu trữ “${course.courseName}”? Khóa học sẽ bị ẩn khỏi trang công khai, nhưng dữ liệu học và lịch sử vẫn được giữ. Quản trị viên sẽ nhận được thông báo.`,
+                    )
+                  )
+                    return;
+                  runAction(
+                    () =>
+                      api.updateTeacherCourseStatus(
+                        course.courseId,
+                        archiving ? "ARCHIVED" : "PUBLISHED",
+                        token,
+                      ),
+                    archiving
+                      ? `Đã lưu trữ khóa học ${course.courseName}.`
+                      : `Đã gửi ${course.courseName} cho quản trị viên kiểm duyệt.`,
+                  );
+                }}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {course.reviewStatus === "PENDING"
+                  ? "Đang chờ duyệt"
+                  : course.status === "PUBLISHED"
+                    ? "Lưu trữ"
+                    : "Gửi duyệt"}
+              </button>
+            ) : (
+              <span className="text-xs text-slate-500">
+                Giảng viên hỗ trợ không đổi trạng thái khóa học
+              </span>
+            )}
           </td>
         </tr>
       ))}
