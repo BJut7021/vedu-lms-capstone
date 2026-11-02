@@ -2,16 +2,43 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
+  OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AccessService, Actor } from '../auth/access.service';
 @Injectable()
-export class RecommendationService {
+export class RecommendationService implements OnModuleInit {
   constructor(
     private readonly db: DataSource,
     private readonly access: AccessService,
   ) {}
+  async onModuleInit() {
+    // Only reconcile jobs whose worker has a conclusive terminal status.
+    await this.reconcileExperiments().catch(() => undefined);
+  }
+  private async reconcileExperiments() {
+    const pending = await this.db.query(
+      "SELECT experiment_id FROM learning.experiments WHERE status='RUNNING' AND created_at < now()-interval '2 minutes' ORDER BY created_at LIMIT 30",
+    );
+    for (const entry of pending) {
+      try {
+        const result = await this.worker(`/jobs/${entry.experiment_id}`);
+        if (result.status === 'SUCCEEDED') await this.persist(entry.experiment_id, result.report);
+        else if (result.status === 'FAILED') await this.db.query(
+          "UPDATE learning.experiments SET status='FAILED',manifest=manifest || $2::jsonb WHERE experiment_id=$1 AND status='RUNNING'",
+          [entry.experiment_id, JSON.stringify({error:result.error, reconciledAt:new Date().toISOString()})],
+        );
+      } catch (error) {
+        if (error instanceof NotFoundException) await this.db.query(
+          "UPDATE learning.experiments SET status='FAILED',manifest=manifest || $2::jsonb WHERE experiment_id=$1 AND status='RUNNING'",
+          [entry.experiment_id, JSON.stringify({error:'Worker artifact not found; experiment cannot be resumed. Submit a new run.',reconciledAt:new Date().toISOString()})],
+        );
+        // A temporarily unavailable worker does not prove a failed experiment.
+      }
+    }
+  }
   private async worker(path: string, body?: unknown) {
     let response: Response;
     try {
@@ -34,6 +61,7 @@ export class RecommendationService {
       );
     }
     const result = (await response.json()) as any;
+    if (response.status === 404) throw new NotFoundException(result.message);
     if (!response.ok)
       throw new BadRequestException(result.message || 'ML worker lỗi');
     return result;
@@ -77,6 +105,7 @@ export class RecommendationService {
   }
   async experiments(actor: Actor) {
     if (actor.role !== 'ADMIN') throw new ForbiddenException();
+    await this.reconcileExperiments();
     return this.db.query(
       'SELECT * FROM learning.experiments ORDER BY created_at DESC LIMIT 30',
     );
