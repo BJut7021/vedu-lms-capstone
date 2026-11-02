@@ -7,6 +7,8 @@ from engine import load_dataset, predict
 def replay(artifact_dir, data_dir):
     path = Path(artifact_dir)
     report = json.loads((path/'report.json').read_text(encoding='utf-8'))
+    if report['manifest'].get('split_protocol','global_temporal')!='global_temporal':
+        raise ValueError('Research replay currently supports global temporal artifacts only')
     dataset = report['manifest']['dataset']
     if dataset not in ('kaggle_logs','kaggle_recommender'):
         raise ValueError('Replay only supports external public datasets, never private VEDU histories')

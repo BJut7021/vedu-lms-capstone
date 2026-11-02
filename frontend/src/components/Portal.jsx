@@ -1153,9 +1153,12 @@ const loadCourseLessons = async (courseId) => {
 
 useEffect(() => {
   let cancelled = false;
-
+  const initialize = async () => {
+  await Promise.resolve();
+  if (cancelled) return;
   if (!lessonForm.courseId) {
     setCourseLessons([]);
+    setLessonLoading(false);
     return;
   }
 
@@ -1177,6 +1180,8 @@ useEffect(() => {
     .finally(() => {
       if (!cancelled) setLessonLoading(false);
     });
+  };
+  initialize();
 
   return () => {
     cancelled = true;
@@ -1184,6 +1189,7 @@ useEffect(() => {
 }, [lessonForm.courseId, token]);
 
 const editLesson = (lesson) => {
+  resetResourceEditor();
   setSelectedLessonId(Number(lesson.lesson_id));
 
   setLessonForm({
@@ -1203,6 +1209,7 @@ const editLesson = (lesson) => {
 };
 
 const startNewLesson = () => {
+  resetResourceEditor();
   setSelectedLessonId(null);
   setLessonPublished(false);
 
@@ -1240,7 +1247,7 @@ const [resourceForm, setResourceForm] = useState({
   resourceUrl: "",
 });
 
-useEffect(() => {
+const resetResourceEditor = () => {
   setEditingResourceId(null);
   setResourceForm({
     resourceType: "VIDEO",
@@ -1249,18 +1256,20 @@ useEffect(() => {
   });
   setResourceError("");
   setResourceSuccess("");
-}, [selectedLessonId]);
+};
 
 useEffect(() => {
   let cancelled = false;
 
-  if (!selectedLessonId || !lessonForm.courseId) {
-    setLessonResources([]);
-    setResourceError("");
-    return;
-  }
-
   const loadResources = async () => {
+    await Promise.resolve();
+    if (cancelled) return;
+    if (!selectedLessonId || !lessonForm.courseId) {
+      setLessonResources([]);
+      setResourceError("");
+      setResourceLoading(false);
+      return;
+    }
     setResourceLoading(true);
     setResourceError("");
 
@@ -1922,6 +1931,7 @@ const deleteLessonResource = async (resource) => {
       <button
         type="button"
         onClick={() => {
+          resetResourceEditor();
           setSelectedLessonId(null);
           setLessonPublished(false);
 

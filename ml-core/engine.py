@@ -14,7 +14,7 @@ from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
 from torch import nn
 
-VERSION = 'vedu-huspm-bpr-gru-1.0'
+VERSION = 'vedu-huspm-bpr-gru-1.1'
 SOURCES = {
     'kaggle_logs': 'https://www.kaggle.com/datasets/ziya07/student-learning-interaction-logs-dataset',
     'kaggle_recommender': 'https://www.kaggle.com/datasets/nhondangcode/e-learning-recommender-system-dataset',
@@ -122,14 +122,15 @@ def huspm_scores(history,patterns,count):
         if cursor==len(prefix): scores[pattern['items'][-1]]+=pattern['utility_ratio']*pattern['support']
     return normalized(scores)
 
-def metrics(cases,score_fn,item_count):
+def metrics(cases,score_fn,item_count,ranks_out=None):
     result={f'{metric}@{k}':0.0 for k in (1,3,5,10) if k<=item_count for metric in ('Recall','NDCG','MRR')}
     coverage=set()
     for user,history,target in cases:
-        scores=score_fn(user,history)
+        scores=np.asarray(score_fn(user,history),dtype=float)
         ranking=np.argsort(-scores,kind='stable')
         coverage.update(ranking[:min(10,item_count)].tolist())
         rank=int(np.where(ranking==target)[0][0])+1
+        if ranks_out is not None: ranks_out.append(rank)
         for k in (1,3,5,10):
             if k>item_count: continue
             result[f'Recall@{k}']+=float(rank<=k)
@@ -152,22 +153,48 @@ def train(dataset,data_dir,output,config=None,rows=None):
     rng=np.random.default_rng(seed); started=time.perf_counter()
     df,manifest=load_dataset(dataset,data_dir,rows)
     if len(df)<30 or df.user.nunique()<3 or df.item.nunique()<3: raise ValueError('Need >=30 REAL events, >=3 users, >=3 items before training; no fake metrics')
+    protocol=config.get('protocol','global_temporal')
     first=df.time.iloc[int(len(df)*0.70)]; second=df.time.iloc[int(len(df)*0.85)]
-    train_df=df[df.time<first].copy()
+    excluded_users=0
+    if protocol=='global_temporal':
+        train_df=df[df.time<first].copy()
+        targets=[df[(df.time>=first)&(df.time<second)],df[df.time>=second]]
+    elif protocol=='per_user_temporal':
+        eligible=df.groupby('user').filter(lambda g:len(g)>=5)
+        excluded_users=df.user.nunique()-eligible.user.nunique()
+        # Keep every row at the held-out timestamp outside training. Timestamp ties
+        # are not evidence of observed ordering.
+        training=[]; validation=[]; testing=[]
+        for _,g in eligible.groupby('user',sort=True):
+            times=g.time.drop_duplicates()
+            if len(times)<3:
+                excluded_users+=1;continue
+            validation.append(g[g.time==times.iloc[-2]].head(1))
+            testing.append(g[g.time==times.iloc[-1]].head(1))
+            training.append(g[g.time<times.iloc[-2]])
+        if not training: raise ValueError('No eligible per-user histories')
+        train_df=pd.concat(training).sort_values(['time','user','item'],kind='stable')
+        targets=[pd.concat(validation),pd.concat(testing)]
+    else: raise ValueError('Unknown split protocol')
     items=sorted(train_df.item.unique()); users=sorted(train_df.user.unique())
     im={v:i for i,v in enumerate(items)}; um={v:i for i,v in enumerate(users)}
     if len(items)<3: raise ValueError('Training split has <3 items')
     train_df['i']=train_df.item.map(im); train_df['u']=train_df.user.map(um)
     histories={int(u):g.i.tolist() for u,g in train_df.groupby('u')}
-    def cases(start,end):
+    case_details=[]
+    def cases(targets):
         found=[]; skipped=0
-        for user,g in df[(df.time>=start)&(df.time<end)].groupby('user',sort=True):
+        details=[]
+        for user,g in targets.groupby('user',sort=True):
             target=g.iloc[0]; past=df[(df.user==user)&(df.time<target.time)]
             history=[im[x] for x in past.item if x in im][-20:]
-            if target['item'] not in im or not history: skipped+=1;continue
+            reason='unknown_item' if target['item'] not in im else ('no_known_history' if not history else None)
+            details.append({'user_hash':hashlib.sha256((dataset+':'+user).encode()).hexdigest(), 'target':target['item'], 'target_time':target.time.isoformat(),'history_length':len(history),'unsupported_reason':reason})
+            if reason: skipped+=1;continue
             found.append((um.get(user,-1),history,im[target['item']]))
+        case_details.append(details)
         return found,skipped
-    val,val_skip=cases(first,second); test,test_skip=cases(second,df.time.max()+pd.Timedelta(seconds=1))
+    val,val_skip=cases(targets[0]); test,test_skip=cases(targets[1])
     if not val or not test: raise ValueError('Temporal validation/test has no usable cases')
     positives={u:set(h) for u,h in histories.items()}
     utility_triples=[]
@@ -243,24 +270,49 @@ def train(dataset,data_dir,output,config=None,rows=None):
     patterns,mining=mine_huspm(sequences,float(config.get('min_support',0.02)),float(config.get('utility_ratio',0.01)),int(config.get('max_length',3)))
     mining['runtime_seconds']=round(time.perf_counter()-mining_started,6)
     h_scores=lambda u,h:huspm_scores(h,patterns,len(items))
-    weight_options=[(a,b,1-a-b) for a,b in [(0.2,0.6),(0.4,0.4),(0.6,0.2),(0.0,0.8),(0.8,0.0)]]
+    def cached(fn):
+        values={}
+        def score(u,h):
+            key=(u,tuple(h))
+            if key not in values: values[key]=fn(u,h)
+            return values[key]
+        return score
+    # Weight search reuses predictions; no repeated GRU inference per weight.
+    bpr_scores=cached(bpr_scores); gru_scores=cached(gru_scores); h_scores=cached(h_scores)
+    weight_options=[(a,1-a,0.0) for a in [0,.25,.5,.75,1]]+[(a,b,round(1-a-b,8)) for a,b in [(0.2,0.6),(0.4,0.4),(0.6,0.2),(0.0,0.8),(0.8,0.0),(0.2,0.4)]]
     def hybrid(weights):return lambda u,h:weights[0]*normalized(bpr_scores(u,h))+weights[1]*normalized(gru_scores(u,h))+weights[2]*h_scores(u,h)
     weights=max(weight_options,key=lambda w:metrics(val,hybrid(w),len(items))[f'NDCG@{min(3,len(items))}'])
     pop=train_df.i.value_counts().reindex(range(len(items)),fill_value=0).to_numpy(dtype=float)
     def without_huspm(a):return lambda u,h:a*normalized(bpr_scores(u,h))+(1-a)*normalized(gru_scores(u,h))
     no_h_weight=max([0,.25,.5,.75,1],key=lambda a:metrics(val,without_huspm(a),len(items))[f'NDCG@{min(3,len(items))}'])
     scorers={'BPR-MF':bpr_scores,'GRU-next-item':gru_scores,'Item-KNN (sklearn external)':knn_scores,'Popularity (train-only)':lambda u,h:pop,'HUSPM-only':h_scores,'BPR+GRU without HUSPM (ablation)':without_huspm(no_h_weight),'Hybrid BPR+GRU+HUSPM':hybrid(weights)}
-    measured={name:{'validation':metrics(val,fn,len(items)),'test':metrics(test,fn,len(items))} for name,fn in scorers.items()}
+    def random_scores(u,h):
+        # Stable for a given seed/context; independent of model RNG and call order.
+        key=hashlib.sha256(json.dumps([seed,u,h]).encode()).digest()
+        return np.random.default_rng(int.from_bytes(key[:8],'big')).random(len(items))
+    scorers['Random (seeded)']=random_scores
+    measured={}; rank_rows=[]
+    for name,fn in scorers.items():
+        measured[name]={}
+        for split,cases_,details in [('validation',val,case_details[0]),('test',test,case_details[1])]:
+            ranks=[]; measured[name][split]=metrics(cases_,fn,len(items),ranks)
+            rank_iter=iter(ranks)
+            for detail in details:
+                rank_rows.append({**detail,'model':name,'split':split,'rank':None if detail['unsupported_reason'] else next(rank_iter)})
     for values in measured.values():
         total_targets=len(test)+test_skip
         values['test_all_targets']={key:value*len(test)/total_targets for key,value in values['test'].items() if key.startswith(('Recall@','MRR@','NDCG@')) and isinstance(value,(int,float))}
         values['test_all_targets'].update({'total_target_users':total_targets,'known_catalog_with_history':len(test),'unsupported_targets_counted_as_misses':test_skip})
     manifest.update({'dataset':dataset,'version':VERSION,'code_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'dependencies':{'python':platform.python_version(),'numpy':np.__version__,'pandas':pd.__version__,'torch':torch.__version__,'sklearn':sklearn.__version__},'seed':seed,'train_rows':len(train_df),'users':len(users),'items':len(items),'train_before':first.isoformat(),'validation_before':second.isoformat(),'test_end':df.time.max().isoformat(),'validation_skipped_cold':val_skip,'test_skipped_cold':test_skip,'protocol':'global temporal 70/15/15; one first next-item target/user/split; full training catalog; repeats allowed; checkpoints and blend selected on validation only','bpr_objective':'train-only average-utility pairwise preference' if utility_triples else 'implicit observed versus unseen preference','bpr_contrast_negatives':contrast,'bpr_saturated_users':excluded_saturated_users,'bpr_training_pairs':len(pairs),'sequence_window_huspm':100,'context_window_gru':20,'utility_formula':'1 + min(time_spent_seconds,3600)/600 + quiz_score/100' if dataset=='kaggle_logs' else ('1 per click' if dataset=='kaggle_recommender' else '1 + verified_actual_seconds/600; capped at 20'),'config':config,'hybrid_weights':weights,'runtime_seconds':round(time.perf_counter()-started,3)})
     manifest['ablation_bpr_weight']=no_h_weight
+    if protocol=='per_user_temporal':
+        manifest.update({'train_before':None,'validation_before':None,'protocol':'per-user temporal; >=5 events; last distinct timestamp test, penultimate validation; full training catalog; repeats allowed; validation-only selection'})
+    manifest.update({'split_protocol':protocol,'excluded_short_or_tied_users':int(excluded_users),'evaluation_note':'Per-user split is a warm-history diagnostic and can overlap global periods; global temporal is the deployment-oriented protocol. Repeats allowed; full train catalog; unknown targets retained as misses.','train_split_sha256':hashlib.sha256(train_df[['user','item','time','utility']].to_csv(index=False).encode()).hexdigest(),'hybrid_weight_candidates':weight_options,'source_revision':config.get('source_revision')})
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     artifact={'manifest':manifest,'metrics':measured,'mining':mining,'patterns':patterns,'items':items,'users':users,'bpr_loss':bpr_loss,'gru_loss':gru_loss,'dimensions':dim}
     torch.save({'bpr':bpr.state_dict(),'gru':gru.state_dict()},output/'models.pt')
     np.save(output/'knn.npy',similarity)
+    pd.DataFrame(rank_rows).to_csv(output/'per_user_ranks.csv',index=False)
     (output/'report.json').write_text(json.dumps(artifact,ensure_ascii=False,indent=2),encoding='utf-8')
     artifact['artifact_sha256']=hashlib.sha256((output/'models.pt').read_bytes()).hexdigest()
     (output/'report.json').write_text(json.dumps(artifact,ensure_ascii=False,indent=2),encoding='utf-8')
