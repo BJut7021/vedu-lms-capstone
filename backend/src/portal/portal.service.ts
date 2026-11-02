@@ -319,7 +319,7 @@ export class PortalService {
         (SELECT COUNT(*)::int
          FROM lms.courses
          WHERE is_deleted = FALSE
-           AND review_status = 'UNREVIEWED') AS "unreviewedCourses",
+           AND review_status IN ('UNREVIEWED','PENDING')) AS "unreviewedCourses",
 
         (SELECT COUNT(*)::int
          FROM payment.v_order_payment_status
@@ -598,23 +598,76 @@ export class PortalService {
     courseId: number,
     statusInput: string,
   ) {
-    await this.assertCourseOwner(teacherId, courseId);
     const status = statusInput?.toUpperCase();
     if (!['DRAFT', 'PUBLISHED', 'ARCHIVED'].includes(status)) {
       throw new BadRequestException('Trạng thái khóa học không hợp lệ');
     }
-    const rows = await this.dataSource.query(
-      `
-            UPDATE lms.courses
-            SET status = CASE WHEN $1='PUBLISHED' THEN 'DRAFT' ELSE $1 END,
-                review_status=CASE WHEN $1='PUBLISHED' THEN 'PENDING' ELSE review_status END,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE course_id = $2 AND is_deleted = FALSE AND (teacher_id = $3 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=lms.courses.course_id AND ct.teacher_id=$3))
-            RETURNING course_id AS "courseId", course_name AS "courseName", status
-        `,
-      [status, courseId, teacherId],
-    );
-    return rows[0];
+    return this.dataSource.transaction(async (manager) => {
+      const [course] = await manager.query(
+        `SELECT c.course_id,c.course_name,c.teacher_id,c.status,c.review_status,c.review_note,u.full_name AS teacher_name
+         FROM lms.courses c JOIN auth.users u ON u.user_id=c.teacher_id
+         WHERE c.course_id=$1 AND NOT c.is_deleted FOR UPDATE OF c`,
+        [courseId],
+      );
+      if (!course) throw new NotFoundException('Không tìm thấy khóa học');
+      if (Number(course.teacher_id) !== Number(teacherId))
+        throw new ForbiddenException(
+          'Chỉ giảng viên chính được gửi duyệt hoặc lưu trữ khóa học',
+        );
+
+      const nextStatus = status === 'PUBLISHED' ? 'DRAFT' : status;
+      const nextReviewStatus =
+        status === 'PUBLISHED'
+          ? 'PENDING'
+          : status === 'ARCHIVED' && course.review_status === 'PENDING'
+            ? 'UNREVIEWED'
+            : course.review_status;
+      const [updated] = await manager.query(
+        `UPDATE lms.courses
+         SET status=$2,review_status=$3,updated_at=now()
+         WHERE course_id=$1
+         RETURNING course_id AS "courseId",course_name AS "courseName",status,review_status AS "reviewStatus"`,
+        [courseId, nextStatus, nextReviewStatus],
+      );
+      const actionText =
+        status === 'PUBLISHED'
+          ? 'đã gửi khóa học chờ kiểm duyệt'
+          : status === 'ARCHIVED'
+            ? 'đã lưu trữ và ẩn khóa học khỏi danh mục công khai'
+            : 'đã chuyển khóa học về bản nháp';
+      await manager.query(
+        `INSERT INTO system_config.audit_logs(user_id,action,schema_name,table_name,record_id,old_data,new_data)
+         VALUES($1,'UPDATE','lms','courses',$2,$3::jsonb,$4::jsonb)`,
+        [
+          teacherId,
+          String(courseId),
+          JSON.stringify({
+            status: course.status,
+            reviewStatus: course.review_status,
+          }),
+          JSON.stringify({
+            status: updated.status,
+            reviewStatus: updated.reviewStatus,
+            source: 'TEACHER_PORTAL',
+          }),
+        ],
+      );
+      await manager.query(
+        `INSERT INTO auth.notifications(user_id,title,body,route)
+         SELECT user_id,'Cập nhật trạng thái khóa học',$1,'/admin/catalog'
+         FROM auth.users WHERE role='ADMIN' AND is_active`,
+        [`${course.course_name}: ${course.teacher_name} ${actionText}.`],
+      );
+      return {
+        ...updated,
+        message:
+          status === 'PUBLISHED'
+            ? 'Đã gửi khóa học cho quản trị viên kiểm duyệt'
+            : status === 'ARCHIVED'
+              ? 'Đã lưu trữ khóa học và thông báo cho quản trị viên'
+              : 'Đã chuyển khóa học về bản nháp',
+      };
+    });
   }
 
     async replaceTeacherPdf(
