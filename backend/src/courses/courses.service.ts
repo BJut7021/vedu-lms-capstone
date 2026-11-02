@@ -317,7 +317,7 @@ export class CoursesService {
     const url = String(r.resource_url);
     if (
       /^vedu-file:[a-f0-9-]{36}\.pdf$/.test(url) ||
-      /^https:\/\//.test(url) ||
+      url.startsWith('https://') ||
       /^\/course-materials\/[a-z]+\/\d+\.html$/.test(url)
     )
       return r;

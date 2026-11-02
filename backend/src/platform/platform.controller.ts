@@ -281,6 +281,25 @@ export class PlatformController {
   ) {
     return this.service.createQuiz(r.user, id, b);
   }
+  @Get('teacher/quizzes/:id') @Roles('ADMIN', 'TEACHER') teacherQuiz(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.teacherQuiz(r.user, id);
+  }
+  @Patch('teacher/quizzes/:id') @Roles('ADMIN', 'TEACHER') updateTeacherQuiz(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() b: any,
+  ) {
+    return this.service.updateTeacherQuiz(r.user, id, b);
+  }
+  @Delete('teacher/quizzes/:id') @Roles('ADMIN', 'TEACHER') archiveTeacherQuiz(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.archiveTeacherQuiz(r.user, id);
+  }
   @Patch('attempts/:id/draft') @Roles('STUDENT') draft(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
@@ -314,12 +333,23 @@ export class PlatformController {
       ? this.momo.checkout(r.user, id)
       : this.manualPayments.create(r.user, id, 'MOMO_WALLET');
   }
-  @Get('payments/momo/wallet') @Roles('ADMIN') momoWallet(@Req() r: AuthRequest) {
+  @Get('payments/momo/wallet') @Roles('ADMIN') momoWallet(
+    @Req() r: AuthRequest,
+  ) {
     return this.manualPayments.walletSettings(r.user);
   }
-  @Post('payments/momo/wallet') @Roles('ADMIN')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 4 * 1024 * 1024, files: 1 } }))
-  configureMomoWallet(@Req() r: AuthRequest, @Body() b: any, @UploadedFile() file?: { buffer: Buffer }) {
+  @Post('payments/momo/wallet')
+  @Roles('ADMIN')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 4 * 1024 * 1024, files: 1 },
+    }),
+  )
+  configureMomoWallet(
+    @Req() r: AuthRequest,
+    @Body() b: any,
+    @UploadedFile() file?: { buffer: Buffer },
+  ) {
     return this.manualPayments.configureWallet(r.user, b, file);
   }
   @Public() @Post('payments/momo/ipn') @HttpCode(204) async ipn(

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -281,7 +282,7 @@ export class PlatformService {
         [lessonId, type, data.title.trim(), url],
       );
       await m.query(
-  `
+        `
   UPDATE lms.lessons
   SET
     video_duration_seconds = COALESCE(
@@ -295,8 +296,8 @@ export class PlatformService {
     END
   WHERE lesson_id = $1
   `,
-  [lessonId, videoDuration],
-);
+        [lessonId, videoDuration],
+      );
       return r;
     });
   }
@@ -707,14 +708,37 @@ export class PlatformService {
   async updateTicket(actor: Actor, id: number, data: any) {
     await this.ticket(actor, id);
     return this.db.transaction(async (m) => {
-      const [locked] = await m.query('SELECT * FROM support.tickets WHERE ticket_id=$1 FOR UPDATE', [id]);
-      if (!locked || (actor.role !== 'ADMIN' && Number(locked.student_id) !== actor.userId && Number(locked.assigned_to) !== actor.userId))
+      const [locked] = await m.query(
+        'SELECT * FROM support.tickets WHERE ticket_id=$1 FOR UPDATE',
+        [id],
+      );
+      if (
+        !locked ||
+        (actor.role !== 'ADMIN' &&
+          Number(locked.student_id) !== actor.userId &&
+          Number(locked.assigned_to) !== actor.userId)
+      )
         throw new ForbiddenException('Không được truy cập ticket');
-      if (locked.status === 'CLOSED' && data.status && data.status !== 'CLOSED' && actor.role !== 'ADMIN')
-        throw new ForbiddenException('Chỉ quản trị viên có thể mở lại ticket đã đóng');
-      const nextStatus = actor.role === 'ADMIN' && data.status ? data.status : locked.status;
-      if (locked.status === 'CLOSED' && nextStatus === 'CLOSED' && typeof data.message === 'string' && data.message.trim())
-        throw new BadRequestException('Ticket đã đóng. Không thể gửi thêm tin nhắn; hãy tạo yêu cầu hỗ trợ mới.');
+      if (
+        locked.status === 'CLOSED' &&
+        data.status &&
+        data.status !== 'CLOSED' &&
+        actor.role !== 'ADMIN'
+      )
+        throw new ForbiddenException(
+          'Chỉ quản trị viên có thể mở lại ticket đã đóng',
+        );
+      const nextStatus =
+        actor.role === 'ADMIN' && data.status ? data.status : locked.status;
+      if (
+        locked.status === 'CLOSED' &&
+        nextStatus === 'CLOSED' &&
+        typeof data.message === 'string' &&
+        data.message.trim()
+      )
+        throw new BadRequestException(
+          'Ticket đã đóng. Không thể gửi thêm tin nhắn; hãy tạo yêu cầu hỗ trợ mới.',
+        );
       if (data.status || data.assignedTo !== undefined) {
         if (actor.role === 'STUDENT')
           throw new ForbiddenException('Học viên chỉ gửi hội thoại');
@@ -736,7 +760,11 @@ export class PlatformService {
         );
       }
       if (data.message) {
-        if (typeof data.message !== 'string' || !data.message.trim() || data.message.length > 5000)
+        if (
+          typeof data.message !== 'string' ||
+          !data.message.trim() ||
+          data.message.length > 5000
+        )
           throw new BadRequestException('Nội dung quá dài');
         await m.query(
           'INSERT INTO support.ticket_messages(ticket_id,sender_id,message_text) VALUES($1,$2,$3)',
@@ -833,63 +861,212 @@ export class PlatformService {
   }
   async createQuiz(actor: Actor, courseId: number, data: any) {
     await this.access.manageCourse(actor, courseId);
-    if (
-      !data.title?.trim() ||
-      data.title.length > 200 ||
-      !Number.isInteger(Number(data.timeLimitSeconds)) ||
-      Number(data.timeLimitSeconds) < 10 ||
-      Number(data.timeLimitSeconds) > 86400 ||
-      !Array.isArray(data.questions) ||
-      data.questions.length < 1 ||
-      data.questions.length > 100 ||
-      !Number.isFinite(Number(data.passingScore ?? 5)) ||
-      Number(data.passingScore ?? 5) < 0 ||
-      Number(data.passingScore ?? 5) > 10
-    )
-      throw new BadRequestException(
-        'Tên, thời gian (10-86400 giây), điểm đạt hoặc câu hỏi không hợp lệ',
-      );
+    const payload = this.validateQuizPayload(data);
     return this.db.transaction(async (m) => {
       const [q] = await m.query(
         `INSERT INTO assessment.quizzes(course_id,title,time_limit_seconds,passing_score,max_attempts,is_published) VALUES($1,$2,$3,$4,$5,true) RETURNING *`,
         [
           courseId,
-          data.title,
-          Number(data.timeLimitSeconds),
-          Number(data.passingScore ?? 5),
-          Math.min(100, Math.max(1, Number(data.maxAttempts) || 3)),
+          payload.title,
+          payload.timeLimitSeconds,
+          payload.passingScore,
+          payload.maxAttempts,
         ],
       );
-      for (const [index, item] of data.questions.entries()) {
-        const type = item.type ?? 'SINGLE_CHOICE';
-        if (
-          !item.text?.trim() ||
-          !['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(type) ||
-          !Array.isArray(item.options) ||
-          item.options.length < 2 ||
-          item.options.length > 10 ||
-          !item.options.some((o: any) => o.correct) ||
-          (type !== 'MULTIPLE_CHOICE' &&
-            item.options.filter((o: any) => o.correct).length !== 1)
-        )
-          throw new BadRequestException(
-            'Câu hỏi cần ít nhất 2 lựa chọn và đáp án đúng hợp lệ',
-          );
-        const [question] = await m.query(
-          'INSERT INTO assessment.questions(quiz_id,question_text,question_type,question_order,points) VALUES($1,$2,$3,$4,1) RETURNING question_id',
-          [q.quiz_id, item.text, type, index + 1],
-        );
-        for (const [j, opt] of item.options.entries()) {
-          if (!opt.text?.trim())
-            throw new BadRequestException('Lựa chọn không được trống');
-          await m.query(
-            'INSERT INTO assessment.answers(question_id,answer_text,is_correct,answer_order) VALUES($1,$2,$3,$4)',
-            [question.question_id, opt.text, opt.correct === true, j + 1],
-          );
-        }
-      }
+      await this.insertQuizQuestions(m, q.quiz_id, payload.questions);
       return q;
     });
+  }
+  async teacherQuiz(actor: Actor, quizId: number) {
+    const quiz = await this.requireManagedQuiz(actor, quizId);
+    return this.quizEditorView(quiz);
+  }
+  async updateTeacherQuiz(actor: Actor, quizId: number, data: any) {
+    await this.requireManagedQuiz(actor, quizId);
+    const payload = this.validateQuizPayload(data);
+    return this.db.transaction(async (m) => {
+      await this.lockQuiz(m, quizId);
+      const [quiz] = await m.query(
+        `SELECT q.*,(SELECT count(*)::int FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id) AS attempt_count
+         FROM assessment.quizzes q WHERE q.quiz_id=$1 AND NOT q.is_deleted FOR UPDATE`,
+        [quizId],
+      );
+      if (!quiz) throw new NotFoundException('Quiz không tồn tại');
+      if (Number(quiz.attempt_count) > 0)
+        throw new ConflictException(
+          'Quiz đã có lượt làm nên không thể sửa nội dung. Hãy lưu trữ và tạo quiz mới.',
+        );
+      const [updated] = await m.query(
+        `UPDATE assessment.quizzes SET title=$2,time_limit_seconds=$3,passing_score=$4,max_attempts=$5,updated_at=now()
+         WHERE quiz_id=$1 RETURNING *`,
+        [
+          quizId,
+          payload.title,
+          payload.timeLimitSeconds,
+          payload.passingScore,
+          payload.maxAttempts,
+        ],
+      );
+      await m.query('DELETE FROM assessment.questions WHERE quiz_id=$1', [
+        quizId,
+      ]);
+      await this.insertQuizQuestions(m, quizId, payload.questions);
+      return this.quizEditorView({ ...updated, attempt_count: 0 }, m);
+    });
+  }
+  async archiveTeacherQuiz(actor: Actor, quizId: number) {
+    await this.requireManagedQuiz(actor, quizId);
+    return this.db.transaction(async (m) => {
+      await this.lockQuiz(m, quizId);
+      const [archived] = await m.query(
+        `UPDATE assessment.quizzes
+         SET is_published=false,is_deleted=true,deleted_at=now(),updated_at=now()
+         WHERE quiz_id=$1 AND NOT is_deleted RETURNING quiz_id`,
+        [quizId],
+      );
+      if (!archived) throw new NotFoundException('Quiz không tồn tại');
+      return {
+        quizId: Number(archived.quiz_id),
+        archived: true,
+        message: 'Đã lưu trữ quiz; lịch sử làm bài được giữ nguyên',
+      };
+    });
+  }
+  private async requireManagedQuiz(actor: Actor, quizId: number) {
+    const [quiz] = await this.db.query(
+      `SELECT q.*,(SELECT count(*)::int FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id) AS attempt_count
+       FROM assessment.quizzes q WHERE q.quiz_id=$1 AND NOT q.is_deleted`,
+      [quizId],
+    );
+    if (!quiz) throw new NotFoundException('Quiz không tồn tại');
+    await this.access.manageCourse(actor, Number(quiz.course_id));
+    return quiz;
+  }
+  private validateQuizPayload(data: any) {
+    const title = typeof data?.title === 'string' ? data.title.trim() : '';
+    const timeLimitSeconds = Number(data?.timeLimitSeconds);
+    const passingScore = Number(data?.passingScore ?? 5);
+    const maxAttempts = Number(data?.maxAttempts ?? 3);
+    if (
+      !title ||
+      title.length > 200 ||
+      !Number.isInteger(timeLimitSeconds) ||
+      timeLimitSeconds < 10 ||
+      timeLimitSeconds > 86400 ||
+      !Number.isFinite(passingScore) ||
+      passingScore < 0 ||
+      passingScore > 10 ||
+      !Number.isInteger(maxAttempts) ||
+      maxAttempts < 1 ||
+      maxAttempts > 100 ||
+      !Array.isArray(data?.questions) ||
+      data.questions.length < 1 ||
+      data.questions.length > 100
+    )
+      throw new BadRequestException(
+        'Tên, thời gian (10-86400 giây), điểm đạt, số lượt làm hoặc câu hỏi không hợp lệ',
+      );
+    const questions = data.questions.map((item: any) => {
+      const text = typeof item?.text === 'string' ? item.text.trim() : '';
+      const type = item?.type ?? 'SINGLE_CHOICE';
+      const options = Array.isArray(item?.options)
+        ? item.options.map((option: any) => ({
+            text: typeof option?.text === 'string' ? option.text.trim() : '',
+            correct: option?.correct === true,
+          }))
+        : [];
+      const correctCount = options.filter(
+        (option: any) => option.correct,
+      ).length;
+      if (
+        !text ||
+        text.length > 2000 ||
+        !['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE'].includes(type) ||
+        options.length < 2 ||
+        options.length > 10 ||
+        options.some(
+          (option: any) => !option.text || option.text.length > 1000,
+        ) ||
+        correctCount < 1 ||
+        (type !== 'MULTIPLE_CHOICE' && correctCount !== 1)
+      )
+        throw new BadRequestException(
+          'Mỗi câu hỏi cần 2-10 lựa chọn, nội dung hợp lệ và đáp án đúng phù hợp với loại câu hỏi',
+        );
+      return { text, type, options };
+    });
+    return { title, timeLimitSeconds, passingScore, maxAttempts, questions };
+  }
+  private async insertQuizQuestions(
+    manager: { query: (sql: string, params?: any[]) => Promise<any> },
+    quizId: number,
+    questions: any[],
+  ) {
+    for (const [index, item] of questions.entries()) {
+      const [question] = await manager.query(
+        'INSERT INTO assessment.questions(quiz_id,question_text,question_type,question_order,points) VALUES($1,$2,$3,$4,1) RETURNING question_id',
+        [quizId, item.text, item.type, index + 1],
+      );
+      for (const [answerIndex, option] of item.options.entries())
+        await manager.query(
+          'INSERT INTO assessment.answers(question_id,answer_text,is_correct,answer_order) VALUES($1,$2,$3,$4)',
+          [question.question_id, option.text, option.correct, answerIndex + 1],
+        );
+    }
+  }
+  private async quizEditorView(
+    quiz: any,
+    manager: { query: (sql: string, params?: any[]) => Promise<any> } = this.db,
+  ) {
+    const rows: any[] = await manager.query(
+      `SELECT q.question_id,q.question_text,q.question_type,q.question_order,
+              a.answer_id,a.answer_text,a.is_correct,a.answer_order
+       FROM assessment.questions q
+       JOIN assessment.answers a ON a.question_id=q.question_id
+       WHERE q.quiz_id=$1 ORDER BY q.question_order,a.answer_order`,
+      [quiz.quiz_id],
+    );
+    const questions: any[] = [];
+    for (const row of rows) {
+      let question = questions.find(
+        (item) => item.id === Number(row.question_id),
+      );
+      if (!question) {
+        question = {
+          id: Number(row.question_id),
+          text: row.question_text,
+          type: row.question_type,
+          options: [],
+        };
+        questions.push(question);
+      }
+      question.options.push({
+        id: Number(row.answer_id),
+        text: row.answer_text,
+        correct: row.is_correct === true,
+      });
+    }
+    return {
+      id: Number(quiz.quiz_id),
+      courseId: Number(quiz.course_id),
+      title: quiz.title,
+      timeLimitSeconds: Number(quiz.time_limit_seconds),
+      passingScore: Number(quiz.passing_score),
+      maxAttempts: Number(quiz.max_attempts),
+      attemptCount: Number(quiz.attempt_count ?? 0),
+      questions,
+    };
+  }
+  private lockQuiz(
+    manager: { query: (sql: string, params?: any[]) => Promise<any> },
+    quizId: number,
+  ) {
+    // Same transaction lock is used when a learner starts an attempt, preventing
+    // a race between replacing questions and creating the first attempt.
+    return manager.query(
+      'SELECT pg_advisory_xact_lock(1447384169,$1::integer)',
+      [quizId],
+    );
   }
   async openWatch(actor: Actor, lessonId: number) {
     const [l] = await this.db.query(
