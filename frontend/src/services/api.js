@@ -47,6 +47,12 @@ function withToken(token) {
 export const api = {
   me: (token) => request("/users/me", { headers: withToken(token) }),
   health: () => request("/health"),
+
+  systemHealth: (token) =>
+  request("/system-health", {
+    headers: withToken(token),
+  }),
+
   courses: (filters = {}) =>
     request(`/courses?${new URLSearchParams(filters)}`),
   courseSuggestions: (q, signal) =>

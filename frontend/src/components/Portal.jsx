@@ -35,6 +35,7 @@ import Notifications from "./Notifications";
 import Avatar from "./Avatar";
 import Profile from "./Profile";
 import PaymentReview from "./PaymentReview";
+import TeacherQuizActions from "./TeacherQuizActions";
 
 const roleLabels = {
   STUDENT: "Học viên",
@@ -236,6 +237,11 @@ export default function Portal({
     : "dashboard";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState(null);
+  const [systemHealth, setSystemHealth] = useState({
+  postgresql: "UNKNOWN",
+  ml: "UNKNOWN",
+  checkedAt: null,
+});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -290,6 +296,45 @@ export default function Portal({
       active = false;
     };
   }, [auth.accessToken]);
+
+
+useEffect(() => {
+  if (role !== "ADMIN" || activePage !== "dashboard") return;
+
+  let active = true;
+
+  const checkHealth = async () => {
+    try {
+      const result = await api.systemHealth(auth.accessToken);
+
+      if (active) {
+        setSystemHealth({
+          postgresql: result.postgresql,
+          ml: result.ml,
+          checkedAt: result.checkedAt,
+        });
+      }
+    } catch {
+      if (active) {
+        setSystemHealth({
+          postgresql: "UNKNOWN",
+          ml: "UNKNOWN",
+          checkedAt: null,
+        });
+      }
+    }
+  };
+
+  checkHealth();
+
+  const timer = setInterval(checkHealth, 15000);
+
+  return () => {
+    active = false;
+    clearInterval(timer);
+  };
+}, [role, activePage, auth.accessToken]);
+
 
   useEffect(() => {
     if (role !== "TEACHER") return;
@@ -580,6 +625,7 @@ export default function Portal({
                   auth,
                   busy,
                   runAction,
+                  systemHealth,
                 })}
             </>
           )}
@@ -2764,6 +2810,10 @@ function renderTeacherPage({
     />
   );
 
+
+
+
+
   if (activePage === "quiz-bank")
     return (
       <Panel
@@ -2779,9 +2829,12 @@ function renderTeacherPage({
               "Điểm đạt",
               "Số lần",
               "Trạng thái",
+              "Thao tác",
             ]}
           >
+
             {data.quizzes.map((quiz) => (
+
               <tr key={quiz.quizId}>
                 <td className="px-3 py-4 font-bold">{quiz.title}</td>
                 <td className="px-3 py-4">{quiz.courseName}</td>
@@ -2789,11 +2842,18 @@ function renderTeacherPage({
                 <td className="px-3 py-4">{quiz.passingScore}/10</td>
                 <td className="px-3 py-4">{quiz.maxAttempts}</td>
                 <td className="px-3 py-4">
-                  <Badge tone={quiz.isPublished ? "green" : "amber"}>
-                    {quiz.isPublished ? "PUBLISHED" : "DRAFT"}
-                  </Badge>
-                </td>
-              </tr>
+  <Badge tone={quiz.isPublished ? "green" : "amber"}>
+    {quiz.isPublished ? "PUBLISHED" : "DRAFT"}
+  </Badge>
+</td>
+
+<td className="px-3 py-4">
+  <TeacherQuizActions
+    quizId={quiz.quizId}
+    token={token}
+  />
+</td>
+</tr>
             ))}
           </TableShell>
         ) : (
@@ -2931,7 +2991,15 @@ function renderTeacherPage({
   );
 }
 
-function renderAdminPage({ activePage, data, catalog, auth, busy, runAction }) {
+function renderAdminPage({
+  activePage,
+  data,
+  catalog,
+  auth,
+  busy,
+  runAction,
+  systemHealth,
+}) {
 
   if (activePage === "dashboard") {
     const totalUsers = number(data.stats.totalUsers);
@@ -3373,37 +3441,73 @@ const maxStudents = Math.max(
 
         {/* KHAI THAC MAU VA KHUYEN NGHI */}
         <div className="grid gap-6 xl:grid-cols-2">
-          <Panel title="Hệ thống khuyến nghị & khai thác mẫu">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-emerald-50 p-4">
-                <span className="font-bold text-emerald-900">
-                  PostgreSQL & audit
-                </span>
-                <Badge tone="green">Dữ liệu đã tải</Badge>
-              </div>
 
-              <div className="flex items-center justify-between rounded-xl bg-blue-50 p-4">
-                <span className="font-bold text-blue-900">
-                  Recommendation store
-                </span>
-                <Badge tone="blue">Hệ thống khuyến nghị</Badge>
-              </div>
+<Panel title="Hệ thống khuyến nghị & khai thác mẫu">
+  <div className="space-y-3">
 
-              <div className="flex items-center justify-between rounded-xl bg-amber-50 p-4">
-                <span className="font-bold text-amber-900">
-                  Python mining service
-                </span>
-                <Badge tone="blue">
-                  {miningRuns.some(
-                    (run) =>
-                      run.algorithm === "VEDU-PrefixProjection-HUSPM"
-                  )
-                    ? "ĐÃ CÓ LỊCH SỬ"
-                    : "CHƯA CÓ LỊCH SỬ"}
-                </Badge>
-              </div>
-            </div>
-          </Panel>
+    {/* TRẠNG THÁI POSTGRESQL */}
+    <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+      <span className="font-bold text-slate-800">
+        PostgreSQL
+      </span>
+
+      <Badge
+        tone={
+          systemHealth?.postgresql === "ONLINE"
+            ? "green"
+            : systemHealth?.postgresql === "OFFLINE"
+              ? "red"
+              : "amber"
+        }
+      >
+        {systemHealth?.postgresql ?? "UNKNOWN"}
+      </Badge>
+    </div>
+
+    {/* TRẠNG THÁI ML WORKER */}
+    <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+      <span className="font-bold text-slate-800">
+        Python ML Worker
+      </span>
+
+      <Badge
+        tone={
+          systemHealth?.ml === "ONLINE"
+            ? "green"
+            : systemHealth?.ml === "OFFLINE"
+              ? "red"
+              : "amber"
+        }
+      >
+        {systemHealth?.ml ?? "UNKNOWN"}
+      </Badge>
+    </div>
+
+    {/* LỊCH SỬ KHÔNG QUYẾT ĐỊNH ONLINE */}
+    <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+      <span className="font-bold text-slate-800">
+        Lịch sử HUSPM
+      </span>
+
+      <Badge tone="blue">
+        {miningRuns.length} lần chạy đã lưu
+      </Badge>
+    </div>
+
+    <p className="text-xs text-slate-500">
+      Trạng thái dịch vụ được kiểm tra trực tiếp mỗi 15 giây.
+      Dữ liệu lịch sử không quyết định trạng thái ONLINE.
+    </p>
+
+    {systemHealth?.checkedAt && (
+      <p className="text-xs text-slate-400">
+        Kiểm tra lần cuối: {formatDate(systemHealth.checkedAt)}
+      </p>
+    )}
+
+  </div>
+</Panel>
+
 
           <Panel title="Mining run gần nhất">
             {latestMining ? (
