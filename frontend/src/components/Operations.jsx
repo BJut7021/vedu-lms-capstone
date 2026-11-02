@@ -6,6 +6,7 @@ import PedagogyEditor from "./PedagogyEditor";
 import ContentModeration from "./ContentModeration";
 import CourseOverviewEditor from "./CourseOverviewEditor";
 import { formatMinutes } from "../services/time";
+import TeacherQuizActions from "./TeacherQuizActions";
 
 const button =
   "rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50";
@@ -70,7 +71,7 @@ export default function Operations({ page, auth, data, catalog, onLogout }) {
     discussions: Discussions,
     reports: Reports,
     content: Content,
-    "quiz-bank": QuizEditor,
+    "quiz-bank": TeacherQuizPage,
     mining: Mining,
     assignments: Assignments,
     "ticket-chat": Tickets,
@@ -722,6 +723,16 @@ function LessonEditor({ lesson, sections, auth, act, busy, reload }) {
     </Card>
   );
 }
+
+function TeacherQuizPage(props) {
+  return (
+    <div className="space-y-5">
+      <QuizEditor {...props} />
+      <TeacherQuizList auth={props.auth} data={props.data} />
+    </div>
+  );
+}
+
 function QuizEditor({ auth, data, act, busy }) {
   const [course, setCourse] = useState(""),
     [title, setTitle] = useState(""),
@@ -908,6 +919,78 @@ function QuizEditor({ auth, data, act, busy }) {
     </Card>
   );
 }
+
+
+function TeacherQuizList({ auth, data }) {
+  const quizzes = data?.quizzes || [];
+
+  return (
+    <Card title="Danh sách bài kiểm tra đã tạo">
+      {quizzes.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          Chưa có bài kiểm tra nào. Hãy tạo quiz ở phía trên.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b bg-slate-50">
+                <th className="px-3 py-3">Tên bài kiểm tra</th>
+                <th className="px-3 py-3">Khóa học</th>
+                <th className="px-3 py-3">Số câu</th>
+                <th className="px-3 py-3">Điểm đạt</th>
+                <th className="px-3 py-3">Trạng thái</th>
+                <th className="px-3 py-3">Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {quizzes.map((quiz) => (
+                <tr key={quiz.quizId} className="border-b">
+                  <td className="px-3 py-3 font-semibold">
+                    {quiz.title}
+                  </td>
+
+                  <td className="px-3 py-3">
+                    {quiz.courseName}
+                  </td>
+
+                  <td className="px-3 py-3">
+                    {quiz.questionCount}
+                  </td>
+
+                  <td className="px-3 py-3">
+                    {quiz.passingScore}/10
+                  </td>
+
+                  <td className="px-3 py-3">
+                    <span
+                      className={
+                        quiz.isPublished
+                          ? "text-green-600"
+                          : "text-amber-600"
+                      }
+                    >
+                      {quiz.isPublished ? "Đã công bố" : "Bản nháp"}
+                    </span>
+                  </td>
+
+                  <td className="px-3 py-3">
+                    <TeacherQuizActions
+                      quizId={quiz.quizId}
+                      token={auth.accessToken}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function Assignments({ auth, act, busy }) {
   const [info, setInfo] = useState(null),
     [course, setCourse] = useState(""),
@@ -1010,6 +1093,43 @@ function Tickets({ auth, data, act, busy }) {
       .then(setTickets)
       .catch(() => {});
   }, [auth.accessToken]);
+
+
+  const [teachers, setTeachers] = useState([]);
+  const [teachersError, setTeachersError] = useState("");
+
+  useEffect(() => {
+    if (auth.user.role !== "ADMIN") return;
+
+    let active = true;
+
+    api.platform("/assignments", auth.accessToken)
+      .then((info) => {
+        if (!active) return;
+
+        const list = (info.teachers || [])
+          .map((teacher) => ({
+            id: String(teacher.user_id),
+            name: teacher.full_name,
+          }))
+          .filter((teacher) => teacher.id && teacher.name)
+          .sort((a, b) => a.name.localeCompare(b.name, "vi"));
+
+        setTeachers(list);
+        setTeachersError("");
+      })
+      .catch((error) => {
+        if (active) {
+          setTeachersError(error.message || "Không tải được danh sách giảng viên");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [auth.user.role, auth.accessToken]);
+
+
   const [id, setId] = useState(""),
     [ticket, setTicket] = useState(null),
     [body, setBody] = useState(""),
@@ -1117,15 +1237,40 @@ function Tickets({ auth, data, act, busy }) {
                 ))}
               </select>
             )}
-            {auth.user.role === "ADMIN" && (
-              <Input
-                label="Mã giảng viên/admin được giao (để trống: bỏ phân công)"
-                type="number"
-                min={1}
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-              />
-            )}
+
+{auth.user.role === "ADMIN" && (
+  <label className="block space-y-1 text-sm font-medium">
+    <span>Phân công giảng viên xử lý</span>
+
+    <select
+      className={field}
+      value={String(assignee)}
+      onChange={(e) => setAssignee(e.target.value)}
+    >
+      <option value="">-- Chưa phân công --</option>
+
+      {teachers.map((teacher) => (
+        <option key={teacher.id} value={teacher.id}>
+          {teacher.name}
+        </option>
+      ))}
+
+      {assignee &&
+        !teachers.some((teacher) => teacher.id === String(assignee)) && (
+          <option value={String(assignee)}>
+            Người được giao hiện tại (ID: {assignee})
+          </option>
+        )}
+    </select>
+
+    {(teachersError || teachers.length === 0) && (
+  <p className="text-xs text-amber-600">
+    {teachersError || "Chưa có giảng viên trong danh sách."}
+  </p>
+)}
+  </label>
+)}
+
             {closed && <p role="status" className="rounded-xl bg-slate-100 p-3 text-sm">Yêu cầu đã đóng. Bạn có thể xem lịch sử; hãy tạo yêu cầu mới nếu cần hỗ trợ thêm.</p>}
             <button className={button} disabled={busy || (closed && auth.user.role !== "ADMIN")}>
               Lưu và gửi trả lời
