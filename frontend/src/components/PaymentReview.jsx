@@ -200,7 +200,7 @@ export default function PaymentReview({ auth }) {
                 Đối soát: {r.reviewerNote}
               </p>
             )}
-            {r.orderStatus === "PENDING" && r.status !== "APPROVED" && (
+            {r.orderStatus === "PENDING" && r.status === "REVIEW" && (
               <div className="space-y-3 border-t pt-4">
                 <p className="rounded-xl bg-slate-50 p-3 text-sm leading-6">
                   Đối chiếu giao dịch nhận đủ{" "}
@@ -213,7 +213,7 @@ export default function PaymentReview({ auth }) {
                   <input
                     className={`${field} mt-2`}
                     autoComplete="off"
-                    maxLength={121}
+                    maxLength={120}
                     value={
                       form[r.id]?.transaction ?? transactionHint(r.learnerNote)
                     }

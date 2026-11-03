@@ -66,6 +66,13 @@ END LOOP;
 INSERT INTO lms.catalog_retirements(course_id,previous_teacher_id,previous_status) SELECT course_id,teacher_id,status FROM lms.courses WHERE NOT(course_id=ANY(selected)) AND NOT is_deleted ON CONFLICT DO NOTHING;
 UPDATE lms.courses c SET status='ARCHIVED',is_deleted=true,deleted_at=now(),teacher_id=CASE WHEN EXISTS(SELECT 1 FROM auth.users u WHERE u.user_id=c.teacher_id AND u.role='TEACHER' AND u.is_active) THEN c.teacher_id ELSE teacherids[1] END WHERE NOT(course_id=ANY(selected)) AND NOT is_deleted;
 IF cardinality(selected)<>21 THEN RAISE EXCEPTION 'Catalog must contain 21 courses'; END IF;
+-- VEDU demo commercial policy: keep the public catalog free except for one
+-- advanced course used to verify checkout, payment reconciliation and access
+-- locking. Apply this on every team seed so all developer databases agree.
+UPDATE lms.courses c
+SET price=CASE WHEN cc.course_key='data-mining' THEN 199000 ELSE 0 END
+FROM lms.curated_courses cc
+WHERE cc.course_id=c.course_id AND c.course_id=ANY(selected);
 INSERT INTO lms.catalog_revisions(revision) VALUES('2026.11.2');
 END $curated$;
 COMMIT;

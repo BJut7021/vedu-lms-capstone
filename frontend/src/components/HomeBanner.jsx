@@ -19,24 +19,6 @@ export default function HomeBanner({
       className="home-hero home-hero-v2 relative overflow-hidden"
       aria-labelledby="home-heading"
     >
-      <div aria-hidden="true" className="home-side-decoration home-side-left">
-        <img
-          src="/images/learning/study-books.svg"
-          alt=""
-          width="300"
-          height="470"
-          className="h-auto w-full"
-        />
-      </div>
-      <div aria-hidden="true" className="home-side-decoration home-side-right">
-        <img
-          src="/images/learning/study-laptop.svg"
-          alt=""
-          width="300"
-          height="470"
-          className="h-auto w-full"
-        />
-      </div>
       <div className="relative mx-auto max-w-7xl space-y-6 px-4 pb-7 pt-6 sm:px-6 lg:px-8">
         <div className="grid items-center gap-6 lg:grid-cols-[1fr_1.06fr] lg:gap-10">
           <div className="min-w-0 py-2">

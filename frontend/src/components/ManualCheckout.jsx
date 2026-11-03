@@ -33,6 +33,10 @@ export default function ManualCheckout({ status, auth, courseId, refresh }) {
     }
   };
   const momo = r?.method === "MOMO_WALLET";
+  const transactionCode = note.trim().replace(/^#\s*/, "");
+  const transactionCodeValid = /^[A-Za-z0-9_.:/-]{4,120}$/.test(
+    transactionCode,
+  );
   return (
     <div className="space-y-5">
       {!r ? (
@@ -171,23 +175,24 @@ export default function ManualCheckout({ status, auth, courseId, refresh }) {
                   </p>
                 )}
                 <label className="block text-sm font-medium">
-                  Ghi chú đối soát (mã giao dịch MoMo, thời điểm chuyển)
-                  <textarea
-                    maxLength={500}
+                  Mã giao dịch MoMo
+                  <input
+                    autoComplete="off"
+                    maxLength={121}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-slate-200 p-3"
-                    placeholder="Mã giao dịch và thời điểm chuyển tiền; không nhập mật khẩu/OTP"
+                    placeholder="Ví dụ: 154131562196"
                   />
                 </label>
                 <button
-                  disabled={busy}
+                  disabled={busy || !transactionCodeValid}
                   onClick={() =>
                     act(() =>
                       api.platform(
                         `/payments/manual/${r.id}/report`,
                         auth.accessToken,
-                        { note },
+                        { note: transactionCode },
                       ),
                     )
                   }
@@ -201,7 +206,7 @@ export default function ManualCheckout({ status, auth, courseId, refresh }) {
                 </button>
                 <p className="text-xs leading-5 text-slate-500">
                   Nút này chỉ báo cho quản trị viên kiểm tra, chưa xác nhận đã
-                  nhận tiền và chưa mở khóa học.
+                  nhận tiền và chưa mở khóa học. Không nhập mật khẩu hoặc OTP.
                 </p>
               </div>
             )

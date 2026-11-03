@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BookOpen, Search, SlidersHorizontal, User } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Search,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import { api } from "../services/api";
 import CourseImage from "./CourseImage";
 
@@ -111,13 +117,21 @@ export default function CourseCatalog({ topics }) {
                     {course.title}
                   </h2>
                   <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
-                    <User size={14} />
+                    <GraduationCap
+                      size={15}
+                      className="text-blue-600"
+                      aria-hidden="true"
+                    />
                     {course.instructor}
                   </p>
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <BookOpen size={14} />
-                      {course.lessons} bài · {course.students} học viên
+                  <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <BookOpen size={14} aria-hidden="true" />
+                      {course.lessons} bài
+                    </span>
+                    <span className="flex items-center gap-1 whitespace-nowrap">
+                      <Users size={14} aria-hidden="true" />
+                      {course.students} học viên
                     </span>
                     <strong className="text-blue-700">
                       {Number(course.price).toLocaleString("vi-VN")} ₫
