@@ -6,9 +6,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  GraduationCap,
   Star,
   TrendingUp,
-  User,
+  Users,
 } from "lucide-react";
 
 function CourseCard({ course, onSelectCourse }) {
@@ -21,7 +22,7 @@ function CourseCard({ course, onSelectCourse }) {
       <div className="p-5">
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <User size={14} />
+            <Users size={14} aria-hidden="true" />
             {course.students} học viên
           </span>
           {course.rating != null && (
@@ -35,7 +36,11 @@ function CourseCard({ course, onSelectCourse }) {
           {course.title}
         </h3>
         <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-gray-500">
-          <User size={14} className="mt-0.5 shrink-0" />
+          <GraduationCap
+            size={15}
+            className="mt-0.5 shrink-0 text-blue-600"
+            aria-hidden="true"
+          />
           <span className="home-copy">{course.instructor}</span>
         </p>
         <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-gray-500">

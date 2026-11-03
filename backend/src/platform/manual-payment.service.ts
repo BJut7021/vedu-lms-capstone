@@ -286,8 +286,12 @@ export class ManualPaymentService {
   async report(actor: Actor, id: string, note: unknown) {
     this.student(actor);
     this.id(id);
-    if (typeof note !== 'string' || note.length > 500)
-      throw new BadRequestException('Ghi chú tối đa 500 ký tự.');
+    const transactionCode =
+      typeof note === 'string' ? note.trim().replace(/^#\s*/, '') : '';
+    if (!/^[A-Za-z0-9_.:/-]{4,120}$/.test(transactionCode))
+      throw new BadRequestException(
+        'Nhập đúng mã giao dịch MoMo (4–120 ký tự, không nhập mật khẩu hoặc OTP).',
+      );
     await this.db.transaction(async (m) => {
       const [r] = await m.query(
         'SELECT r.*,o.student_id,o.status order_status FROM payment.manual_requests r JOIN payment.orders o USING(order_id) WHERE request_id=$1 FOR UPDATE OF r,o',
@@ -301,7 +305,7 @@ export class ManualPaymentService {
       if (r.status === 'REVIEW') return;
       await m.query(
         "UPDATE payment.manual_requests SET status='REVIEW',learner_note=$2,reported_at=now(),updated_at=now() WHERE request_id=$1",
-        [id, note.trim()],
+        [id, transactionCode],
       );
       await m.query(
         "INSERT INTO payment.manual_events(request_id,actor_id,action) VALUES($1,$2,'REPORTED')",
@@ -362,6 +366,10 @@ export class ManualPaymentService {
         if (r.order_status !== 'PENDING' || r.status === 'APPROVED')
           throw new ConflictException('Đơn hàng đã được xử lý hoặc đã đóng.');
         if (b.decision === 'APPROVE') {
+          if (r.status !== 'REVIEW')
+            throw new ConflictException(
+              'Học viên chưa gửi yêu cầu đối soát cho đơn này.',
+            );
           if (b.verified !== true)
             throw new BadRequestException(
               'Hãy xác nhận đã kiểm tra giao dịch thực nhận.',

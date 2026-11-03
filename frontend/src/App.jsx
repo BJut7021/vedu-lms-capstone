@@ -10,6 +10,7 @@ import {
 import Header from "./components/Header";
 import Banner from "./components/HomeBanner";
 import FeaturedCourses from "./components/FeaturedCourses";
+import HomeSideRails from "./components/HomeSideRails";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 import CourseDetail from "./components/CourseDetail";
@@ -460,6 +461,7 @@ export default function App() {
         element={
           <div className="home-page min-h-screen bg-white text-gray-800">
             {header}
+            <HomeSideRails />
             {error && (
               <div className="bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-800">
                 {error}
