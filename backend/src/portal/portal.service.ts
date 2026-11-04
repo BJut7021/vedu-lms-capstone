@@ -257,7 +257,29 @@ export class PortalService {
                 FROM assessment.quizzes q
                 JOIN lms.courses c ON c.course_id = q.course_id
                 LEFT JOIN assessment.questions qq ON qq.quiz_id = q.quiz_id
-                WHERE (c.teacher_id = $1 OR EXISTS(SELECT 1 FROM lms.course_teachers ct WHERE ct.course_id=c.course_id AND ct.teacher_id=$1)) AND q.is_deleted = FALSE
+               
+WHERE (
+  c.teacher_id = $1
+  OR EXISTS (
+    SELECT 1
+    FROM lms.course_teachers ct
+    WHERE ct.course_id = c.course_id
+      AND ct.teacher_id = $1
+  )
+)
+AND q.is_deleted = FALSE
+AND c.is_deleted = FALSE
+AND c.status <> 'ARCHIVED'
+AND (
+  q.lesson_id IS NULL
+  OR EXISTS (
+    SELECT 1
+    FROM lms.lessons l
+    WHERE l.lesson_id = q.lesson_id
+      AND l.is_deleted = FALSE
+  )
+)
+
                 GROUP BY q.quiz_id, c.course_name
                 ORDER BY q.updated_at DESC
             `,

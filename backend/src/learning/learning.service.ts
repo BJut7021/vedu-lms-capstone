@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
+
 const ALLOWED_ACTIONS = new Set([
   'VIEW_LESSON',
-  'COMPLETE_LESSON',
   'REVIEW_LESSON',
   'START_QUIZ',
   'SUBMIT_QUIZ',
 ]);
+
 
 @Injectable()
 export class LearningService {

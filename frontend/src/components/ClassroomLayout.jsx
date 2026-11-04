@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
+  Lock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Clock,
 } from "lucide-react";
 import CourseImage from "./CourseImage";
+import InlineLessonQuiz from "./InlineLessonQuiz";
 import CourseStartGuide from "./CourseStartGuide";
 import ResourceFileIcon from "./ResourceFileIcon";
 import { resourceFormat } from "../services/resources";
@@ -56,10 +58,10 @@ export default function ClassroomLayout({
   onSelect,
   onBack,
   isGuest,
-  complete,
   video,
   header,
-  onLeaveVideo,
+  token,
+  onRefreshCourse,
 }) {
   const index = lessons.findIndex((l) => l.id === lesson.id),
     next = lessons[index + 1],
@@ -67,7 +69,6 @@ export default function ClassroomLayout({
   const section = course.sections.find((s) =>
     s.lessons.some((l) => l.id === lesson.id),
   );
-  const [tab, setTab] = useState(lesson.type === "video" ? "video" : "lecture");
   const [open, setOpen] = useState({ [section?.id]: true });
   const resources = lesson.resources || [],
     documents = resources.filter((r) => r.type !== "VIDEO");
@@ -97,16 +98,14 @@ export default function ClassroomLayout({
   const sectionPercent = sectionStudy.length
     ? Math.round((sectionDone / sectionStudy.length) * 100)
     : 0;
-  const tabs = [
-    ["lecture", "Bài giảng", BookOpen],
-    ...(lesson.type === "video" ? [["video", "Video", PlayCircle]] : []),
-    ["documents", "Tài liệu", FileText],
-    ...(exercise ? [["exercises", "Bài tập", HelpCircle]] : []),
-  ];
-  const changeTab = (id) => {
-    if (tab === "video" && id !== "video") onLeaveVideo();
-    setTab(id);
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
+  const lectureText = exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
+
   return (
     <div className="classroom-shell min-h-screen bg-slate-50 text-slate-800">
       {header}
@@ -174,45 +173,83 @@ export default function ClassroomLayout({
                 </button>
                 {open[s.id] && (
                   <div className="space-y-1">
-                    {s.lessons.map((l, lessonIndex) => (
-                      <div key={l.id} className="relative">
-                        {lessonIndex < s.lessons.length - 1 && (
-                          <span
-                            aria-hidden="true"
-                            className={`absolute bottom-[-18px] left-[25px] top-9 w-0.5 ${done[l.id] ? "bg-emerald-300" : "bg-slate-200"}`}
-                          />
-                        )}
-                        <button
-                          onClick={() => onSelect(l)}
-                          aria-current={l.id === lesson.id ? "step" : undefined}
-                          className={`relative flex w-full items-start gap-3 rounded-xl p-3 text-left text-sm ${l.id === lesson.id ? "bg-gradient-to-r from-blue-100/90 to-blue-50/80 text-blue-700 ring-1 ring-blue-100" : "text-slate-600 hover:bg-slate-50"}`}
-                        >
-                          <span
-                            className={`relative z-10 mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-[3px] border-white shadow-sm ${done[l.id] ? "bg-emerald-500 text-white" : l.id === lesson.id ? "bg-blue-600 text-white ring-2 ring-blue-100" : "bg-white text-slate-400 ring-1 ring-slate-200"}`}
-                          >
-                            {done[l.id] ? (
-                              <CheckCircle2 size={15} />
-                            ) : l.type === "quiz" ? (
-                              <HelpCircle size={15} />
-                            ) : l.type === "video" ? (
-                              <PlayCircle size={15} />
-                            ) : (
-                              <FileText size={15} />
-                            )}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="home-balanced block font-medium leading-5">
-                              {l.title}
-                            </span>
-                            {l.type === "quiz" && l.durationSeconds > 0 && (
-                              <small className="mt-1 block text-slate-400">
-                                {formatMinutes(l.durationSeconds)} làm bài
-                              </small>
-                            )}
-                          </span>
-                        </button>
-                      </div>
-                    ))}
+                    
+{s.lessons.map((l, lessonIndex) => (
+  <div key={l.id} className="relative">
+    {lessonIndex < s.lessons.length - 1 && (
+      <span
+        aria-hidden="true"
+        className={`absolute bottom-[-18px] left-[25px] top-9 w-0.5 ${
+          done[l.id] ? "bg-emerald-300" : "bg-slate-200"
+        }`}
+      />
+    )}
+
+    <button
+      type="button"
+      onClick={() => onSelect(l)}
+      disabled={!!l.locked}
+      title={
+        l.locked
+          ? "Cần đạt quiz bài học trước để mở khóa"
+          : undefined
+      }
+      aria-current={l.id === lesson.id ? "step" : undefined}
+      className={`relative flex w-full items-start gap-3 rounded-xl p-3 text-left text-sm transition ${
+        l.locked
+          ? "cursor-not-allowed bg-slate-50 text-slate-400 opacity-70"
+          : l.id === lesson.id
+            ? "bg-gradient-to-r from-blue-100/90 to-blue-50/80 text-blue-700 ring-1 ring-blue-100"
+            : "text-slate-600 hover:bg-slate-50"
+      }`}
+    >
+      <span
+        className={`relative z-10 mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-[3px] border-white shadow-sm ${
+          l.locked
+            ? "bg-slate-200 text-slate-500"
+            : done[l.id]
+              ? "bg-emerald-500 text-white"
+              : l.id === lesson.id
+                ? "bg-blue-600 text-white ring-2 ring-blue-100"
+                : "bg-white text-slate-400 ring-1 ring-slate-200"
+        }`}
+      >
+        {l.locked ? (
+          <Lock size={14} />
+        ) : done[l.id] ? (
+          <CheckCircle2 size={15} />
+        ) : l.type === "quiz" ? (
+          <HelpCircle size={15} />
+        ) : l.type === "video" ? (
+          <PlayCircle size={15} />
+        ) : (
+          <FileText size={15} />
+        )}
+      </span>
+
+      <span className="min-w-0">
+        <span className="home-balanced block font-medium leading-5">
+          {l.title}
+        </span>
+
+        {l.locked && (
+          <small className="mt-1 block text-xs text-slate-500">
+            Chưa mở khóa · Cần đạt quiz bài trước
+          </small>
+        )}
+
+        {!l.locked &&
+          l.type === "quiz" &&
+          l.durationSeconds > 0 && (
+            <small className="mt-1 block text-slate-400">
+              {formatMinutes(l.durationSeconds)} làm bài
+            </small>
+          )}
+      </span>
+    </button>
+  </div>
+))}
+
                   </div>
                 )}
               </div>
@@ -227,7 +264,7 @@ export default function ClassroomLayout({
               Tổng quan khóa học
             </button>
             <button
-              onClick={() => changeTab("documents")}
+              onClick={() => scrollToSection("lesson-documents")}
               className="flex items-center gap-2 py-2 text-sm"
             >
               <FileText size={17} />
@@ -333,162 +370,147 @@ export default function ClassroomLayout({
               {notice}
             </p>
           )}
-          <div
-            role="tablist"
-            aria-label="Học liệu của bài"
-            className="flex gap-2 overflow-x-auto border-b border-slate-200"
-          >
-            {tabs.map(([id, label, Icon]) => (
-              <button
-                key={id}
-                id={`lesson-tab-${id}`}
-                role="tab"
-                aria-selected={tab === id}
-                aria-controls={`lesson-panel-${id}`}
-                tabIndex={tab === id ? 0 : -1}
-                onKeyDown={(event) => {
-                  const i = tabs.findIndex((t) => t[0] === id);
-                  let target;
-                  if (event.key === "ArrowRight")
-                    target = (i + 1) % tabs.length;
-                  if (event.key === "ArrowLeft")
-                    target = (i + tabs.length - 1) % tabs.length;
-                  if (event.key === "Home") target = 0;
-                  if (event.key === "End") target = tabs.length - 1;
-                  if (target === undefined) return;
-                  event.preventDefault();
-                  changeTab(tabs[target][0]);
-                  event.currentTarget.parentElement.children[target].focus();
-                }}
-                onClick={() => changeTab(id)}
-                className={`flex shrink-0 items-center gap-2 border-b-[3px] px-3 py-3 text-sm font-semibold ${tab === id ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-blue-600"}`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            ))}
-          </div>
-          <section
-            hidden={tab !== "lecture"}
-            role="tabpanel"
-            id="lesson-panel-lecture"
-            aria-labelledby="lesson-tab-lecture"
-            className="space-y-5"
-          >
-            {localSlide && (
-              <iframe
-                title={localSlide.title}
-                src={localSlide.url}
-                className="h-[58vh] min-h-80 w-full rounded-2xl border border-slate-200 bg-white"
-              />
-            )}
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-                <FileText size={20} className="text-blue-600" />
-                Nội dung bài học
+          {lesson.locked ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+              <h2 className="text-lg font-bold text-amber-900">
+                Bài học chưa được mở khóa
               </h2>
-              <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                {text || "Mở tab Tài liệu để xem học liệu của bài này."}
+              <p className="mt-2 text-sm text-amber-800">
+                Hãy làm đạt quiz của bài trước để xem nội dung này.
               </p>
-            </article>
-          </section>
-          {video && (
-            <section
-              hidden={tab !== "video"}
-              role="tabpanel"
-              id="lesson-panel-video"
-              aria-labelledby="lesson-tab-video"
-              className="space-y-4"
-            >
-              {video}
-              <div className="space-y-3 rounded-xl border border-blue-100 bg-white p-4 text-sm">
-                <p>
-                  Đã xem thực:{" "}
-                  <strong>{formatMinutes(stats?.actualSeconds || 0)}</strong> ·
-                  Nội dung duy nhất: {formatMinutes(stats?.uniqueSeconds || 0)}{" "}
-                  ({stats?.percent || 0}%)
-                </p>
-                <p className="text-xs text-slate-500">
-                  Thời lượng video:{" "}
-                  {stats?.durationSeconds > 0
-                    ? formatMinutes(stats.durationSeconds)
-                    : "đang đo từ trình phát"}
-                </p>
-                <div className="h-2 overflow-hidden rounded-full bg-blue-50">
-                  <div
-                    className="h-full bg-blue-500"
-                    style={{ width: `${stats?.percent || 0}%` }}
-                  />
-                </div>
-                <p className="text-xs leading-5 text-slate-500">
-                  Cho phép tua; đoạn bỏ qua không tính hoàn thành. Tiến độ được
-                  lưu tự động. Xem đủ 85% nội dung duy nhất để hoàn thành; tab
-                  nền sẽ dừng video.
-                </p>
-              </div>
             </section>
-          )}
-          <section
-            hidden={tab !== "documents"}
-            role="tabpanel"
-            id="lesson-panel-documents"
-            aria-labelledby="lesson-tab-documents"
-            className="space-y-4"
-          >
-            {documents.length ? (
-              <>
-                <ResourceLinks resources={documents} />
-                {documents
-                  .filter((r) => r.type === "PDF")
-                  .map((r) => (
-                    <div key={r.id}>
-                      <iframe
-                        title={r.title}
-                        src={r.url}
-                        className="h-[65vh] w-full rounded-xl border bg-white"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Nếu nguồn không cho nhúng, mở liên kết tài liệu phía
-                        trên.
+          ) : (
+            <>
+              <section
+                id="lesson-video"
+                className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+              >
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <PlayCircle size={21} className="text-blue-600" />
+                  1. Video bài giảng
+                </h2>
+                {video ? (
+                  <>
+                    {video}
+                    <div className="space-y-3 rounded-xl bg-blue-50 p-4 text-sm">
+                      <p>
+                        Đã xem thực: <strong>{formatMinutes(stats?.actualSeconds || 0)}</strong>
+                        {" · "}Nội dung duy nhất: {formatMinutes(stats?.uniqueSeconds || 0)}
+                        {" "}({stats?.percent || 0}%)
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Thời lượng video:{" "}
+                        {stats?.durationSeconds > 0
+                          ? formatMinutes(stats.durationSeconds)
+                          : "đang đo từ trình phát"}
+                      </p>
+                      <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                        <div
+                          className="h-full bg-blue-600"
+                          style={{ width: `${stats?.percent || 0}%` }}
+                        />
+                      </div>
+                      <p className="text-xs leading-5 text-slate-600">
+                        Tiến độ xem video được lưu tự động. Chỉ kết quả quiz đạt mới
+                        xác nhận hoàn thành bài học và mở bài tiếp theo.
                       </p>
                     </div>
-                  ))}
-              </>
-            ) : (
-              <p className="rounded-xl border bg-white p-5 text-sm text-slate-500">
-                Bài này chưa có tài liệu đính kèm riêng.
-              </p>
-            )}
-          </section>
-          {exercise && (
-            <section
-              hidden={tab !== "exercises"}
-              role="tabpanel"
-              id="lesson-panel-exercises"
-              aria-labelledby="lesson-tab-exercises"
-              className="space-y-4 rounded-2xl border border-blue-100 bg-white p-5"
-            >
-              <h2 className="text-lg font-bold">Bài tập của bài học</h2>
-              <p className="whitespace-pre-wrap text-sm leading-7">
-                {exercise}
-              </p>
-              {localSlide && (
-                <a
-                  href={localSlide.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-block text-sm font-semibold text-blue-700"
-                >
-                  Mở slide để tự đối chiếu gợi ý →
-                </a>
+                  </>
+                ) : (
+                  <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">
+                    Giảng viên chưa gắn video cho bài học này. Bạn có thể xem tài liệu
+                    và làm quiz nếu bài đã có quiz.
+                  </p>
+                )}
+              </section>
+
+              <section
+                id="lesson-documents"
+                className="scroll-mt-24 space-y-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+              >
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <FileText size={21} className="text-blue-600" />
+                  2. Tài liệu bài học (PDF / slide)
+                </h2>
+                {documents.length ? (
+                  <>
+                    <p className="text-sm text-slate-500">
+                      Nhấn vào tên tài liệu để mở trong tab mới, không rời trang học.
+                    </p>
+                    <ResourceLinks resources={documents} />
+                  </>
+                ) : (
+                  <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+                    Bài này chưa có tài liệu PDF hoặc slide đính kèm.
+                  </p>
+                )}
+              </section>
+
+              {lesson.type !== "quiz" && (
+                <div id="lesson-quiz" className="scroll-mt-24">
+                  {isGuest ? (
+                    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+                      Cần đăng nhập bằng tài khoản học viên để làm quiz và ghi nhận tiến độ.
+                    </section>
+                  ) : (
+                    <InlineLessonQuiz
+                      key={lesson.id}
+                      quizId={lesson.quizId}
+                      token={token}
+                      onQuizPassed={onRefreshCourse}
+                    />
+                  )}
+                </div>
               )}
-              <p className="text-xs text-slate-500">
-                Bài tập tự luyện, chưa phải bài nộp được giảng viên chấm. Bài
-                thi của khóa được hiển thị trong danh sách nội dung.
-              </p>
-            </section>
+
+              {(lectureText || localSlide) && (
+                <details className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                  <summary className="cursor-pointer font-semibold text-slate-800">
+                    Nội dung bài giảng bổ sung
+                  </summary>
+                  <div className="mt-4 space-y-4">
+                    {localSlide && (
+                      <iframe
+                        title={localSlide.title}
+                        src={localSlide.url}
+                        className="h-[58vh] min-h-80 w-full rounded-xl border border-slate-200"
+                      />
+                    )}
+                    {lectureText && (
+                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                        {lectureText}
+                      </p>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              {exercise && (
+                <details
+                  id="lesson-exercises"
+                  className="scroll-mt-24 rounded-2xl border border-blue-100 bg-white p-4 sm:p-5"
+                >
+                  <summary className="cursor-pointer font-semibold text-blue-800">
+                    Bài tập tự luyện (không tính hoàn thành bài)
+                  </summary>
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    {exercise}
+                  </p>
+                  {localSlide && (
+                    <a
+                      href={localSlide.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-block text-sm font-semibold text-blue-700 underline"
+                    >
+                      Mở slide để tự đối chiếu gợi ý
+                    </a>
+                  )}
+                </details>
+              )}
+            </>
           )}
-          {lesson.pedagogy && (
+          {!lesson.locked && lesson.pedagogy && (
             <details className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
               <summary className="cursor-pointer font-semibold">
                 Đầu ra và nguồn học liệu
@@ -513,7 +535,7 @@ export default function ClassroomLayout({
               </div>
             </details>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <div id="lesson-navigation" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
             <button
               disabled={!previous}
               onClick={() => onSelect(previous)}
@@ -523,25 +545,42 @@ export default function ClassroomLayout({
               Bài trước
             </button>
             <div className="flex flex-wrap gap-2">
-              {lesson.type !== "video" && (
-                <button
-                  onClick={complete}
-                  disabled={!!done[lesson.id]}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 disabled:text-emerald-600"
-                >
-                  <CheckCircle2 size={17} />
-                  {done[lesson.id] ? "Đã đọc tài liệu" : "Tôi đã đọc tài liệu"}
-                </button>
-              )}
-              {next && (
-                <button
-                  onClick={() => onSelect(next)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white"
-                >
-                  {next.type === "quiz" ? "Bài kiểm tra" : "Bài kế tiếp"}
-                  <ArrowRight size={17} />
-                </button>
-              )}
+              
+{lesson.type !== "quiz" && (
+  <div className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm text-blue-800">
+    {done[lesson.id]
+      ? "Bài học đã được ghi nhận hoàn thành."
+      : "Hãy học nội dung và đạt quiz của bài này để hoàn thành."}
+  </div>
+)}
+
+              
+{next && (
+  <button
+    type="button"
+    onClick={() => onSelect(next)}
+    disabled={!!next.locked}
+    title={
+      next.locked
+        ? "Hoàn thành quiz bài hiện tại để mở khóa"
+        : undefined
+    }
+    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+  >
+    {next.locked
+      ? "Bài tiếp theo đang khóa"
+      : next.type === "quiz"
+        ? "Bài kiểm tra"
+        : "Bài kế tiếp"}
+
+    {next.locked ? (
+      <Lock size={17} />
+    ) : (
+      <ArrowRight size={17} />
+    )}
+  </button>
+)}
+
             </div>
           </div>
         </main>
@@ -550,7 +589,7 @@ export default function ClassroomLayout({
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="font-bold">Tài liệu liên quan</h2>
               <button
-                onClick={() => changeTab("documents")}
+                onClick={() => scrollToSection("lesson-documents")}
                 className="shrink-0 text-xs font-semibold text-blue-600 hover:underline"
               >
                 Xem tất cả
@@ -571,7 +610,7 @@ export default function ClassroomLayout({
                 Tự luyện và đối chiếu gợi ý sau khi học.
               </p>
               <button
-                onClick={() => changeTab("exercises")}
+                onClick={() => scrollToSection("lesson-exercises")}
                 className="w-full rounded-xl bg-blue-50 p-3 text-sm font-bold text-blue-700"
               >
                 Làm bài tập →
@@ -598,10 +637,12 @@ export default function ClassroomLayout({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => onSelect(next)}
-                className="mt-3 w-full rounded-lg bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                disabled={!!next.locked}
+                className="mt-3 w-full rounded-lg bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
-                Tiếp tục học →
+                {next.locked ? "Bài tiếp theo đang khóa" : "Tiếp tục học →"}
               </button>
             </section>
           )}
@@ -666,3 +707,4 @@ export default function ClassroomLayout({
     </div>
   );
 }
+

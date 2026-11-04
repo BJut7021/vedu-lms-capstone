@@ -20,6 +20,7 @@ export default function Classroom({
   onBack,
   onOpenQuiz,
   onLogEvent,
+  onRefreshCourse,
 }) {
   const navigate = useNavigate(),
     videoRef = useRef(null),
@@ -27,13 +28,15 @@ export default function Classroom({
     sending = useRef(false);
   const lessons = course.sections.flatMap((s) => s.lessons);
   const lesson = lessons.find((l) => l.id === activeLessonId) || lessons[0];
-  const [stats, setStats] = useState(null),
-    [notice, setNotice] = useState(""),
-    [done, setDone] = useState(() =>
-      Object.fromEntries(
-        lessons.filter((l) => l.completed).map((l) => [l.id, true]),
-      ),
-    );
+  
+  const [stats, setStats] = useState(null);
+  const [notice, setNotice] = useState("");
+  const done = Object.fromEntries(
+    lessons
+      .filter((l) => l.type !== "quiz" && l.completed === true)
+      .map((l) => [l.id, true]),
+  );
+
   const syncRef = useRef(null);
   const logRef = useRef(onLogEvent);
   const viewedLessonId = lesson?.id,
@@ -58,9 +61,26 @@ export default function Classroom({
       w = watchRef.current;
     if (!v || !w || !Number.isFinite(v.duration) || v.duration <= 0)
       return false;
-    if (!w.restored && Number(w.state.position_seconds) < v.duration)
-      v.currentTime = Number(w.state.position_seconds);
-    w.restored = true;
+    
+if (!w.restored) {
+  const savedPosition = Number(w.state?.position_seconds ?? 0);
+
+  // Khi video gần kết thúc, phát lại từ đầu.
+  const restartWindow = Math.min(
+    10,
+    Math.max(2, v.duration * 0.1),
+  );
+
+  if (Number.isFinite(savedPosition)) {
+    v.currentTime =
+      savedPosition >= v.duration - restartWindow
+        ? 0
+        : Math.max(0, savedPosition);
+  }
+}
+
+w.restored = true;
+
     setStats((previous) => ({
       ...previous,
       lessonId: w.lessonId,
@@ -97,8 +117,6 @@ export default function Classroom({
         const result = await api.platform("/watch/heartbeat/sync", token, data);
         if (watchRef.current?.watchId === watch.watchId) {
           setStats({ ...result, lessonId: watch.lessonId });
-          if (result.completed)
-            setDone((previous) => ({ ...previous, [watch.lessonId]: true }));
         }
       } catch (error) {
         setNotice(`Chưa lưu được tiến độ: ${error.message}`);
@@ -162,25 +180,18 @@ export default function Classroom({
     );
   const select = (l) => {
     if (!l) return;
+    if (l.locked) {
+      setNotice(
+        "Bài học đang bị khóa. Hãy đạt quiz của bài trước để tiếp tục.",
+      );
+      return;
+    }
     syncRef.current?.({ playing: true });
     if (l.id !== lesson.id) setNotice("");
     if (l.type === "quiz") onOpenQuiz(l.quizId);
     else navigate(`/learn/${course.id}/${l.id}`);
   };
-  const complete = async () => {
-    try {
-      await onLogEvent({
-        action: "COMPLETE_LESSON",
-        lessonId: lesson.id,
-        durationSeconds: 0,
-        metadata: { trackingMode: "MANUAL_DOCUMENT_COMPLETE" },
-      });
-      setDone((previous) => ({ ...previous, [lesson.id]: true }));
-      setNotice("Đã lưu hoàn thành tài liệu.");
-    } catch (error) {
-      setNotice(error.message);
-    }
-  };
+  
   const video =
     lesson.type === "video" ? (
       youtubeId(lesson.videoUrl) ? (
@@ -228,9 +239,10 @@ export default function Classroom({
       onSelect={select}
       onBack={onBack}
       isGuest={isGuest}
-      complete={complete}
       video={video}
-      onLeaveVideo={() => videoRef.current?.pause()}
+      token={token}
+      onRefreshCourse={onRefreshCourse}
     />
   );
 }
+

@@ -51,18 +51,24 @@ export default function YouTubeLesson({
     loadApi()
       .then((YT) => {
         if (cancelled) return;
-        const child = document.createElement("div");
-        host.current.appendChild(child);
-        player = new YT.Player(child, {
-          videoId: youtubeId(url),
-          host: "https://www.youtube-nocookie.com",
-          width: "100%",
-          height: "100%",
-          playerVars: {
-            origin: window.location.origin,
-            playsinline: 1,
-            rel: 0,
-          },
+        const videoId = youtubeId(url);
+        if (!videoId || !host.current) {
+          setError("Đường dẫn YouTube không hợp lệ.");
+          return;
+        }
+        const iframe = document.createElement("iframe");
+        iframe.title = title || "Video bài giảng";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.allow =
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        iframe.allowFullscreen = true;
+        iframe.src =
+          `https://www.youtube.com/embed/${videoId}` +
+          `?enablejsapi=1` +
+          `&origin=${encodeURIComponent(window.location.origin)}` +
+          `&playsinline=1&rel=0`;
+        host.current.replaceChildren(iframe);
+        player = new YT.Player(iframe, {
           events: {
             onReady: () => {
               if (cancelled) return;
@@ -103,10 +109,12 @@ export default function YouTubeLesson({
             },
             onPlaybackRateChange: () =>
               callbacks.current.onEvent?.({ seeking: true }),
-            onError: () => {
+            onError: (event) => {
               if (!cancelled)
                 setError(
-                  "Nguồn video không cho phát/nhúng hoặc tạm không khả dụng. Mở liên kết gốc; xem bên ngoài không được tự ghi nhận tiến độ trong VEDU.",
+                  event.data === 153
+                    ? "YouTube báo lỗi 153 (Referer). Kiểm tra Referrer-Policy của trang hoặc mở video gốc."
+                    : `Không phát được video YouTube (mã lỗi ${event.data}). Mở liên kết gốc để xem.`,
                 );
             },
           },

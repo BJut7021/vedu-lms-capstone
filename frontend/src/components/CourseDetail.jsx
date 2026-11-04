@@ -157,8 +157,8 @@ export default function CourseDetail({
               </p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-lg text-gray-600">
-              {allLessons.filter((l) => l.type !== "quiz").length} bài học ·{" "}
-              {allLessons.filter((l) => l.type === "quiz").length} bài kiểm tra
+              {allLessons.filter((l) => Number(l.id) > 0).length} bài học ·{" "}
+              {allLessons.filter((l) => Boolean(l.quizId)).length} bài kiểm tra
             </span>
           </div>
 

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { resolve } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
@@ -37,18 +37,23 @@ export class PlatformService {
         [actor.userId, courseId],
       ),
       this.db.query(
-        `SELECT q.quiz_id,
+        `SELECT q.quiz_id, q.lesson_id,
         EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND a.status IN ('SUBMITTED','GRADED') AND a.score>=q.passing_score) AS passed,
         EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2) AS attempted
         FROM assessment.quizzes q WHERE q.course_id=$1 AND q.is_published AND NOT q.is_deleted ORDER BY q.quiz_id`,
         [courseId, actor.userId],
       ),
     ]);
-    const done = new Set<number>(
-      progress
-        .filter((p: any) => p.status === 'COMPLETED')
-        .map((p: any) => Number(p.lesson_id)),
-    );
+    
+const done = new Set<number>(
+  quizzes
+    .filter(
+      (q: any) =>
+        q.lesson_id != null && q.passed === true,
+    )
+    .map((q: any) => Number(q.lesson_id)),
+);
+
     const previewIds = course.sections
       .flatMap((s) => s.lessons)
       .filter((l) => l.id > 0)
@@ -84,11 +89,9 @@ export class PlatformService {
             l.title,
           ),
       ) ?? allowed[0];
-    const target = completed
-      ? review
-      : last
-        ? allowed.find((l) => l.id === Number(last.lesson_id))
-        : pending[0];
+
+    const target = completed ? review : pending[0];
+
     const quiz =
       !actor.isGuest && !target ? quizzes.find((q: any) => !q.passed) : null;
     return {
@@ -129,17 +132,105 @@ export class PlatformService {
       `SELECT p.*,v.ranges,v.position_seconds,v.actual_seconds,v.duration_seconds FROM learning.lesson_progress p LEFT JOIN learning.video_state v USING(student_id,lesson_id) WHERE p.student_id=$1 AND p.course_id=$2`,
       [actor.userId, courseId],
     );
+
+    
+    // Lấy thứ tự bài học chính thức trong khóa học.
+    const orderedRows: { lesson_id: number }[] = await this.db.query(
+      `SELECT lesson_id
+       FROM lms.lessons
+       WHERE course_id = $1
+         AND is_published = TRUE
+         AND NOT is_deleted
+       ORDER BY lesson_order, lesson_id`,
+      [courseId],
+    );
+
+    // Lấy các bài đã có ít nhất một quiz được chấm đạt.
+    const passedRows: { lesson_id: number }[] =
+      actor.role === 'STUDENT' && !actor.isGuest
+        ? await this.db.query(
+            `SELECT DISTINCT q.lesson_id
+             FROM assessment.quizzes q
+             JOIN assessment.quiz_attempts a
+               ON a.quiz_id = q.quiz_id
+             WHERE q.course_id = $1
+               AND q.lesson_id IS NOT NULL
+               AND q.is_published = TRUE
+               AND NOT q.is_deleted
+               AND a.student_id = $2
+               AND a.status = 'GRADED'
+               AND a.score >= q.passing_score`,
+            [courseId, actor.userId],
+          )
+        : [];
+
+    const passedLessonIds = new Set(
+      passedRows.map((r) => Number(r.lesson_id)),
+    );
+
+    const unlockedLessonIds = new Set<number>();
+    let previousLessonsPassed = true;
+
+    for (const row of orderedRows) {
+      const lessonId = Number(row.lesson_id);
+
+      if (previousLessonsPassed) {
+        unlockedLessonIds.add(lessonId);
+      }
+
+      previousLessonsPassed =
+        previousLessonsPassed && passedLessonIds.has(lessonId);
+    }
+
     const resources: any[] = await this.db.query(
       `SELECT r.* FROM lms.lesson_resources r JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1 ORDER BY r.resource_id`,
       [courseId],
     );
-    for (const section of course.sections)
+    
+    for (const section of course.sections) {
       for (const lesson of section.lessons) {
-        const p = progress.find((x) => Number(x.lesson_id) === lesson.id);
-        lesson.completed = p?.status === 'COMPLETED';
+        const lessonId = Number(lesson.id);
+
+        const p = progress.find(
+          (x) => Number(x.lesson_id) === lessonId,
+        );
+
+        const locked =
+          actor.role === 'STUDENT' &&
+          !actor.isGuest &&
+          lesson.type !== 'quiz' &&
+          !unlockedLessonIds.has(lessonId);
+
+        // Với học viên, chỉ kết quả quiz đạt được tính hoàn thành.
+        const completed =
+          actor.role === 'STUDENT' && !actor.isGuest
+            ? passedLessonIds.has(lessonId)
+            : p?.status === 'COMPLETED';
+
+        Object.assign(lesson, {
+          locked,
+          completed: !locked && completed,
+        });
+
+        if (locked) {
+          // Chỉ hiển thị thông tin nhận diện bài học.
+          // Không gửi nội dung và liên kết học liệu.
+          Object.assign(lesson, {
+            content: '',
+            videoUrl: null,
+            resources: [],
+            progress: null,
+            pedagogy: null,
+            completed: false,
+          });
+          continue;
+        }
+
         const list = await Promise.all(
           resources
-            .filter((r) => Number(r.lesson_id) === lesson.id)
+            .filter(
+              (r) => Number(r.lesson_id) === lessonId,
+            )
             .map(async (r) => ({
               id: Number(r.resource_id),
               title: r.title,
@@ -147,13 +238,37 @@ export class PlatformService {
               url: await this.resourceUrl(r, actor),
             })),
         );
-        Object.assign(lesson, { progress: p ?? null, resources: list });
-        const video = [...list].reverse().find((r) => r.type === 'VIDEO');
+
+        // Không dùng trạng thái COMPLETED cũ do video tạo ra
+        // để hiển thị bài đã hoàn thành cho học viên.
+        const safeProgress =
+          p && actor.role === 'STUDENT' && !actor.isGuest
+            ? {
+                ...p,
+                status: completed
+                  ? 'COMPLETED'
+                  : p.status === 'COMPLETED'
+                    ? 'IN_PROGRESS'
+                    : p.status,
+              }
+            : (p ?? null);
+
+        Object.assign(lesson, {
+          progress: safeProgress,
+          resources: list,
+        });
+
+        const video = [...list]
+          .reverse()
+          .find((r) => r.type === 'VIDEO');
+
         if (video) {
           lesson.videoUrl = video.url;
           lesson.type = 'video';
         }
       }
+    }
+
     if (!actor.isGuest) {
       try {
         Object.assign(course, {
@@ -173,11 +288,50 @@ export class PlatformService {
       'SELECT m.* FROM lms.lesson_pedagogy m JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1',
       [courseId],
     );
-    for (const s of course.sections)
-      for (const l of s.lessons)
+    
+    for (const s of course.sections) {
+      for (const l of s.lessons) {
+        if ((l as any).locked) continue;
+
         Object.assign(l, {
-          pedagogy: pedagogy.find((m) => Number(m.lesson_id) === l.id) ?? null,
+          pedagogy:
+            pedagogy.find(
+              (m) => Number(m.lesson_id) === Number(l.id),
+            ) ?? null,
         });
+      }
+    }
+
+    
+const quizLinks: any[] = await this.db.query(
+  `SELECT DISTINCT ON (q.lesson_id)
+      q.lesson_id,
+      q.quiz_id
+   FROM assessment.quizzes q
+   WHERE q.course_id = $1
+     AND q.lesson_id IS NOT NULL
+     AND q.is_published = TRUE
+     AND NOT q.is_deleted
+   ORDER BY q.lesson_id, q.quiz_id DESC`,
+  [courseId],
+);
+
+const quizByLesson = new Map<number, number>(
+  quizLinks.map((q) => [
+    Number(q.lesson_id),
+    Number(q.quiz_id),
+  ]),
+);
+
+for (const section of course.sections) {
+  for (const lesson of section.lessons) {
+    (lesson as any).quizId = (lesson as any).locked
+      ? null
+      : quizByLesson.get(Number(lesson.id)) ?? null;
+  }
+}
+
+
     return course;
   }
   private async resourceUrl(r: any, actor: Actor) {
@@ -209,6 +363,343 @@ export class PlatformService {
       type: name.endsWith('.pdf') ? 'application/pdf' : 'video/mp4',
     };
   }
+
+  
+private async practiceLesson(lessonId: number) {
+  const [lesson] = await this.db.query(
+    `SELECT lesson_id, course_id, is_published
+     FROM lms.lessons
+     WHERE lesson_id = $1 AND NOT is_deleted`,
+    [lessonId],
+  );
+
+  if (!lesson) {
+    throw new NotFoundException('Bài học không tồn tại');
+  }
+
+  return lesson;
+}
+
+async configureLessonPractice(
+  actor: Actor,
+  lessonId: number,
+  data: any,
+) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  await this.access.manageCourse(
+    actor,
+    Number(lesson.course_id),
+  );
+
+  if (
+    typeof data?.enabled !== 'boolean' ||
+    typeof data?.instructions !== 'string' ||
+    data.instructions.length > 5000 ||
+    (data.enabled && !data.instructions.trim())
+  ) {
+    throw new BadRequestException(
+      'Cần nhập yêu cầu bài thực hành hợp lệ (tối đa 5000 ký tự)',
+    );
+  }
+
+  const [row] = await this.db.query(
+    `INSERT INTO learning.lesson_practice_config
+       (lesson_id, is_enabled, instructions)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (lesson_id)
+     DO UPDATE SET
+       is_enabled = EXCLUDED.is_enabled,
+       instructions = EXCLUDED.instructions,
+       updated_at = NOW()
+     RETURNING
+       is_enabled AS "enabled",
+       instructions`,
+    [lessonId, data.enabled, data.instructions.trim()],
+  );
+
+  return row;
+}
+
+async getLessonPractice(actor: Actor, lessonId: number) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  if (actor.role === 'STUDENT') {
+    if (actor.isGuest) {
+      throw new BadRequestException(
+        'Cần đăng nhập tài khoản học viên để nộp bài',
+      );
+    }
+
+    await this.access.lesson(
+      actor,
+      Number(lesson.course_id),
+      lessonId,
+    );
+  } else {
+    await this.access.manageCourse(
+      actor,
+      Number(lesson.course_id),
+    );
+  }
+
+  const [config] = await this.db.query(
+    `SELECT is_enabled, instructions
+     FROM learning.lesson_practice_config
+     WHERE lesson_id = $1`,
+    [lessonId],
+  );
+
+  const submissions =
+    actor.role === 'STUDENT'
+      ? await this.db.query(
+          `SELECT
+             submission_id AS "submissionId",
+             original_filename AS "filename",
+             submitted_at AS "submittedAt",
+             feedback,
+             reviewed_at AS "reviewedAt"
+           FROM learning.lesson_practice_submissions
+           WHERE lesson_id = $1 AND student_id = $2
+           ORDER BY submitted_at DESC, submission_id DESC`,
+          [lessonId, actor.userId],
+        )
+      : [];
+
+  return {
+    lessonId,
+    enabled: config?.is_enabled === true,
+    instructions: config?.instructions ?? '',
+    submissions,
+  };
+}
+
+async submitLessonPractice(
+  actor: Actor,
+  lessonId: number,
+  file?: { buffer: Buffer; originalname?: string },
+) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  if (actor.isGuest) {
+    throw new BadRequestException(
+      'Tài khoản khách không được nộp bài thực hành',
+    );
+  }
+
+  await this.access.lesson(
+    actor,
+    Number(lesson.course_id),
+    lessonId,
+  );
+
+  const [config] = await this.db.query(
+    `SELECT is_enabled
+     FROM learning.lesson_practice_config
+     WHERE lesson_id = $1`,
+    [lessonId],
+  );
+
+  if (!config?.is_enabled) {
+    throw new BadRequestException(
+      'Bài học chưa mở chức năng nộp bài thực hành',
+    );
+  }
+
+  if (
+    !file?.buffer ||
+    file.buffer.length < 8 ||
+    file.buffer.length > 10 * 1024 * 1024 ||
+    file.buffer.subarray(0, 5).toString() !== '%PDF-'
+  ) {
+    throw new BadRequestException(
+      'Chỉ chấp nhận file PDF tối đa 10 MB',
+    );
+  }
+
+  const [count] = await this.db.query(
+    `SELECT COUNT(*)::int AS total
+     FROM learning.lesson_practice_submissions
+     WHERE lesson_id = $1 AND student_id = $2`,
+    [lessonId, actor.userId],
+  );
+
+  if (Number(count.total) >= 5) {
+    throw new ConflictException(
+      'Bạn đã sử dụng tối đa 5 lượt nộp cho bài này',
+    );
+  }
+
+  const directory = resolve(
+    process.env.MEDIA_DIR || './media',
+    'practice-submissions',
+  );
+
+  await mkdir(directory, { recursive: true });
+
+  const filename = `${randomUUID()}.pdf`;
+  const path = resolve(directory, filename);
+
+  const originalFilename = String(
+    file.originalname || 'bai-thuc-hanh.pdf',
+  ).slice(0, 255);
+
+  await writeFile(path, file.buffer, { flag: 'wx' });
+
+  try {
+    const [submission] = await this.db.query(
+      `INSERT INTO learning.lesson_practice_submissions
+         (lesson_id, student_id, stored_filename, original_filename)
+       VALUES ($1, $2, $3, $4)
+       RETURNING
+         submission_id AS "submissionId",
+         submitted_at AS "submittedAt"`,
+      [
+        lessonId,
+        actor.userId,
+        filename,
+        originalFilename,
+      ],
+    );
+
+    return {
+      ...submission,
+      message: 'Đã nộp bài thực hành PDF thành công',
+    };
+  } catch (error) {
+    await unlink(path).catch(() => {});
+    throw error;
+  }
+}
+
+async lessonPracticeSubmissions(
+  actor: Actor,
+  lessonId: number,
+) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  await this.access.manageCourse(
+    actor,
+    Number(lesson.course_id),
+  );
+
+  return this.db.query(
+    `SELECT
+       s.submission_id AS "submissionId",
+       s.student_id AS "studentId",
+       u.full_name AS "studentName",
+       s.original_filename AS "filename",
+       s.submitted_at AS "submittedAt",
+       s.feedback,
+       s.reviewed_at AS "reviewedAt"
+     FROM learning.lesson_practice_submissions s
+     JOIN auth.users u ON u.user_id = s.student_id
+     WHERE s.lesson_id = $1
+     ORDER BY s.submitted_at DESC, s.submission_id DESC
+     LIMIT 200`,
+    [lessonId],
+  );
+}
+
+async reviewLessonPractice(
+  actor: Actor,
+  lessonId: number,
+  submissionId: number,
+  data: any,
+) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  await this.access.manageCourse(
+    actor,
+    Number(lesson.course_id),
+  );
+
+  if (
+    typeof data?.feedback !== 'string' ||
+    !data.feedback.trim() ||
+    data.feedback.length > 2000
+  ) {
+    throw new BadRequestException(
+      'Nhận xét cần từ 1 đến 2000 ký tự',
+    );
+  }
+
+  const [row] = await this.db.query(
+    `UPDATE learning.lesson_practice_submissions
+     SET
+       feedback = $3,
+       reviewed_by = $4,
+       reviewed_at = NOW()
+     WHERE lesson_id = $1 AND submission_id = $2
+     RETURNING submission_id AS "submissionId",
+       feedback,
+       reviewed_at AS "reviewedAt"`,
+    [
+      lessonId,
+      submissionId,
+      data.feedback.trim(),
+      actor.userId,
+    ],
+  );
+
+  if (!row) {
+    throw new NotFoundException('Không tìm thấy bài nộp');
+  }
+
+  return row;
+}
+
+async lessonPracticeFile(
+  actor: Actor,
+  lessonId: number,
+  submissionId: number,
+) {
+  const lesson = await this.practiceLesson(lessonId);
+
+  const [submission] = await this.db.query(
+    `SELECT student_id, stored_filename
+     FROM learning.lesson_practice_submissions
+     WHERE lesson_id = $1 AND submission_id = $2`,
+    [lessonId, submissionId],
+  );
+
+  if (!submission) {
+    throw new NotFoundException('Không tìm thấy bài nộp');
+  }
+
+  if (actor.role === 'STUDENT') {
+    if (
+      actor.isGuest ||
+      Number(submission.student_id) !== Number(actor.userId)
+    ) {
+      throw new NotFoundException('Không tìm thấy bài nộp');
+    }
+
+    await this.access.lesson(
+      actor,
+      Number(lesson.course_id),
+      lessonId,
+    );
+  } else {
+    await this.access.manageCourse(
+      actor,
+      Number(lesson.course_id),
+    );
+  }
+
+  const filename = String(submission.stored_filename);
+
+  if (!/^[a-f0-9-]{36}\.pdf$/.test(filename)) {
+    throw new NotFoundException('File PDF không hợp lệ');
+  }
+
+  return resolve(
+    process.env.MEDIA_DIR || './media',
+    'practice-submissions',
+    filename,
+  );
+}
+
   async addResource(
     actor: Actor,
     lessonId: number,
@@ -423,6 +914,36 @@ export class PlatformService {
       );
       if (!s) throw new BadRequestException('Chương không thuộc khóa học');
     }
+
+    
+// Chỉ kiểm tra khi chuyển bài từ nháp sang công bố.
+// Bài đã công bố từ trước vẫn được chỉnh sửa nội dung.
+if (data.isPublished && !l.is_published) {
+  const [check] = await this.db.query(
+    `SELECT EXISTS (
+      SELECT 1
+      FROM assessment.quizzes q
+      WHERE q.course_id = $1
+        AND q.lesson_id = $2
+        AND q.is_published = TRUE
+        AND NOT q.is_deleted
+        AND EXISTS (
+          SELECT 1
+          FROM assessment.questions qq
+          WHERE qq.quiz_id = q.quiz_id
+        )
+    ) AS has_quiz`,
+    [l.course_id, id],
+  );
+
+  if (!check?.has_quiz) {
+    throw new BadRequestException(
+      'Không thể công bố bài học. Giảng viên cần tạo ' +
+      'quiz có câu hỏi và gắn đúng bài học trước.',
+    );
+  }
+}
+
     await this.db.query(
       'UPDATE lms.lessons SET title=$2,content=$3,estimated_duration_seconds=COALESCE(CEIL(video_duration_seconds)::int,$4),is_published=$5,section_id=$6 WHERE lesson_id=$1',
       [
@@ -561,6 +1082,84 @@ export class PlatformService {
     if (!rows.length) throw new NotFoundException('Không tìm thấy thông báo');
     return { message: 'Đã đọc thông báo' };
   }
+  // Preview uploaded course resources for authenticated administrators, including drafts.
+  async moderationResource(actor: Actor, resourceId: number) {
+    if (actor.role !== 'ADMIN') throw new ForbiddenException();
+    const [resource] = await this.db.query(
+      `SELECT r.resource_url, r.resource_type
+       FROM lms.lesson_resources r
+       JOIN lms.lessons l ON l.lesson_id = r.lesson_id
+       JOIN lms.courses c ON c.course_id = l.course_id
+       WHERE r.resource_id = $1
+         AND NOT l.is_deleted AND NOT c.is_deleted
+         AND r.resource_type IN ('PDF', 'VIDEO')`,
+      [resourceId],
+    );
+    if (!resource) throw new NotFoundException('Không tìm thấy tài liệu');
+    const raw = String(resource.resource_url || '');
+    if (!/^vedu-file:[a-f0-9-]{36}\.(pdf|mp4)$/i.test(raw)) {
+      throw new BadRequestException('Không phải file PDF hoặc video tải lên VEDU');
+    }
+    const name = raw.substring('vedu-file:'.length);
+    const isPdf = name.toLowerCase().endsWith('.pdf');
+    if ((resource.resource_type === 'PDF') !== isPdf) {
+      throw new BadRequestException('Loại file không khớp tài liệu');
+    }
+    return {
+      path: resolve(process.env.MEDIA_DIR || './media', name),
+      type: isPdf ? 'application/pdf' : 'video/mp4',
+    };
+  }
+
+  // Admin read-only quiz preview for moderation. Never create quiz attempts here.
+  async moderationQuizDetail(actor: Actor, quizId: number) {
+    if (actor.role !== 'ADMIN') throw new ForbiddenException();
+
+    const [quiz] = await this.db.query(
+      `SELECT q.quiz_id, q.course_id, q.title, q.passing_score, q.is_published
+       FROM assessment.quizzes q
+       JOIN lms.courses c ON c.course_id = q.course_id
+       WHERE q.quiz_id = $1 AND NOT q.is_deleted AND NOT c.is_deleted`,
+      [quizId],
+    );
+    if (!quiz) throw new NotFoundException('Không tìm thấy quiz cần kiểm duyệt');
+
+    const questions: any[] = await this.db.query(
+      `SELECT question_id, question_text, question_type
+       FROM assessment.questions
+       WHERE quiz_id = $1
+       ORDER BY question_order, question_id`,
+      [quizId],
+    );
+    const answers: any[] = await this.db.query(
+      `SELECT a.question_id, a.answer_id, a.answer_text, a.is_correct
+       FROM assessment.answers a
+       JOIN assessment.questions q ON q.question_id = a.question_id
+       WHERE q.quiz_id = $1
+       ORDER BY q.question_order, q.question_id, a.answer_order, a.answer_id`,
+      [quizId],
+    );
+    return {
+      quizId: Number(quiz.quiz_id),
+      courseId: Number(quiz.course_id),
+      title: quiz.title,
+      passingScore: Number(quiz.passing_score),
+      isPublished: Boolean(quiz.is_published),
+      questions: questions.map((question: any) => ({
+        id: Number(question.question_id),
+        text: question.question_text,
+        type: question.question_type,
+        options: answers
+          .filter((answer: any) => Number(answer.question_id) === Number(question.question_id))
+          .map((answer: any) => ({
+            id: Number(answer.answer_id),
+            text: answer.answer_text,
+            correct: Boolean(answer.is_correct),
+          })),
+      })),
+    };
+  }
+
   async moderation(actor: Actor) {
     if (actor.role !== 'ADMIN') throw new ForbiddenException();
     return this.db
@@ -859,24 +1458,80 @@ export class PlatformService {
       ],
     );
   }
-  async createQuiz(actor: Actor, courseId: number, data: any) {
-    await this.access.manageCourse(actor, courseId);
-    const payload = this.validateQuizPayload(data);
-    return this.db.transaction(async (m) => {
-      const [q] = await m.query(
-        `INSERT INTO assessment.quizzes(course_id,title,time_limit_seconds,passing_score,max_attempts,is_published) VALUES($1,$2,$3,$4,$5,true) RETURNING *`,
-        [
-          courseId,
-          payload.title,
-          payload.timeLimitSeconds,
-          payload.passingScore,
-          payload.maxAttempts,
-        ],
-      );
-      await this.insertQuizQuestions(m, q.quiz_id, payload.questions);
-      return q;
-    });
+  
+async createQuiz(actor: Actor, courseId: number, data: any) {
+  await this.access.manageCourse(actor, courseId);
+
+  const payload = this.validateQuizPayload(data);
+
+  // Quiz từng bài phải có lessonId.
+  // Giữ null cho quiz cấp khóa học, ví dụ bài thi cuối khóa.
+  const lessonId =
+    data?.lessonId === undefined ||
+    data?.lessonId === null ||
+    data?.lessonId === ''
+      ? null
+      : Number(data.lessonId);
+
+  if (
+    lessonId !== null &&
+    (!Number.isSafeInteger(lessonId) || lessonId <= 0)
+  ) {
+    throw new BadRequestException(
+      'Mã bài học của quiz không hợp lệ',
+    );
   }
+
+  return this.db.transaction(async (m) => {
+    if (lessonId !== null) {
+      const [lesson] = await m.query(
+        `SELECT lesson_id
+         FROM lms.lessons
+         WHERE lesson_id = $1
+           AND course_id = $2
+           AND NOT is_deleted`,
+        [lessonId, courseId],
+      );
+
+      if (!lesson) {
+        throw new BadRequestException(
+          'Bài học không tồn tại hoặc không thuộc khóa học này',
+        );
+      }
+    }
+
+    const [q] = await m.query(
+      `INSERT INTO assessment.quizzes (
+        course_id,
+        lesson_id,
+        title,
+        time_limit_seconds,
+        passing_score,
+        max_attempts,
+        is_published
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+      RETURNING *`,
+      [
+        courseId,
+        lessonId,
+        payload.title,
+        payload.timeLimitSeconds,
+        payload.passingScore,
+        payload.maxAttempts,
+      ],
+    );
+
+    await this.insertQuizQuestions(
+      m,
+      q.quiz_id,
+      payload.questions,
+    );
+
+    return q;
+  });
+}
+
   async teacherQuiz(actor: Actor, quizId: number) {
     const quiz = await this.requireManagedQuiz(actor, quizId);
     return this.quizEditorView(quiz);
@@ -918,6 +1573,78 @@ export class PlatformService {
     await this.requireManagedQuiz(actor, quizId);
     return this.db.transaction(async (m) => {
       await this.lockQuiz(m, quizId);
+      
+const [quiz] = await m.query(
+  `SELECT quiz_id, course_id, lesson_id, is_published
+   FROM assessment.quizzes
+   WHERE quiz_id = $1 AND NOT is_deleted
+   FOR UPDATE`,
+  [quizId],
+);
+
+if (!quiz) {
+  throw new NotFoundException('Quiz không tồn tại');
+}
+
+if (quiz.lesson_id != null) {
+  // Bảo vệ lịch sử điểm và tiến độ của học viên.
+  const [attempts] = await m.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM assessment.quiz_attempts
+       WHERE quiz_id = $1
+     ) AS has_attempts`,
+    [quizId],
+  );
+
+  if (attempts.has_attempts) {
+    throw new ConflictException(
+      'Quiz đã có lượt làm. Không thể lưu trữ vì có thể ảnh hưởng tiến độ học viên.',
+    );
+  }
+
+  // Nếu bài học đang công bố, phải còn quiz thay thế hợp lệ.
+  const [lesson] = await m.query(
+    `SELECT lesson_id
+     FROM lms.lessons
+     WHERE lesson_id = $1
+       AND course_id = $2
+       AND is_published
+       AND NOT is_deleted
+     FOR UPDATE`,
+    [quiz.lesson_id, quiz.course_id],
+  );
+
+  if (lesson && quiz.is_published) {
+    const [other] = await m.query(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM assessment.quizzes q
+         WHERE q.course_id = $1
+           AND q.lesson_id = $2
+           AND q.quiz_id <> $3
+           AND q.is_published
+           AND NOT q.is_deleted
+           AND EXISTS (
+             SELECT 1
+             FROM assessment.questions question
+             JOIN assessment.answers answer
+               ON answer.question_id = question.question_id
+             WHERE question.quiz_id = q.quiz_id
+               AND answer.is_correct = TRUE
+           )
+       ) AS has_other`,
+      [quiz.course_id, quiz.lesson_id, quizId],
+    );
+
+    if (!other.has_other) {
+      throw new ConflictException(
+        'Không thể lưu trữ quiz cuối cùng của bài đang công bố. Hãy tạo quiz thay thế trước.',
+      );
+    }
+  }
+}
+
       const [archived] = await m.query(
         `UPDATE assessment.quizzes
          SET is_published=false,is_deleted=true,deleted_at=now(),updated_at=now()
@@ -954,7 +1681,7 @@ export class PlatformService {
       timeLimitSeconds < 10 ||
       timeLimitSeconds > 86400 ||
       !Number.isFinite(passingScore) ||
-      passingScore < 0 ||
+      passingScore < 1 ||
       passingScore > 10 ||
       !Number.isInteger(maxAttempts) ||
       maxAttempts < 1 ||
@@ -1200,43 +1927,64 @@ export class PlatformService {
           duration,
         ],
       );
-      await m.query(
-        `INSERT INTO learning.lesson_progress(student_id,course_id,lesson_id,status,progress_percent,watch_duration_seconds,first_viewed_at,last_viewed_at,completed_at)
-       VALUES($1,$2,$3,$4::varchar,$5,$6,now(),now(),CASE WHEN $4::varchar='COMPLETED' THEN now() END)
-       ON CONFLICT(student_id,lesson_id) DO UPDATE SET status=EXCLUDED.status,progress_percent=EXCLUDED.progress_percent,watch_duration_seconds=EXCLUDED.watch_duration_seconds,last_viewed_at=now(),completed_at=COALESCE(learning.lesson_progress.completed_at,EXCLUDED.completed_at)`,
-        [
-          actor.userId,
-          ctx.course_id,
-          w.lesson_id,
-          percent >= 85 ? 'COMPLETED' : 'IN_PROGRESS',
-          percent,
-          Math.floor(Number(v.actual_seconds) + actual),
-        ],
-      );
-      if (actual >= 1)
-        await m.query(
-          `SELECT learning.fn_log_learning_event($1::uuid,$2::bigint,$3::bigint,$4::bigint,NULL,NULL,$5::uuid,'VIEW_LESSON',now(),NULL,0,'IN_PROGRESS','WEB','REAL',$6::jsonb)`,
-          [
-            data.eventId,
-            actor.userId,
-            ctx.course_id,
-            w.lesson_id,
-            data.watchId,
-            JSON.stringify({
-              verifiedActualSeconds: actual,
-              uniqueSeconds: unique,
-              serverClock: true,
-            }),
-          ],
-        );
-      const result = {
-        actualSeconds: Math.floor(Number(v.actual_seconds) + actual),
-        uniqueSeconds: Math.floor(unique),
-        percent,
-        completed: percent >= 85,
-        positionSeconds: pos,
-        durationSeconds: Math.ceil(duration),
-      };
+      
+const [lessonProgress] = await m.query(
+  `INSERT INTO learning.lesson_progress (
+      student_id,
+      course_id,
+      lesson_id,
+      status,
+      progress_percent,
+      watch_duration_seconds,
+      first_viewed_at,
+      last_viewed_at,
+      completed_at
+    )
+    VALUES (
+      $1, $2, $3, 'IN_PROGRESS',
+      $4, $5, now(), now(), NULL
+    )
+    ON CONFLICT (student_id, lesson_id)
+    DO UPDATE SET
+      status = CASE
+        WHEN learning.lesson_progress.status = 'COMPLETED'
+        THEN 'COMPLETED'
+        ELSE 'IN_PROGRESS'
+      END,
+      progress_percent = CASE
+        WHEN learning.lesson_progress.status = 'COMPLETED'
+        THEN 100
+        ELSE EXCLUDED.progress_percent
+      END,
+      watch_duration_seconds = EXCLUDED.watch_duration_seconds,
+      last_viewed_at = now(),
+      completed_at = learning.lesson_progress.completed_at
+    RETURNING status`,
+  [
+    actor.userId,
+    ctx.course_id,
+    w.lesson_id,
+    percent,
+    Math.floor(Number(v.actual_seconds) + actual),
+  ],
+);
+
+      
+const result = {
+  actualSeconds: Math.floor(Number(v.actual_seconds) + actual),
+  uniqueSeconds: Math.floor(unique),
+  percent,
+
+  // Chỉ quiz đạt mới được công nhận hoàn thành bài học.
+  completed: lessonProgress?.status === 'COMPLETED',
+
+  // Theo dõi riêng việc xem đủ video.
+  videoCompleted: percent >= 85,
+
+  positionSeconds: pos,
+  durationSeconds: Math.ceil(duration),
+};
+
       await m.query(
         'INSERT INTO learning.watch_receipts(event_id,watch_id,result) VALUES($1,$2,$3)',
         [data.eventId, data.watchId, JSON.stringify(result)],

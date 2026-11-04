@@ -200,7 +200,7 @@ export class CoursesService {
               lessonOrder: Number(lesson.lessonOrder),
               durationSeconds: Number(lesson.durationSeconds ?? 0),
               quizId: lesson.quizId ? Number(lesson.quizId) : null,
-              type: lesson.quizId ? 'quiz' : resourceType.toLowerCase(),
+              type: resourceType.toLowerCase(),
               videoUrl:
                 includeContent && resourceType === 'VIDEO'
                   ? lesson.resourceUrl

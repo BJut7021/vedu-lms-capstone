@@ -28,7 +28,7 @@ function Input({ label, ...props }) {
     </label>
   );
 }
-function CourseSelect({ courses, value, onChange }) {
+function CourseSelect({ courses, value, onChange, disabled = false }) {
   return (
     <label className="block space-y-1 text-sm font-medium">
       Khóa học
@@ -36,6 +36,7 @@ function CourseSelect({ courses, value, onChange }) {
         className={field}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
       >
         <option value="">Chọn khóa học</option>
         {courses.map((c) => (
@@ -48,7 +49,18 @@ function CourseSelect({ courses, value, onChange }) {
   );
 }
 
-export default function Operations({ page, auth, data, catalog, onLogout }) {
+
+export default function Operations({
+  page,
+  auth,
+  data,
+  catalog,
+  onLogout,
+  initialCourseId = "",
+  initialLessonId = "",
+  initialLessons = [],
+}) {
+
   const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const act = async (fn) => {
@@ -64,7 +76,19 @@ export default function Operations({ page, auth, data, catalog, onLogout }) {
       setBusy(false);
     }
   };
-  const props = { auth, data, catalog, act, busy, onLogout };
+  
+const props = {
+  auth,
+  data,
+  catalog,
+  act,
+  busy,
+  onLogout,
+  initialCourseId,
+  initialLessonId,
+  initialLessons,
+};
+
   const pages = {
     catalog: ContentModeration,
     security: Security,
@@ -481,7 +505,9 @@ function Content({ auth, data, act, busy }) {
                     auth.accessToken,
                   );
                   await load();
-                  return { message: "Đã lưu tài liệu và công bố bài học" };
+                  return {
+  message: "Đã lưu tài liệu. Hãy kiểm tra quiz và trạng thái công bố bài học.",
+};
                 });
               }}
             >
@@ -733,8 +759,18 @@ function TeacherQuizPage(props) {
   );
 }
 
-function QuizEditor({ auth, data, act, busy }) {
-  const [course, setCourse] = useState(""),
+function QuizEditor({
+  auth,
+  data,
+  act,
+  busy,
+  initialCourseId,
+  initialLessonId,
+  initialLessons,
+}) {
+  // Khi mở từ trang Soạn khóa học, lấy khóa học đang chọn.
+  // Không tự chọn bài học: giảng viên được chọn từng bài hoặc đề cuối khóa.
+  const [course, setCourse] = useState(() => String(initialCourseId ?? "")),
     [title, setTitle] = useState(""),
     [duration, setDuration] = useState(600),
     [passing, setPassing] = useState(5),
@@ -748,6 +784,34 @@ function QuizEditor({ auth, data, act, busy }) {
         ],
       },
     ]);
+
+    const [quizLessonId, setQuizLessonId] = useState("");
+    const [quizLessons, setQuizLessons] = useState(() =>
+      (Array.isArray(initialLessons) ? initialLessons : []).filter(
+        (lesson) => !lesson.is_deleted,
+      ),
+    );
+    const [quizLessonError, setQuizLessonError] = useState("");
+
+  // Chỉ cập nhật KHÓA HỌC khi người dạy chuyển khóa ở cột trái.
+  // Bài học luôn để giảng viên chủ động chọn, không gán initialLessonId.
+  useEffect(() => {
+    if (!initialCourseId) return;
+    setCourse(String(initialCourseId));
+    setQuizLessonId("");
+    setQuizLessonError("");
+  }, [initialCourseId]);
+
+  // Danh sách bài học được Soạn khóa học tải từ backend và truyền sang.
+  useEffect(() => {
+    if (!initialCourseId) return;
+    setQuizLessons(
+      (Array.isArray(initialLessons) ? initialLessons : []).filter(
+        (lesson) => !lesson.is_deleted,
+      ),
+    );
+  }, [initialCourseId, initialLessons]);
+
   const edit = (index, changes) =>
     setQuestions(
       questions.map((q, i) => (i === index ? { ...q, ...changes } : q)),
@@ -759,21 +823,106 @@ function QuizEditor({ auth, data, act, busy }) {
         onSubmit={(e) => {
           e.preventDefault();
           act(() =>
-            api.platform(`/courses/${course}/quizzes`, auth.accessToken, {
-              title,
-              timeLimitSeconds: Number(duration),
-              passingScore: Number(passing),
-              questions,
-              maxAttempts: 3,
-            }),
+            
+api.platform(`/courses/${course}/quizzes`, auth.accessToken, {
+  lessonId:
+    quizLessonId === "final"
+      ? null
+      : Number(quizLessonId),
+  title:
+    quizLessonId === "final" &&
+    !title.trim().startsWith("Thi cuối khóa —")
+      ? `Thi cuối khóa — ${title.trim()}`
+      : title.trim(),
+  timeLimitSeconds: Number(duration),
+  passingScore: Number(passing),
+  questions,
+  maxAttempts: 3,
+}),
+
           );
         }}
       >
-        <CourseSelect
-          courses={data.courses || []}
-          value={course}
-          onChange={setCourse}
-        />
+        
+<CourseSelect
+  courses={data.courses || []}
+  value={course}
+  disabled={Boolean(initialCourseId)}
+  onChange={async (selectedCourse) => {
+    setCourse(selectedCourse);
+    setQuizLessonId("");
+    setQuizLessons([]);
+    setQuizLessonError("");
+
+    if (!selectedCourse) return;
+
+    try {
+      const content = await api.platform(
+        `/courses/${selectedCourse}/content`,
+        auth.accessToken,
+      );
+
+      setQuizLessons(
+        (content.lessons || []).filter(
+          (lesson) => !lesson.is_deleted,
+        ),
+      );
+    } catch (error) {
+      setQuizLessonError(
+        `Không tải được bài học: ${error.message}`,
+      );
+    }
+  }}
+/>
+
+{initialCourseId && (
+  <p className="text-xs text-slate-500">
+    Khóa học đã lấy từ mục Soạn khóa học. Bạn chỉ cần chọn bài học cần kiểm tra
+    hoặc chọn đề kiểm tra cuối khóa ở phía dưới.
+  </p>
+)}
+
+<div className="space-y-2">
+  <label className="block text-sm font-semibold text-slate-700">
+    Quiz thuộc bài học <span className="text-red-500">*</span>
+  </label>
+
+  <select
+    required
+    value={quizLessonId}
+    onChange={(e) => setQuizLessonId(e.target.value)}
+    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm"
+  >
+    <option value="">-- Chọn bài học --</option>
+
+    {quizLessons.map((lesson) => (
+      <option
+        key={lesson.lesson_id}
+        value={lesson.lesson_id}
+      >
+        Bài {lesson.lesson_order}: {lesson.title}
+      </option>
+    ))}
+
+    <option value="final">
+      Đề kiểm tra cuối khóa (không gắn bài học)
+    </option>
+  </select>
+
+  {quizLessonError && (
+    <p className="text-sm text-red-600">
+      {quizLessonError}
+    </p>
+  )}
+
+  <p className="text-xs leading-5 text-slate-500">
+    Quiz của từng bài học được sử dụng để đánh giá
+    hoàn thành và mở khóa bài tiếp theo.
+    Đề cuối khóa được quản lý riêng.
+  </p>
+</div>
+
+
         <div className="grid gap-3 sm:grid-cols-3">
           <Input
             label="Tên bài thi"

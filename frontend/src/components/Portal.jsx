@@ -61,7 +61,6 @@ const menus = {
     ["dashboard", "Tổng quan", LayoutDashboard],
     ["courses", "Quản lý khóa học", LibraryBig],
     ["builder", "Soạn khóa học", Plus],
-    ["quiz-bank", "Ngân hàng quiz", GraduationCap],
     ["learners", "Danh sách học viên", Users],
     ["gradebook", "Sổ điểm", ClipboardCheck],
     ["analytics", "Phân tích học tập", BarChart3],
@@ -2082,7 +2081,34 @@ const deleteLessonResource = async (resource) => {
 </span>
           </div>
 
-          <form onSubmit={createLesson}>
+          {/* Thanh chuyển tab luôn hiển thị, nằm ngoài các form để tránh form lồng nhau. */}
+          <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-white px-6">
+            {[
+              ["content", "Nội dung bài học"],
+              ["resources", "Tài liệu & video"],
+              ["quiz", "Ngân hàng quiz"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`border-b-2 px-4 py-4 text-sm font-bold transition ${
+                  activeTab === id
+                    ? "border-blue-600 text-blue-700"
+                    : "border-transparent text-slate-500 hover:text-blue-600"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Ẩn chỉ form soạn bài khi mở tab quiz. Không ẩn thanh tab. */}
+          <form
+            onSubmit={createLesson}
+            style={{ display: activeTab === "quiz" ? "none" : undefined }}
+          >
+
             <div className="space-y-6 p-6">
 
               {/* TÊN BÀI */}
@@ -2123,28 +2149,6 @@ const deleteLessonResource = async (resource) => {
                   }
                 />
               </label>
-
-              {/* TAB */}
-              <div className="flex flex-wrap gap-2 border-b border-slate-200">
-                {[
-                  ["content", "Nội dung bài học"],
-                  ["resources", "Tài liệu & video"],
-
-                ].map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setActiveTab(id)}
-                    className={`border-b-2 px-4 py-3 text-sm font-bold ${
-                      activeTab === id
-                        ? "border-blue-600 text-blue-700"
-                        : "border-transparent text-slate-500"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
 
               {/* NỘI DUNG */}
               {activeTab === "content" && (
@@ -2652,6 +2656,26 @@ const deleteLessonResource = async (resource) => {
 )}
             </div>
           </form>
+
+          {/* Chỉ cần chọn khóa học ở cột trái; bài học/đề cuối khóa chọn trong Quiz. */}
+          {activeTab === "quiz" && (
+            <div className="p-6">
+              {!lessonForm.courseId ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+                  Hãy chọn một khóa học ở cột bên trái trước khi soạn quiz.
+                </div>
+              ) : (
+                <Operations
+                  key={`quiz-${lessonForm.courseId}`}
+                  page="quiz-bank"
+                  auth={{ accessToken: token }}
+                  data={data}
+                  initialCourseId={lessonForm.courseId}
+                  initialLessons={courseLessons}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

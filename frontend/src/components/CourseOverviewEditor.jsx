@@ -32,10 +32,11 @@ export default function CourseOverviewEditor({
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-lg font-bold">Giới thiệu trước khi học</h2>
       <p className="text-sm leading-6 text-slate-600">
-        Thông tin này hiển thị ở trang giới thiệu khóa học, trước khi học viên
-        ghi danh. Điểm đạt, số lượt và thời gian thi lấy trực tiếp từ cấu hình
-        quiz.
-      </p>
+  Cung cấp thông tin tổng quan về khóa học, đối tượng học viên,
+  môn học tiên quyết và chuẩn đầu ra. Học viên cần đạt bài quiz
+  của từng bài học để được mở bài tiếp theo. Bài tập PDF
+  chỉ phục vụ luyện tập bổ sung và không bắt buộc.
+</p>
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -62,15 +63,23 @@ export default function CourseOverviewEditor({
         }}
       >
         {[
-          ["audience", "Đối tượng học viên", 2000],
-          ["preparation", "Kiến thức và công cụ cần chuẩn bị", 3000],
-          ["outcomes", "Chuẩn đầu ra (mỗi dòng một mục, tối đa 30 mục)", 15030],
-          [
-            "practiceNote",
-            "Cách đánh giá bài thực hành / lưu ý hoàn thành",
-            3000,
-          ],
-        ].map(([key, label, max]) => (
+  ["audience", "Đối tượng học viên", 2000],
+  [
+    "preparation",
+    "Môn học tiên quyết / Kiến thức nền cần có",
+    3000,
+  ],
+  [
+    "outcomes",
+    "Chuẩn đầu ra (mỗi dòng một mục, tối đa 30 mục)",
+    15030,
+  ],
+  [
+    "practiceNote",
+    "Hướng dẫn học tập và bài tập luyện tập bổ sung",
+    3000,
+  ],
+].map(([key, label, max]) => (
           <label key={key} className="block text-sm font-medium">
             {label}
             <textarea
@@ -82,6 +91,14 @@ export default function CourseOverviewEditor({
             />
           </label>
         ))}
+
+        <p className="rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-800">
+  <strong>Lưu ý cho giảng viên:</strong> Nếu khóa học không yêu cầu
+  môn học tiên quyết, hãy ghi "Không có". Chuẩn đầu ra cần mô tả
+  những kiến thức hoặc kỹ năng học viên đạt được sau khóa học,
+  không chỉ liệt kê tên các bài học.
+</p>
+
         {!form.outcomes && view?.outcomes?.length > 0 && (
           <p className="text-xs text-slate-500">
             Để trống để tự lấy chuẩn đầu ra từ các bài học đã công bố.

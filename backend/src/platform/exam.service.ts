@@ -21,6 +21,13 @@ export class ExamService {
     if (actor.role !== 'STUDENT')
       throw new BadRequestException('Chỉ học viên có bài làm');
     await this.access.study(actor, Number(quiz.course_id));
+    if (quiz.lesson_id) {
+  await this.access.lesson(
+    actor,
+    Number(quiz.course_id),
+    Number(quiz.lesson_id),
+  );
+}
     if (!quiz.lesson_id && quiz.title.startsWith('Thi cuối khóa —')) {
       const [missing] = await this.db.query(
         `SELECT count(*)::int n FROM lms.lessons l WHERE course_id=$1 AND is_published AND NOT is_deleted AND NOT EXISTS(SELECT 1 FROM learning.lesson_progress p WHERE p.student_id=$2 AND p.lesson_id=l.lesson_id AND p.status='COMPLETED')`,
@@ -54,8 +61,7 @@ export class ExamService {
           'SELECT count(*)::int n FROM assessment.quiz_attempts WHERE quiz_id=$1 AND student_id=$2',
           [quizId, actor.userId],
         );
-        if (count.n >= Number(currentQuiz.max_attempts))
-          throw new BadRequestException('Đã hết lượt làm bài');
+        
         [a] = await m.query(
           `INSERT INTO assessment.quiz_attempts(quiz_id,course_id,student_id,attempt_no,status) VALUES($1,$2,$3,$4,'IN_PROGRESS') RETURNING *`,
           [quizId, currentQuiz.course_id, actor.userId, count.n + 1],
@@ -104,12 +110,24 @@ export class ExamService {
     actor: Actor,
     incoming: { questionId: number; answerId?: number; answerIds?: number[] }[],
   ) {
-    const [context] = await this.db.query(
-      'SELECT course_id FROM assessment.quiz_attempts WHERE attempt_id=$1 AND student_id=$2',
-      [attemptId, actor.userId],
-    );
+    
+const [context] = await this.db.query(
+  `SELECT a.course_id, q.lesson_id
+   FROM assessment.quiz_attempts a
+   JOIN assessment.quizzes q ON q.quiz_id = a.quiz_id
+   WHERE a.attempt_id = $1 AND a.student_id = $2`,
+  [attemptId, actor.userId],
+);
+
     if (!context) throw new NotFoundException('Bài làm không thuộc học viên');
     await this.access.study(actor, Number(context.course_id));
+    if (context.lesson_id) {
+  await this.access.lesson(
+    actor,
+    Number(context.course_id),
+    Number(context.lesson_id),
+  );
+}
     return this.db.transaction(async (m) => {
       const [a] = await m.query(
         `SELECT a.*,COALESCE(q.time_limit_seconds,600) AS time_limit_seconds,q.passing_score,q.lesson_id FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id) WHERE attempt_id=$1 AND student_id=$2 FOR UPDATE OF a`,

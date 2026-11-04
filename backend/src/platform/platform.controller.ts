@@ -105,6 +105,119 @@ export class PlatformController {
   ) {
     return this.service.addResource(r.user, id, b, file);
   }
+
+  
+@Patch('lessons/:id/practice')
+@Roles('ADMIN', 'TEACHER')
+configurePractice(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+  @Body() body: any,
+) {
+  return this.service.configureLessonPractice(
+    r.user, id, body,
+  );
+}
+
+@Get('lessons/:id/practice')
+@Roles('STUDENT', 'ADMIN', 'TEACHER')
+getPractice(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+) {
+  return this.service.getLessonPractice(r.user, id);
+}
+
+@Post('lessons/:id/practice/submissions')
+@Roles('STUDENT')
+@UseInterceptors(
+  FileInterceptor('file', {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+      files: 1,
+    },
+  }),
+)
+submitPractice(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+  @UploadedFile()
+  file?: { buffer: Buffer; originalname?: string },
+) {
+  return this.service.submitLessonPractice(
+    r.user, id, file,
+  );
+}
+
+@Get('lessons/:id/practice/submissions')
+@Roles('ADMIN', 'TEACHER')
+practiceSubmissions(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+) {
+  return this.service.lessonPracticeSubmissions(
+    r.user, id,
+  );
+}
+
+@Patch('lessons/:id/practice/submissions/:submissionId')
+@Roles('ADMIN', 'TEACHER')
+reviewPractice(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+  @Param('submissionId', ParseIntPipe) submissionId: number,
+  @Body() body: any,
+) {
+  return this.service.reviewLessonPractice(
+    r.user, id, submissionId, body,
+  );
+}
+
+@Get('lessons/:id/practice/submissions/:submissionId/file')
+@Roles('STUDENT', 'ADMIN', 'TEACHER')
+async practiceFile(
+  @Req() r: AuthRequest,
+  @Param('id', ParseIntPipe) id: number,
+  @Param('submissionId', ParseIntPipe) submissionId: number,
+  @Res() res: Response,
+) {
+  const path = await this.service.lessonPracticeFile(
+    r.user, id, submissionId,
+  );
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="bai-thuc-hanh.pdf"',
+  );
+
+  return res.sendFile(path);
+}
+
+  @Get('moderation/resources/:id/file')
+  @Roles('ADMIN')
+  async moderationResource(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const file = await this.service.moderationResource(r.user, id);
+    res.setHeader('Content-Type', file.type);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.sendFile(file.path);
+  }
+
+  @Get('moderation/quizzes/:id')
+  @Roles('ADMIN')
+  moderationQuizDetail(
+    @Req() r: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.moderationQuizDetail(r.user, id);
+  }
+
   @Get('media/:id') async media(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,

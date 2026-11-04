@@ -58,7 +58,7 @@ export default function CourseIntroduction({ course }) {
           {outcomes.length ? (
             <>
               <ul className="mt-4 space-y-3">
-                {outcomes.slice(0, 6).map((o, i) => (
+                {outcomes.map((o, i) => (
                   <li
                     key={i}
                     className="flex items-start gap-2 text-sm leading-6 text-slate-700"
@@ -71,18 +71,6 @@ export default function CourseIntroduction({ course }) {
                   </li>
                 ))}
               </ul>
-              {outcomes.length > 6 && (
-                <details className="mt-3 text-sm">
-                  <summary className="cursor-pointer font-semibold text-blue-700">
-                    Xem thêm {outcomes.length - 6} chuẩn đầu ra
-                  </summary>
-                  <ul className="mt-3 list-disc space-y-2 pl-5 leading-6 text-slate-700">
-                    {outcomes.slice(6).map((o, i) => (
-                      <li key={i}>{o}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
             </>
           ) : (
             <>
@@ -110,7 +98,7 @@ export default function CourseIntroduction({ course }) {
             </p>
             <h3 className="mt-5 flex items-center gap-2 font-bold">
               <BookOpen size={19} className="text-blue-600" />
-              Cần chuẩn bị gì?
+              Kiến thức nền tảng & công cụ cần chuẩn bị
             </h3>
             <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
               {overview.preparation ||
@@ -123,12 +111,12 @@ export default function CourseIntroduction({ course }) {
               Điều kiện hoàn thành & chứng nhận
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-700">
-              Hoàn thành {overview.lessonCount ?? lessons.length} bài học
-              {quizzes.length > 0
-                ? ` và đạt tất cả ${quizzes.length} bài kiểm tra`
-                : ""}{" "}
-              của khóa để yêu cầu cấp chứng nhận VEDU.
-            </p>
+  Học viên phải đạt bài kiểm tra trắc nghiệm (quiz) của từng bài học
+  theo mức điểm do giảng viên quy định. Khi đạt quiz của bài hiện tại,
+  học viên mới được mở bài học tiếp theo. Bài tập nộp PDF (nếu có)
+  chỉ dùng để luyện tập thêm, không phải điều kiện mở khóa.
+  Việc cấp chứng nhận tuân theo các điều kiện hoàn thành của khóa học.
+</p>
             {quizzes.length > 0 && (
               <ul className="mt-3 space-y-3">
                 {quizzes.map((q, i) => (
@@ -138,7 +126,7 @@ export default function CourseIntroduction({ course }) {
                   >
                     <strong className="block text-slate-800">{q.title}</strong>
                     <span className="text-slate-600">
-                      Đạt từ {q.passingScore}/10 · {q.maxAttempts} lượt ·{" "}
+                      Đạt từ {q.passingScore}/10 · Không giới hạn lượt ·{" "}
                       {formatMinutes(q.durationSeconds)}
                     </span>
                     {q.requiresCompletedLessons && (
