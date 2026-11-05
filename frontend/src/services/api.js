@@ -95,6 +95,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  essayPrompt: (quizId,token) => request(`/platform/final-essays/quizzes/${quizId}`,{headers:withToken(token)}),
+  essayResult: (attemptId,token) => request(`/platform/final-essays/attempts/${attemptId}/result`,{headers:withToken(token)}),
+  essayUpload: async (attemptId,file,token) => {
+    const form=new FormData();form.append('file',file);
+    const response=await fetch(`${API_BASE_URL}/platform/final-essays/attempts/${attemptId}/image`,{method:'POST',headers:withToken(token),body:form});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.message||'Không tải được ảnh');
+    return data;
+  },
+  essayImage: async (attemptId,token) => {
+    const response=await fetch(`${API_BASE_URL}/platform/final-essays/attempts/${attemptId}/image`,{headers:withToken(token)});
+    if(!response.ok) throw new Error('Không tải được ảnh bài tự luận');
+    return URL.createObjectURL(await response.blob());
+  },
   playableQuiz: (quizId, token) =>
     request(`/quizzes/${quizId}/play`, { headers: withToken(token) }),
   classroom: (courseId, token) =>

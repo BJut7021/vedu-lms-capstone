@@ -96,6 +96,7 @@ const props = {
     reports: Reports,
     content: Content,
     "quiz-bank": TeacherQuizPage,
+    "final-essay": FinalEssayTeacherPanel,
     mining: Mining,
     assignments: Assignments,
     "ticket-chat": Tickets,
@@ -1899,4 +1900,55 @@ function Mining({ auth, act, busy }) {
       </Card>
     </div>
   );
+}
+
+function FinalEssayTeacherPanel({auth,data,initialCourseId}){
+ const [course,setCourse]=useState(String(initialCourseId||''));
+ const [quizzes,setQuizzes]=useState([]);
+ const [selected,setSelected]=useState('');
+ const [prompt,setPrompt]=useState('');
+ const [submissions,setSubmissions]=useState([]);
+ const [message,setMessage]=useState('');
+ const [images,setImages]=useState({});
+ const [grades,setGrades]=useState({});
+ const load=useCallback(async()=>{
+  if(!course) return;
+  try {
+   const [info,rows]=await Promise.all([api.platform(`/courses/${course}/content`,auth.accessToken),api.platform(`/final-essays/courses/${course}/submissions`,auth.accessToken)]);
+   setQuizzes((info.quizzes||[]).filter(q=>q.lesson_id==null));
+   setSubmissions(rows);setMessage('');
+  }catch(e){setMessage(e.message)}
+ },[course,auth.accessToken]);
+ useEffect(()=>{load()},[load]);
+ const showImage=async id=>{try {const url=await api.essayImage(id,auth.accessToken);setImages(old=>({...old,[id]:url}))}catch(e){setMessage(e.message)}};
+ const loadPrompt=async id=>{setSelected(id);try{const p=await api.essayPrompt(id,auth.accessToken);setPrompt(p.prompt)}catch(e){setMessage(e.message)}};
+ return <Card title="Chấm tự luận cuối khóa (40% TN + 60% TL)">
+  <CourseSelect courses={data.courses||[]} value={course} onChange={v=>{setCourse(v);setSelected('')}} />
+  <button className={button} onClick={load} disabled={!course}>Làm mới danh sách</button>
+  <label className="block text-sm">Chọn đề cuối khóa
+   <select className={field} value={selected} onChange={e=>loadPrompt(e.target.value)}>
+    <option value="">Chọn quiz cuối khóa</option>
+    {quizzes.map(q=><option key={q.quiz_id} value={q.quiz_id}>{q.title}</option>)}
+   </select>
+  </label>
+  {selected && <div className="space-y-2"><textarea className={`${field} min-h-28`} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Nhập đề bài tự luận cho học viên"/>
+   <button className={button} onClick={async()=>{try{await api.platform(`/final-essays/quizzes/${selected}`,auth.accessToken,{prompt},'PATCH');setMessage('Đã lưu đề tự luận')}catch(e){setMessage(e.message)}}}>Lưu đề tự luận</button>
+  </div>}
+  <div className="flex flex-wrap items-center gap-3 justify-between">
+    <h3 className="font-bold">Bài đã nộp ({submissions.length})</h3>
+    <span className="rounded-lg bg-amber-50 text-amber-800 px-3 py-1 text-sm font-semibold">Chờ chấm: {submissions.filter(s=>s.grade==null).length}</span>
+  </div>
+  {submissions.map(s=><div key={s.attempt_id} className="border rounded-xl p-3 space-y-2 text-sm">
+   <p><b>{s.student_name}</b> – {s.quiz_title} – trắc nghiệm {s.mcq_score}/10</p>
+   <p>{s.grade==null?'Chờ chấm':`Đã chấm: ${s.grade}/10 · Tổng kết: ${(Number(s.mcq_score)*0.4+Number(s.grade)*0.6).toFixed(2)}/10 · ${(Number(s.mcq_score)*0.4+Number(s.grade)*0.6)>=5?'Đạt':'Chưa đạt'}`}</p>
+   <button className="underline text-blue-700" onClick={()=>showImage(s.attempt_id)}>Xem ảnh bài nộp</button>
+   {images[s.attempt_id]&&<img className="max-h-96 object-contain" src={images[s.attempt_id]} alt="Bài tự luận học viên"/>}
+   {s.grade==null&&<div className="flex flex-wrap gap-2 items-center">
+    <input className={`${field} w-28`} type="number" min="0" max="10" step="0.25" placeholder="Điểm" value={grades[s.attempt_id]?.grade??''} onChange={e=>setGrades(o=>({...o,[s.attempt_id]:{...o[s.attempt_id],grade:e.target.value}}))}/>
+    <input className={`${field} flex-1`} placeholder="Nhận xét" value={grades[s.attempt_id]?.feedback??''} onChange={e=>setGrades(o=>({...o,[s.attempt_id]:{...o[s.attempt_id],feedback:e.target.value}}))}/>
+    <button className={button} onClick={async()=>{try{await api.platform(`/final-essays/attempts/${s.attempt_id}/grade`,auth.accessToken,{grade:grades[s.attempt_id]?.grade,feedback:grades[s.attempt_id]?.feedback||''});await load()}catch(e){setMessage(e.message)}}}>Chấm và xác nhận</button>
+   </div>}
+  </div>)}
+  {message&&<p className="text-sm text-blue-700">{message}</p>}
+ </Card>
 }

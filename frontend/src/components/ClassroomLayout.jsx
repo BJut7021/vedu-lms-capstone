@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
-  Lock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -188,35 +187,23 @@ export default function ClassroomLayout({
     <button
       type="button"
       onClick={() => onSelect(l)}
-      disabled={!!l.locked}
-      title={
-        l.locked
-          ? "Cần đạt quiz bài học trước để mở khóa"
-          : undefined
-      }
       aria-current={l.id === lesson.id ? "step" : undefined}
       className={`relative flex w-full items-start gap-3 rounded-xl p-3 text-left text-sm transition ${
-        l.locked
-          ? "cursor-not-allowed bg-slate-50 text-slate-400 opacity-70"
-          : l.id === lesson.id
-            ? "bg-gradient-to-r from-blue-100/90 to-blue-50/80 text-blue-700 ring-1 ring-blue-100"
-            : "text-slate-600 hover:bg-slate-50"
+        l.id === lesson.id
+          ? "bg-gradient-to-r from-blue-100/90 to-blue-50/80 text-blue-700 ring-1 ring-blue-100"
+          : "text-slate-600 hover:bg-slate-50"
       }`}
     >
       <span
         className={`relative z-10 mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-[3px] border-white shadow-sm ${
-          l.locked
-            ? "bg-slate-200 text-slate-500"
-            : done[l.id]
-              ? "bg-emerald-500 text-white"
-              : l.id === lesson.id
-                ? "bg-blue-600 text-white ring-2 ring-blue-100"
-                : "bg-white text-slate-400 ring-1 ring-slate-200"
+          done[l.id]
+            ? "bg-emerald-500 text-white"
+            : l.id === lesson.id
+              ? "bg-blue-600 text-white ring-2 ring-blue-100"
+              : "bg-white text-slate-400 ring-1 ring-slate-200"
         }`}
       >
-        {l.locked ? (
-          <Lock size={14} />
-        ) : done[l.id] ? (
+        {done[l.id] ? (
           <CheckCircle2 size={15} />
         ) : l.type === "quiz" ? (
           <HelpCircle size={15} />
@@ -226,25 +213,16 @@ export default function ClassroomLayout({
           <FileText size={15} />
         )}
       </span>
-
       <span className="min-w-0">
-        <span className="home-balanced block font-medium leading-5">
-          {l.title}
-        </span>
-
-        {l.locked && (
-          <small className="mt-1 block text-xs text-slate-500">
-            Chưa mở khóa · Cần đạt quiz bài trước
+        <span className="home-balanced block font-medium leading-5">{l.title}</span>
+        {done[l.id] && (
+          <small className="mt-1 block text-xs text-emerald-700">Đã hoàn thành quiz</small>
+        )}
+        {l.type === "quiz" && l.durationSeconds > 0 && (
+          <small className="mt-1 block text-slate-400">
+            {formatMinutes(l.durationSeconds)} làm bài
           </small>
         )}
-
-        {!l.locked &&
-          l.type === "quiz" &&
-          l.durationSeconds > 0 && (
-            <small className="mt-1 block text-slate-400">
-              {formatMinutes(l.durationSeconds)} làm bài
-            </small>
-          )}
       </span>
     </button>
   </div>
@@ -370,17 +348,7 @@ export default function ClassroomLayout({
               {notice}
             </p>
           )}
-          {lesson.locked ? (
-            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-              <h2 className="text-lg font-bold text-amber-900">
-                Bài học chưa được mở khóa
-              </h2>
-              <p className="mt-2 text-sm text-amber-800">
-                Hãy làm đạt quiz của bài trước để xem nội dung này.
-              </p>
-            </section>
-          ) : (
-            <>
+          <>
               <section
                 id="lesson-video"
                 className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
@@ -412,7 +380,7 @@ export default function ClassroomLayout({
                       </div>
                       <p className="text-xs leading-5 text-slate-600">
                         Tiến độ xem video được lưu tự động. Chỉ kết quả quiz đạt mới
-                        xác nhận hoàn thành bài học và mở bài tiếp theo.
+                        xác nhận hoàn thành bài học. Các bài khác luôn có thể xem.
                       </p>
                     </div>
                   </>
@@ -508,9 +476,8 @@ export default function ClassroomLayout({
                   )}
                 </details>
               )}
-            </>
-          )}
-          {!lesson.locked && lesson.pedagogy && (
+          </>
+          {lesson.pedagogy && (
             <details className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
               <summary className="cursor-pointer font-semibold">
                 Đầu ra và nguồn học liệu
@@ -559,25 +526,10 @@ export default function ClassroomLayout({
   <button
     type="button"
     onClick={() => onSelect(next)}
-    disabled={!!next.locked}
-    title={
-      next.locked
-        ? "Hoàn thành quiz bài hiện tại để mở khóa"
-        : undefined
-    }
-    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white"
   >
-    {next.locked
-      ? "Bài tiếp theo đang khóa"
-      : next.type === "quiz"
-        ? "Bài kiểm tra"
-        : "Bài kế tiếp"}
-
-    {next.locked ? (
-      <Lock size={17} />
-    ) : (
-      <ArrowRight size={17} />
-    )}
+    {next.type === "quiz" ? "Bài kiểm tra" : "Bài kế tiếp"}
+    <ArrowRight size={17} />
   </button>
 )}
 
@@ -639,10 +591,9 @@ export default function ClassroomLayout({
               <button
                 type="button"
                 onClick={() => onSelect(next)}
-                disabled={!!next.locked}
                 className="mt-3 w-full rounded-lg bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
-                {next.locked ? "Bài tiếp theo đang khóa" : "Tiếp tục học →"}
+                Tiếp tục học →
               </button>
             </section>
           )}

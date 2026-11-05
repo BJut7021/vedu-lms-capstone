@@ -2,7 +2,31 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Clock, CheckCircle2, ArrowLeft, Award, Sparkles } from "lucide-react";
 import { formatMinutes } from "../services/time";
 
-export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
+export default function QuizView({
+  quizData,
+  onBack,
+  onSubmit,
+  onSaveDraft,
+  onContinue,
+  onResult,
+  embedded = false,
+  essayConfig = null,
+  essayResult = null,
+  onEssayUpload = null,
+  onRefreshEssay = null,
+}) {
+  const [essayFile,setEssayFile] = useState(null);
+  const [essayBusy,setEssayBusy] = useState(false);
+  const [essayError,setEssayError] = useState('');
+  const [essayState,setEssayState] = useState(essayResult);
+  useEffect(()=>setEssayState(essayResult),[essayResult]);
+  const uploadEssay=async()=>{
+    if(!essayFile || !onEssayUpload) return;
+    setEssayBusy(true);setEssayError('');
+    try {await onEssayUpload(essayFile);setEssayFile(null);setEssayState(await onRefreshEssay());}
+    catch(e){setEssayError(e.message||'Không nộp được ảnh');}
+    finally {setEssayBusy(false);}
+  };
   const [clockOffset] = useState(
     () => new Date(quizData.serverTime).getTime() - Date.now(),
   );
@@ -108,11 +132,18 @@ export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
     if (timeLeft === 0 && !isSubmitted && !automaticSubmitted.current) {
       automaticSubmitted.current = true;
       handleSubmit();
+
     }
   }, [timeLeft, isSubmitted, handleSubmit]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6">
+    <div
+  className={
+    embedded
+      ? "w-full bg-white py-2"
+      : "min-h-screen bg-gray-50 py-8 px-4 sm:px-6"
+  }
+>
       <div className="max-w-3xl mx-auto space-y-6">
         <button
           onClick={onBack}
@@ -149,7 +180,7 @@ export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
         {isSubmitted && result && (
           <div
             className={`p-6 rounded-2xl border text-center space-y-3 ${
-              result.passed
+              essayConfig ? "bg-blue-50 border-blue-200 text-blue-900" : result.passed
                 ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                 : "bg-red-50 border-red-200 text-red-900"
             }`}
@@ -161,12 +192,12 @@ export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
               />
             </div>
             <h2 className="text-2xl font-black">
-              {result.passed
+              {essayConfig ? "Đã nộp trắc nghiệm – chờ chấm tự luận" : result.passed
                 ? "Chúc mừng! Bạn đã Đạt yêu cầu"
                 : "Chưa đạt điểm chuẩn"}
             </h2>
             <p className="text-sm">
-              Điểm số: <strong className="text-xl">{result.score}/10</strong> (
+              {essayConfig ? "Điểm trắc nghiệm" : "Điểm số"}: <strong className="text-xl">{result.score}/10</strong> (
               {result.correctCount}/{result.totalQuestions} câu đúng) • Thời
               gian làm: {result.timeSpent}
             </p>
@@ -226,6 +257,30 @@ export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
           })}
         </div>
 
+        {essayConfig && (
+          <section className="bg-white rounded-2xl p-6 border border-blue-200 space-y-3">
+            <h2 className="text-xl font-bold text-gray-900">Phần 2 – Tự luận (60%)</h2>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{essayConfig.prompt || 'Chưa có đề tự luận. Vui lòng liên hệ giảng viên; hệ thống chưa thể nhận ảnh khi chưa có đề.'}</p>
+            <p className="text-xs text-gray-500">Nộp ảnh JPG, PNG hoặc WEBP tối đa 5MB. Giảng viên sẽ chấm theo thang 10. Điểm cuối khóa = trắc nghiệm × 40% + tự luận × 60%. Đạt từ 5/10.</p>
+            {essayState?.status==='PENDING_REVIEW' && <p className="font-semibold text-amber-700">Đã nhận ảnh bài làm. Đang chờ giảng viên chấm.</p>}
+            {essayState?.status==='GRADED' && <div className="bg-blue-50 rounded-xl p-3 text-sm space-y-1">
+              <p>Điểm trắc nghiệm: {essayState.mcqScore}/10</p>
+              <p>Điểm tự luận: {essayState.essayScore}/10</p>
+              <p className="font-bold">Tổng kết: {essayState.finalScore}/10 – {essayState.passed?'Đạt':'Chưa đạt'}</p>
+              {essayState.feedback && <p>Nhận xét: {essayState.feedback}</p>}
+            </div>}
+            {essayState?.status!=='GRADED' && essayState?.status!=='PENDING_REVIEW' && Boolean(essayConfig.prompt) && <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+              <label htmlFor="vedu-essay-image" className="block text-sm font-semibold text-gray-900">Tải ảnh bài tự luận lên (JPG, PNG, WEBP; tối đa 5 MB)</label>
+              <input id="vedu-essay-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{ const file=e.target.files?.[0]||null; setEssayError(''); if(file && file.size>5*1024*1024){setEssayFile(null);setEssayError('Ảnh vượt quá 5 MB. Vui lòng chọn ảnh nhỏ hơn.');}else{setEssayFile(file)} }} className="block w-full rounded-lg bg-white p-3 text-sm text-gray-900 border border-gray-200" />
+              {essayFile && <p className="text-sm text-blue-800">Đã chọn: {essayFile.name}</p>}
+              {!isSubmitted && <p className="text-sm text-blue-800">Đã chọn ảnh thì giữ nguyên, bấm “Nộp bài kiểm tra” ở cuối trang trước; ngay sau đó quay lại đây để bấm “Nộp ảnh tự luận”. Kết quả chỉ được xác nhận sau khi giảng viên chấm ảnh.</p>}
+              {isSubmitted && <button type="button" disabled={!essayFile||essayBusy} onClick={uploadEssay} className="rounded-xl bg-blue-600 px-5 py-2 text-white font-bold disabled:opacity-50">{essayBusy?'Đang nộp...':'Nộp ảnh tự luận'}</button>}
+            </div>}
+            {essayError && <p className="text-red-600 text-sm">{essayError}</p>}
+            {isSubmitted && <button type="button" className="text-blue-700 text-sm underline" onClick={async()=>{try{setEssayState(await onRefreshEssay())}catch(e){setEssayError(e.message)}}}>Làm mới kết quả chấm</button>}
+          </section>
+        )}
+
         {!isSubmitted ? (
           <div className="text-center pt-4">
             {submitError && (
@@ -241,16 +296,33 @@ export default function QuizView({ quizData, onBack, onSubmit, onSaveDraft }) {
               {submitting ? "Đang chấm bài..." : "Nộp bài kiểm tra"}
             </button>
           </div>
-        ) : (
-          <div className="text-center pt-4">
-            <button
-              onClick={onBack}
-              className="px-8 py-3 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl text-sm transition"
-            >
-              Trở về phòng học
-            </button>
-          </div>
-        )}
+
+) : (
+  <div className="flex flex-wrap justify-center gap-3 pt-4">
+    <button
+      type="button"
+      onClick={onContinue}
+      className={`rounded-xl px-6 py-3 text-sm font-bold text-white transition ${
+        result?.passed
+          ? "bg-emerald-600 hover:bg-emerald-700"
+          : "bg-blue-600 hover:bg-blue-700"
+      }`}
+    >
+      {result?.passed
+        ? "Tiếp tục học"
+        : "Ôn tập bài học"}
+    </button>
+
+    <button
+      type="button"
+      onClick={onBack}
+      className="rounded-xl bg-gray-700 px-6 py-3 text-sm font-bold text-white hover:bg-gray-800"
+    >
+      Về trang khóa học
+    </button>
+  </div>
+)}
+
       </div>
     </div>
   );

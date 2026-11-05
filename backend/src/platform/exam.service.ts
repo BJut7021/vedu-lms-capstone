@@ -28,16 +28,7 @@ export class ExamService {
     Number(quiz.lesson_id),
   );
 }
-    if (!quiz.lesson_id && quiz.title.startsWith('Thi cuối khóa —')) {
-      const [missing] = await this.db.query(
-        `SELECT count(*)::int n FROM lms.lessons l WHERE course_id=$1 AND is_published AND NOT is_deleted AND NOT EXISTS(SELECT 1 FROM learning.lesson_progress p WHERE p.student_id=$2 AND p.lesson_id=l.lesson_id AND p.status='COMPLETED')`,
-        [quiz.course_id, actor.userId],
-      );
-      if (missing.n)
-        throw new BadRequestException(
-          `Hoàn thành ${missing.n} bài học còn lại trước khi thi cuối khóa`,
-        );
-    }
+    // Final exam is accessible without finishing previous lessons.
     return this.db.transaction(async (m) => {
       await m.query('SELECT pg_advisory_xact_lock(1447384169,$1::integer)', [
         quizId,
@@ -52,6 +43,32 @@ export class ExamService {
         actor.userId,
         quizId,
       ]);
+      // A final exam with a submitted MCQ stays bound to its essay submission.
+      // A refresh MUST NOT create a new attempt while upload/review is pending.
+      if (currentQuiz.lesson_id == null) {
+        const [previous] = await m.query(
+          `SELECT a.attempt_id, a.status, a.score, s.grade AS essay_grade
+           FROM assessment.quiz_attempts a
+           LEFT JOIN assessment.final_essay_submissions s ON s.attempt_id=a.attempt_id
+           WHERE a.quiz_id=$1 AND a.student_id=$2
+           ORDER BY a.attempt_no DESC, a.attempt_id DESC LIMIT 1`,
+          [quizId, actor.userId],
+        );
+        if (previous && previous.status !== 'IN_PROGRESS') {
+          const waiting = previous.essay_grade == null;
+          const finalScore = waiting ? null :
+            Math.round((Number(previous.score) * 0.4 + Number(previous.essay_grade) * 0.6) * 100) / 100;
+          if (waiting || (finalScore != null && finalScore >= 5)) {
+            return {
+              reviewOnly: true,
+              attemptId: Number(previous.attempt_id),
+              finalScore,
+              status: waiting ? 'PENDING_ESSAY' : 'PASSED',
+            };
+          }
+          // Graded and failed: a new attempt may now be started.
+        }
+      }
       let [a] = await m.query(
         `SELECT * FROM assessment.quiz_attempts WHERE quiz_id=$1 AND student_id=$2 AND status='IN_PROGRESS'`,
         [quizId, actor.userId],
@@ -243,7 +260,7 @@ const [context] = await this.db.query(
         ],
       );
       return {
-        ...this.result({ ...graded, passing_score: a.passing_score }),
+        ...this.result({ ...graded, passing_score: a.passing_score, lesson_id: a.lesson_id }),
         correctCount,
         totalQuestions: questions.length,
         expired,
@@ -258,7 +275,8 @@ const [context] = await this.db.query(
       score: Number(a.score),
       durationSeconds: a.duration_seconds,
       status: a.status,
-      passed: Number(a.score) >= Number(a.passing_score),
+      passed: a.lesson_id == null ? null : Number(a.score) >= Number(a.passing_score),
+      finalEssayRequired: a.lesson_id == null,
       submittedAt: a.submitted_at,
     };
   }

@@ -61,6 +61,7 @@ const menus = {
     ["dashboard", "Tổng quan", LayoutDashboard],
     ["courses", "Quản lý khóa học", LibraryBig],
     ["builder", "Soạn khóa học", Plus],
+    ["final-essay", "Chấm tự luận cuối khóa", ClipboardCheck],
     ["learners", "Danh sách học viên", Users],
     ["gradebook", "Sổ điểm", ClipboardCheck],
     ["analytics", "Phân tích học tập", BarChart3],
@@ -581,6 +582,7 @@ useEffect(() => {
               "assignments",
               "mining",
               "quiz-bank",
+              "final-essay",
               "certificates",
               "learning-path",
             ].includes(activePage) ? (

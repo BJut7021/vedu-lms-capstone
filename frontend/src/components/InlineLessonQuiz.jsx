@@ -62,7 +62,7 @@ export default function InlineLessonQuiz({ quizId, token, onQuizPassed }) {
         3. Quiz kiểm tra cuối bài
       </h2>
       <p className="mt-2 text-sm leading-6 text-slate-500">
-        Làm đạt quiz này để hoàn thành bài học và mở bài kế tiếp. Đồng hồ
+        Làm đạt quiz này để đánh dấu hoàn thành bài học. Bạn có thể học bất kỳ bài nào mà không cần chờ mở khóa. Đồng hồ
         chỉ bắt đầu khi bạn nhấn nút bắt đầu.
       </p>
 

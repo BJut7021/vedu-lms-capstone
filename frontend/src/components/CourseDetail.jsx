@@ -26,6 +26,13 @@ export default function CourseDetail({
   const [openSections, setOpenSections] = useState({ "course-content": true });
 
   const allLessons = course.sections.flatMap((section) => section.lessons);
+  const validQuizId = (id) => Number.isSafeInteger(Number(id)) && Number(id) > 0;
+  const resolveQuizId = (lesson) =>
+    validQuizId(lesson?.quizId)
+      ? Number(lesson.quizId)
+      : lesson?.type === 'quiz' && validQuizId(studyState?.finalQuizId)
+        ? Number(studyState.finalQuizId)
+        : null;
   const firstLearningLesson = allLessons.find(
     (lesson) => lesson.type !== "quiz",
   );
@@ -158,7 +165,7 @@ export default function CourseDetail({
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-lg text-gray-600">
               {allLessons.filter((l) => Number(l.id) > 0).length} bài học ·{" "}
-              {allLessons.filter((l) => Boolean(l.quizId)).length} bài kiểm tra
+              {allLessons.filter((l) => Boolean(resolveQuizId(l))).length} bài kiểm tra
             </span>
           </div>
 
@@ -187,9 +194,10 @@ export default function CourseDetail({
                         key={lesson.id}
                         className="p-4 flex items-center justify-between hover:bg-blue-50/40 transition cursor-pointer"
                         onClick={() => {
-                          if (lesson.type === "quiz")
-                            onStartQuiz(lesson.quizId);
-                          else onStartLearning(lesson.id);
+                          if (lesson.type === "quiz") {
+                            const id = resolveQuizId(lesson);
+                            if (id) onStartQuiz(id);
+                          } else onStartLearning(lesson.id);
                         }}
                       >
                         <div className="flex items-center gap-3">
@@ -208,14 +216,18 @@ export default function CourseDetail({
                               {lesson.title}
                             </p>
                             <span className="text-xs text-gray-400 capitalize">
-                              {lesson.type}
+                              {lesson.type === 'quiz' && !resolveQuizId(lesson)
+                                ? (studyLoading ? 'Đang tải bài kiểm tra…' : 'Chưa có bài kiểm tra được công bố')
+                                : lesson.type}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {studyState?.completedQuizIds?.includes(
-                            lesson.quizId,
+                          {(lesson.type === 'quiz' && studyState?.finalExamPassed === true &&
+                            Number(resolveQuizId(lesson)) > 0 && Number(resolveQuizId(lesson)) === Number(studyState?.finalQuizId)) ||
+                          studyState?.completedQuizIds?.includes(
+                            resolveQuizId(lesson),
                           ) ||
                           studyState?.completedLessonIds?.includes(lesson.id) ||
                           lesson.completed ? (

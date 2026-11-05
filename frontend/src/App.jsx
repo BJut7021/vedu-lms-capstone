@@ -37,6 +37,8 @@ const loginDestination = (role, search) =>
     ? "/student/learning-path"
     : rolePath[role];
 
+const validQuizId = (id) => /^[1-9]\d*$/.test(String(id ?? ''));
+
 function CoursePage({ auth, header }) {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -133,6 +135,10 @@ function CoursePage({ auth, header }) {
           }
         }}
         onStartQuiz={(quizId) => {
+          if (!validQuizId(quizId)) {
+            setError('Bài kiểm tra chưa được công bố hoặc chưa có mã hợp lệ.');
+            return;
+          }
           if (requireStudent()) {
             api
               .enroll(course.id, auth.accessToken)
@@ -201,20 +207,104 @@ function ClassroomPage({ auth, onEvent, header }) {
       isGuest={auth.user.isGuest}
       activeLessonId={Number(lessonId)}
       onBack={() => navigate(`/courses/${courseId}`)}
-      onOpenQuiz={(quizId) => navigate(`/quiz/${courseId}/${quizId}`)}
+      onOpenQuiz={(quizId) => {
+        if (!validQuizId(quizId)) {
+          setError('Bài kiểm tra chưa được công bố hoặc chưa có mã hợp lệ.');
+          return;
+        }
+        navigate(`/quiz/${courseId}/${quizId}`);
+      }}
       onLogEvent={(event) => onEvent(course, event)}
+      onRefreshCourse={async () => {
+  const updated = await api.classroom(
+    courseId,
+    auth.accessToken,
+  );
+  setCourse(updated);
+}}
     />
+  );
+}
+
+
+function SubmittedFinalExamReview({ attemptId, token, showImage }) {
+  const [review, setReview] = useState(null);
+  const [reviewError, setReviewError] = useState('');
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageError, setImageError] = useState('');
+  useEffect(() => {
+    if (!attemptId || !token) return;
+    let alive = true;
+    setReview(null);
+    setReviewError('');
+    api.platform(`/final-essays/attempts/${attemptId}/review`, token)
+      .then((v) => { if (alive) setReview(v); })
+      .catch((err) => { if (alive) setReviewError(err.message || 'Không xem lại được bài thi'); });
+    return () => { alive = false; };
+  }, [attemptId, token]);
+  useEffect(() => {
+    if (!attemptId || !token || !showImage) return;
+    let alive = true;
+    let objectUrl = null;
+    setImageError('');
+    api.essayImage(attemptId, token)
+      .then((url) => { objectUrl = url; if (alive) setImageUrl(url); else URL.revokeObjectURL(url); })
+      .catch((err) => { if (alive) setImageError(err.message || 'Không tải được ảnh tự luận'); });
+    return () => { alive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [attemptId, token, showImage]);
+  return (
+    <div className="space-y-5 border-t border-slate-200 pt-5">
+      <h2 className="text-lg font-bold">Xem lại trắc nghiệm đã nộp</h2>
+      {reviewError && <p role="alert" className="text-sm text-red-700">{reviewError}</p>}
+      {!review && !reviewError && <p className="text-sm text-slate-500">Đang tải đáp án đã nộp...</p>}
+      {review?.questions?.map((q, i) => (
+        <div key={q.questionId} className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <strong>Câu {i + 1}. {q.text}</strong>
+            <span className={q.correct ? 'shrink-0 font-bold text-emerald-700' : 'shrink-0 font-bold text-red-700'}>
+              {q.correct ? '✓ Đúng' : '✕ Sai'}
+            </span>
+          </div>
+          {q.options.map((option) => {
+            const selected = q.selectedIds.includes(option.id);
+            const correct = q.correctIds.includes(option.id);
+            return <div key={option.id} className={`rounded-lg border px-3 py-2 text-sm ${correct ? 'border-emerald-300 bg-emerald-50' : selected ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+              {option.text} {selected && <b> — Bạn đã chọn</b>} {correct && <b> — Đáp án đúng</b>}
+            </div>;
+          })}
+          {!q.selectedIds.length && <p className="text-xs text-amber-700">Bạn chưa trả lời câu này.</p>}
+        </div>
+      ))}
+      {showImage && <div className="space-y-3 border-t border-slate-200 pt-5">
+        <h2 className="text-lg font-bold">Ảnh tự luận đã nộp</h2>
+        {imageError && <p role="alert" className="text-sm text-red-700">{imageError}</p>}
+        {imageUrl ? <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="block text-blue-700 underline">
+          <img src={imageUrl} alt="Bài tự luận của bạn đã nộp" className="max-h-[720px] w-full rounded-xl border object-contain" />
+          Xem ảnh kích thước đầy đủ
+        </a> : !imageError && <p className="text-sm text-slate-500">Đang tải ảnh bài làm...</p>}
+      </div>}
+    </div>
   );
 }
 
 function QuizPage({ auth }) {
   const { courseId, quizId } = useParams();
   const navigate = useNavigate();
+  const [essayConfig,setEssayConfig] = useState(null);
+  const [essayResult,setEssayResult] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [essayFile, setEssayFile] = useState(null);
+  const [reviewError, setReviewError] = useState('');
   const [error, setError] = useState("");
   useEffect(() => {
     if (auth?.user?.role !== "STUDENT") return;
+    if (!validQuizId(quizId)) {
+      setError('Không tìm thấy mã bài kiểm tra. Vui lòng mở từ trang khóa học.');
+      return;
+    }
     api
       .enroll(courseId, auth.accessToken)
       .then(() =>
@@ -231,6 +321,11 @@ function QuizPage({ auth }) {
           savedAnswers: attempt.answers,
         });
         setAttemptId(attempt.attemptId);
+        setReviewOnly(Boolean(attempt.reviewOnly));
+        if (quizData.lessonId == null) {
+          api.essayPrompt(quizId,auth.accessToken).then(setEssayConfig).catch(()=>setEssayConfig(null));
+          api.essayResult(attempt.attemptId,auth.accessToken).then(setEssayResult).catch(e=>setReviewError(e.message));
+        }
       })
       .catch((reason) => setError(reason.message));
   }, [auth, quizId, courseId]);
@@ -248,10 +343,85 @@ function QuizPage({ auth }) {
         Đang chuẩn bị bài kiểm tra...
       </div>
     );
+  if (reviewOnly) {
+    const refreshResult = async () => {
+      try {
+        setReviewError('');
+        const refreshed = await api.essayResult(attemptId, auth.accessToken);
+        setEssayResult(refreshed);
+        if (refreshed.status === 'GRADED' && !refreshed.passed) {
+          // Only after the teacher has graded a failed attempt may a retake start.
+          window.location.reload();
+        }
+      } catch(e) { setReviewError(e.message); }
+    };
+    const upload = async () => {
+      if (!essayFile) return;
+      setReviewLoading(true);setReviewError('');
+      try {
+        await api.essayUpload(attemptId,essayFile,auth.accessToken);
+        setEssayFile(null);
+        await refreshResult();
+      } catch(e) { setReviewError(e.message); }
+      finally { setReviewLoading(false); }
+    };
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+      <section className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-7 shadow-sm space-y-5">
+        <h1 className="text-xl font-bold">Kết quả thi cuối khóa</h1>
+        {!essayResult ? <p>Đang tải bài thi đã nộp...</p> : <>
+          <p className="text-sm">Điểm trắc nghiệm: <b>{essayResult.mcqScore}/10</b> (40%)</p>
+          {essayResult.status === 'AWAITING_UPLOAD' && <div className="space-y-3">
+            <p className="font-semibold text-blue-700">Đã nộp trắc nghiệm. Hãy tải ảnh tự luận của lượt thi này.</p>
+            <p className="whitespace-pre-wrap text-sm">{essayConfig?.prompt || 'Đề tự luận của khóa học'}</p>
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setEssayFile(e.target.files?.[0]||null)} className="block w-full text-sm" />
+            <button disabled={reviewLoading||!essayFile} onClick={upload} className="rounded-lg bg-blue-600 px-4 py-2 text-white font-bold disabled:opacity-50">{reviewLoading?'Đang nộp ảnh...':'Nộp ảnh tự luận'}</button>
+          </div>}
+          {essayResult.status === 'PENDING_REVIEW' && <p className="rounded-lg bg-amber-50 p-4 text-amber-800 font-semibold">Đã nhận bài tự luận. Đang chờ giảng viên chấm. Bạn chưa thể thi lại.</p>}
+          {essayResult.status === 'GRADED' && <div className="space-y-2 rounded-lg bg-slate-50 p-4">
+            <p>Điểm tự luận: <b>{essayResult.essayScore}/10</b> (60%)</p>
+            <p className="font-bold">Tổng điểm: {essayResult.finalScore}/10 — {essayResult.passed?'Đã đạt khóa học':'Chưa đạt'}</p>
+            {essayResult.feedback && <p>Nhận xét: {essayResult.feedback}</p>}
+          </div>}
+        </>}
+        {attemptId && <SubmittedFinalExamReview attemptId={attemptId} token={auth.accessToken} showImage={essayResult?.status === 'PENDING_REVIEW' || essayResult?.status === 'GRADED'} />}
+        {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
+        <div className="flex flex-wrap gap-3">
+          <button onClick={refreshResult} className="rounded-lg border px-4 py-2">Làm mới kết quả</button>
+          <button onClick={()=>navigate(`/courses/${courseId}`)} className="rounded-lg bg-slate-800 px-4 py-2 text-white">Về khóa học</button>
+        </div>
+      </section>
+    </div>;
+  }
   return (
-    <QuizView
-      quizData={quiz}
-      onBack={() => navigate(`/courses/${courseId}`)}
+
+<QuizView
+  quizData={quiz}
+  essayConfig={essayConfig}
+  essayResult={essayResult}
+  onEssayUpload={file=>api.essayUpload(attemptId,file,auth.accessToken)}
+  onRefreshEssay={()=>api.essayResult(attemptId,auth.accessToken)}
+  onBack={() => navigate(`/courses/${courseId}`)}
+  onContinue={async () => {
+    try {
+      const state = await api.platform(
+        `/courses/${courseId}/study-state`,
+        auth.accessToken,
+      );
+
+      if (
+        state?.state !== "COMPLETED" &&
+        Number(state?.lessonId) > 0
+      ) {
+        navigate(`/learn/${courseId}/${state.lessonId}`);
+      } else {
+        navigate(`/courses/${courseId}`);
+      }
+    } catch (error) {
+      console.error("Không tải được tiến độ học tập:", error);
+      navigate(`/courses/${courseId}`);
+    }
+  }}
+
       onSubmit={(answers) =>
         api.submitQuizAttempt(attemptId, answers, auth.accessToken)
       }

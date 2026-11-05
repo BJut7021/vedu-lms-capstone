@@ -31,10 +31,21 @@ export default function Classroom({
   
   const [stats, setStats] = useState(null);
   const [notice, setNotice] = useState("");
+  const [finalExamPassed, setFinalExamPassed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setFinalExamPassed(false);
+    if (isGuest || !token || !course?.id) return () => { alive = false; };
+    api.platform(`/courses/${course.id}/study-state`, token)
+      .then((s) => { if (alive) setFinalExamPassed(s.finalExamPassed === true); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [course?.id, token, isGuest]);
   const done = Object.fromEntries(
-    lessons
-      .filter((l) => l.type !== "quiz" && l.completed === true)
-      .map((l) => [l.id, true]),
+    lessons.filter((l) =>
+      (l.type !== 'quiz' && l.completed === true) ||
+      (l.type === 'quiz' && finalExamPassed && Number(l.quizId) > 0 && Number(l.quizId) === Number(course.finalQuizId))
+    ).map((l) => [l.id, true]),
   );
 
   const syncRef = useRef(null);
@@ -180,12 +191,6 @@ w.restored = true;
     );
   const select = (l) => {
     if (!l) return;
-    if (l.locked) {
-      setNotice(
-        "Bài học đang bị khóa. Hãy đạt quiz của bài trước để tiếp tục.",
-      );
-      return;
-    }
     syncRef.current?.({ playing: true });
     if (l.id !== lesson.id) setNotice("");
     if (l.type === "quiz") onOpenQuiz(l.quizId);

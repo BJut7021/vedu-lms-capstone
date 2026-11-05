@@ -23,6 +23,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Public } from '../auth/public.decorator';
 import { PlatformService } from './platform.service';
 import { ExamService } from './exam.service';
+import { FinalEssayService } from './final-essay.service';
 import { MomoService } from './momo.service';
 import { ManualPaymentService } from './manual-payment.service';
 import { RecommendationService } from './recommendation.service';
@@ -33,6 +34,7 @@ export class PlatformController {
   constructor(
     private readonly service: PlatformService,
     private readonly exams: ExamService,
+    private readonly finalEssays: FinalEssayService,
     private readonly momo: MomoService,
     private readonly manualPayments: ManualPaymentService,
     private readonly recommendations: RecommendationService,
@@ -413,6 +415,29 @@ async practiceFile(
   ) {
     return this.service.archiveTeacherQuiz(r.user, id);
   }
+  @Get('final-essays/quizzes/:id')
+  essayPrompt(@Req() r: AuthRequest,@Param('id',ParseIntPipe) id:number){return this.finalEssays.prompt(id,r.user);}
+  @Patch('final-essays/quizzes/:id') @Roles('ADMIN','TEACHER')
+  essaySavePrompt(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number,@Body() b:any){return this.finalEssays.savePrompt(id,r.user,b);}
+  @Post('final-essays/attempts/:id/image') @Roles('STUDENT')
+  @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1}}))
+  essaySubmit(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number,@UploadedFile() file?:{buffer:Buffer;mimetype:string;originalname:string}){return this.finalEssays.submitImage(id,r.user,file);}
+  @Get('final-essays/attempts/:id/review') @Roles('STUDENT')
+  essayReview(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number){return this.finalEssays.reviewQuiz(id,r.user);}
+  @Get('final-essays/attempts/:id/result')
+  essayResult(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number){return this.finalEssays.result(id,r.user);}
+  @Get('final-essays/attempts/:id/image')
+  async essayImage(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number,@Res() res:Response){
+    const file=await this.finalEssays.image(id,r.user);
+    res.setHeader('Content-Type',file.mime);
+    res.setHeader('Cache-Control','private, no-store');
+    res.setHeader('X-Content-Type-Options','nosniff');
+    res.send(file.bytes);
+  }
+  @Get('final-essays/courses/:id/submissions') @Roles('ADMIN','TEACHER')
+  essayList(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number){return this.finalEssays.pending(r.user,id);}
+  @Post('final-essays/attempts/:id/grade') @Roles('ADMIN','TEACHER')
+  essayGrade(@Req() r:AuthRequest,@Param('id',ParseIntPipe) id:number,@Body() b:any){return this.finalEssays.grade(id,r.user,b);}
   @Patch('attempts/:id/draft') @Roles('STUDENT') draft(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
