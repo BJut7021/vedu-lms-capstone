@@ -47,11 +47,17 @@ services:
       - /seed/content_workflow.sql
       - -f
       - /seed/curated_catalog.sql
+      - -f
+      - /seed/01_essay_migration.sql
+      - -f
+      - /seed/02_seed_16_prompts.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
       - ./database/vedu/content_workflow.sql:/seed/content_workflow.sql:ro
       - ./database/vedu/curated_catalog.sql:/seed/curated_catalog.sql:ro
+      - ./database/vedu/01_essay_migration.sql:/seed/01_essay_migration.sql:ro
+      - ./database/vedu/02_seed_16_prompts.sql:/seed/02_seed_16_prompts.sql:ro
     depends_on:
       db:
         condition: service_healthy
