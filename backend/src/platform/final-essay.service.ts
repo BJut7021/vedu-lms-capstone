@@ -5,7 +5,8 @@ import { AccessService, Actor } from '../auth/access.service';
 export class FinalEssayService {
  constructor(private readonly db:DataSource, private readonly access:AccessService){}
  private async getQuiz(quizId:number){
-   const [q] = await this.db.query(`SELECT quiz_id, course_id, lesson_id, title FROM assessment.quizzes WHERE quiz_id=$1 AND NOT is_deleted AND is_published`,[quizId]);
+   const [q] = await this.db.query(`SELECT q.quiz_id,q.course_id,q.lesson_id,q.title,q.passing_score,c.final_mode,c.final_mcq_percent
+     FROM assessment.quizzes q JOIN lms.courses c USING(course_id) WHERE quiz_id=$1 AND NOT q.is_deleted AND q.is_published`,[quizId]);
    if(!q || q.lesson_id != null) throw new NotFoundException('Không tìm thấy bài thi cuối khóa');
    return q;
  }
@@ -14,14 +15,22 @@ export class FinalEssayService {
    if(actor.role==='STUDENT') await this.access.study(actor,Number(q.course_id));
    else await this.access.manageCourse(actor,Number(q.course_id));
    const [p]=await this.db.query('SELECT prompt_text FROM assessment.final_essay_prompts WHERE quiz_id=$1',[quizId]);
-   return {quizId,courseId:Number(q.course_id),prompt:p?.prompt_text || '',weightMcq:0.4,weightEssay:0.6,passingScore:5};
+   const weightMcq=q.final_mode==='MCQ_ONLY'?1:Number(q.final_mcq_percent)/100;
+   return {quizId,courseId:Number(q.course_id),mode:q.final_mode,prompt:p?.prompt_text || '',weightMcq,weightEssay:1-weightMcq,passingScore:Number(q.passing_score)};
  }
  async savePrompt(quizId:number,actor:Actor,raw:any){
    const q=await this.getQuiz(quizId);
    await this.access.manageCourse(actor,Number(q.course_id));
+   if(q.final_mode!=='MCQ_ESSAY') throw new BadRequestException('Khóa học không dùng tự luận cuối khóa');
    const value=String(raw?.prompt ?? '').trim();
    if(!value || value.length>10000) throw new BadRequestException('Đề tự luận phải có nội dung (tối đa 10000 ký tự)');
    await this.db.query(`INSERT INTO assessment.final_essay_prompts(quiz_id,prompt_text,updated_by) VALUES($1,$2,$3) ON CONFLICT(quiz_id) DO UPDATE SET prompt_text=EXCLUDED.prompt_text,updated_by=EXCLUDED.updated_by,updated_at=now()`,[quizId,value,actor.userId]);
+   await this.db.query(
+     `UPDATE assessment.course_assignments SET instructions=$2,updated_at=now()
+      WHERE course_id=$1 AND assignment_key='final-essay'
+      AND NOT EXISTS(SELECT 1 FROM assessment.course_assignment_versions v WHERE v.assignment_id=course_assignments.assignment_id)`,
+     [q.course_id,value],
+   );
    return {saved:true};
  }
  async submitImage(attemptId:number,actor:Actor,file?:{buffer:Buffer; mimetype:string;originalname:string}){
@@ -37,6 +46,8 @@ export class FinalEssayService {
      const [a]=await m.query(`SELECT a.attempt_id,a.quiz_id,a.course_id,a.student_id,a.status,q.lesson_id FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id) WHERE a.attempt_id=$1 AND a.student_id=$2 FOR UPDATE OF a`,[attemptId,actor.userId]);
      if(!a || a.lesson_id!=null || a.status!=='GRADED') throw new BadRequestException('Cần nộp phần trắc nghiệm cuối khóa trước khi gửi ảnh');
      await this.access.study(actor,Number(a.course_id));
+     const q=await this.getQuiz(Number(a.quiz_id));
+     if(q.final_mode!=='MCQ_ESSAY') throw new BadRequestException('Khóa học không dùng tự luận cuối khóa');
      const [p]=await m.query('SELECT prompt_text FROM assessment.final_essay_prompts WHERE quiz_id=$1',[a.quiz_id]);
      if(!p?.prompt_text?.trim()) throw new BadRequestException('Giảng viên chưa đăng đề tự luận');
      const [already]=await m.query('SELECT attempt_id FROM assessment.final_essay_submissions WHERE attempt_id=$1',[attemptId]);
@@ -46,16 +57,25 @@ export class FinalEssayService {
    });
  }
  async result(attemptId:number,actor:Actor){
-   const [a]=await this.db.query(`SELECT a.*,q.lesson_id FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id) WHERE attempt_id=$1`,[attemptId]);
+   const [a]=await this.db.query(`SELECT a.*,q.lesson_id,q.passing_score,c.final_mode,c.final_mcq_percent,
+     assessment.final_score(a.attempt_id) AS final_score, assessment.final_passed(a.attempt_id) AS passed
+     FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id)
+     JOIN lms.courses c ON c.course_id=a.course_id WHERE a.attempt_id=$1`,[attemptId]);
    if(!a || a.lesson_id!=null) throw new NotFoundException();
    if(actor.role==='STUDENT'){
      if(Number(a.student_id)!==actor.userId) throw new ForbiddenException();
      await this.access.study(actor,Number(a.course_id));
    }else await this.access.manageCourse(actor,Number(a.course_id));
-   const [s]=await this.db.query(`SELECT grade,feedback,submitted_at,graded_at FROM assessment.final_essay_submissions WHERE attempt_id=$1`,[attemptId]);
-   const status=!s?'AWAITING_UPLOAD':s.grade==null?'PENDING_REVIEW':'GRADED';
-   const total=s?.grade==null?null:Math.round((Number(a.score)*0.4+Number(s.grade)*0.6)*100)/100;
-   return {attemptId,quizId:Number(a.quiz_id),mcqScore:a.score==null?null:Number(a.score),essayScore:s?.grade==null?null:Number(s.grade),finalScore:total,passed:total==null?null:total>=5,status,feedback:s?.feedback||'',submittedAt:s?.submitted_at||null,gradedAt:s?.graded_at||null};
+   const [legacy]=await this.db.query(`SELECT grade,feedback,submitted_at,graded_at FROM assessment.final_essay_submissions WHERE attempt_id=$1`,[attemptId]);
+   const total=a.final_score==null?null:Number(a.final_score);
+   const [version] = a.final_mode!=='MCQ_ONLY' ? await this.db.query(
+     `SELECT v.status,v.score,v.feedback,v.updated_at,v.graded_at FROM assessment.course_assignment_versions v JOIN assessment.course_assignments t USING(assignment_id)
+      WHERE v.attempt_id=$1 AND v.student_id=$2 AND t.course_id=$3 AND t.section_id IS NULL ORDER BY version_no DESC LIMIT 1`,
+     [attemptId,a.student_id,a.course_id],
+   ) : [];
+   const evidence=version || legacy;
+   const status=a.status==='IN_PROGRESS'?'IN_PROGRESS':total!=null?'GRADED':evidence&&['SUBMITTED','UNDER_REVIEW','NEEDS_REVISION'].includes(evidence.status ?? 'SUBMITTED')?'PENDING_REVIEW':'AWAITING_UPLOAD';
+   return {attemptId,quizId:Number(a.quiz_id),mode:a.final_mode,mcqPercent:a.final_mode==='MCQ_ONLY'?100:Number(a.final_mcq_percent),mcqScore:a.score==null?null:Number(a.score),essayScore:evidence?.score==null&&evidence?.grade==null?null:Number(evidence.score??evidence.grade),finalScore:total,passed:total==null?null:a.passed,status,feedback:evidence?.feedback||'',submittedAt:evidence?.submitted_at||evidence?.updated_at||null,gradedAt:evidence?.graded_at||null};
  }
 
   async reviewQuiz(attemptId: number, actor: Actor) {
@@ -95,7 +115,7 @@ export class FinalEssayService {
   }
  async pending(actor:Actor,courseId:number){
    await this.access.manageCourse(actor,courseId);
-   const rows=await this.db.query(`SELECT s.attempt_id,s.quiz_id,q.title AS quiz_title,u.full_name AS student_name,s.student_id,s.submitted_at,s.grade,s.feedback,a.score AS mcq_score FROM assessment.final_essay_submissions s JOIN assessment.quiz_attempts a USING(attempt_id) JOIN assessment.quizzes q ON q.quiz_id=s.quiz_id JOIN auth.users u ON u.user_id=s.student_id WHERE q.course_id=$1 AND q.lesson_id IS NULL ORDER BY s.graded_at NULLS FIRST,s.submitted_at DESC`,[courseId]);
+   const rows=await this.db.query(`SELECT s.attempt_id,s.quiz_id,q.title AS quiz_title,u.full_name AS student_name,s.student_id,s.submitted_at,s.grade,s.feedback,a.score AS mcq_score,q.passing_score,assessment.final_score(a.attempt_id) AS final_score FROM assessment.final_essay_submissions s JOIN assessment.quiz_attempts a USING(attempt_id) JOIN assessment.quizzes q ON q.quiz_id=s.quiz_id JOIN auth.users u ON u.user_id=s.student_id WHERE q.course_id=$1 AND q.lesson_id IS NULL ORDER BY s.graded_at NULLS FIRST,s.submitted_at DESC`,[courseId]);
    return rows.map((r:any)=>({...r,image_data:undefined}));
  }
  async image(attemptId:number,actor:Actor){
@@ -113,7 +133,7 @@ export class FinalEssayService {
    const [row]=await this.db.query(`SELECT a.course_id FROM assessment.final_essay_submissions s JOIN assessment.quiz_attempts a USING(attempt_id) WHERE s.attempt_id=$1`,[attemptId]);
    if(!row) throw new NotFoundException('Không tìm thấy bài tự luận');
    await this.access.manageCourse(actor,Number(row.course_id));
-   const updated=await this.db.query(`UPDATE assessment.final_essay_submissions SET grade=$2,feedback=$3,graded_by=$4,graded_at=now() WHERE attempt_id=$1 AND grade IS NULL RETURNING attempt_id`,[attemptId,value,feedback,actor.userId]);
+   const updated=await this.db.query(`WITH updated AS (UPDATE assessment.final_essay_submissions SET grade=$2,feedback=$3,graded_by=$4,graded_at=now() WHERE attempt_id=$1 AND grade IS NULL RETURNING attempt_id) SELECT * FROM updated`,[attemptId,value,feedback,actor.userId]);
    if(!updated.length) throw new BadRequestException('Bài đã được chấm. Không thể chấm lại trong phiên bản này.');
    return this.result(attemptId,actor);
  }

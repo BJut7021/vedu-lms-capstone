@@ -31,13 +31,13 @@ export default function Classroom({
   
   const [stats, setStats] = useState(null);
   const [notice, setNotice] = useState("");
-  const [finalExamPassed, setFinalExamPassed] = useState(false);
+  const [finalState, setFinalState] = useState(null);
+  const finalExamPassed = finalState?.courseId === course?.id && finalState?.token === token && finalState.passed;
   useEffect(() => {
     let alive = true;
-    setFinalExamPassed(false);
     if (isGuest || !token || !course?.id) return () => { alive = false; };
     api.platform(`/courses/${course.id}/study-state`, token)
-      .then((s) => { if (alive) setFinalExamPassed(s.finalExamPassed === true); })
+      .then((s) => { if (alive) setFinalState({ courseId: course.id, token, passed: s.finalExamPassed === true }); })
       .catch(() => {});
     return () => { alive = false; };
   }, [course?.id, token, isGuest]);
@@ -98,7 +98,7 @@ w.restored = true;
       durationSeconds: Math.ceil(v.duration),
     }));
     return true;
-  }, []);
+  }, [setStats]);
   const sync = useCallback(
     async ({ seeking = false, playing } = {}) => {
       const video = videoRef.current,
@@ -135,7 +135,7 @@ w.restored = true;
         sending.current = false;
       }
     },
-    [token],
+    [token, setStats, setNotice],
   );
   useEffect(() => {
     syncRef.current = sync;
@@ -247,6 +247,15 @@ w.restored = true;
       video={video}
       token={token}
       onRefreshCourse={onRefreshCourse}
+      onMarkLearned={async (lessonId) => {
+        try {
+          await api.platform(`/courses/${course.id}/lessons/${lessonId}/learning-status`, token, {}, "PATCH");
+          setNotice("Đã ghi nhận bài học. Trạng thái đạt mô-đun vẫn phụ thuộc quiz và bài nộp bắt buộc.");
+          await onRefreshCourse();
+        } catch (error) {
+          setNotice(error.message);
+        }
+      }}
     />
   );
 }

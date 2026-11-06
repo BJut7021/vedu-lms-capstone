@@ -274,7 +274,7 @@ export class RecommendationService implements OnModuleInit {
     if (actor.role !== 'STUDENT') throw new ForbiddenException();
     await this.access.study(actor, courseId);
     const lessons: any[] = await this.db.query(
-      `SELECT l.lesson_id,l.title,l.lesson_order FROM lms.lessons l WHERE l.course_id=$1 AND l.is_published AND NOT l.is_deleted AND NOT EXISTS(SELECT 1 FROM learning.lesson_progress p WHERE p.lesson_id=l.lesson_id AND p.student_id=$2 AND p.status='COMPLETED') ORDER BY lesson_order`,
+      `SELECT l.lesson_id,l.title,l.lesson_order FROM lms.lessons l WHERE l.course_id=$1 AND l.is_published AND NOT l.is_deleted AND NOT EXISTS(SELECT 1 FROM learning.lesson_progress p WHERE p.lesson_id=l.lesson_id AND p.student_id=$2 AND p.status='LEARNED') ORDER BY lesson_order`,
       [courseId, actor.userId],
     );
     const history: any[] = await this.db.query(

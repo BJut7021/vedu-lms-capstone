@@ -47,7 +47,7 @@ export default function InlineLessonQuiz({ quizId, token, onQuizPassed }) {
       setPassed(true);
       try {
         await onQuizPassed?.();
-      } catch (err) {
+      } catch {
         setRefreshError(
           "Quiz đã đạt nhưng chưa cập nhật được danh sách bài học. Hãy tải lại trang.",
         );

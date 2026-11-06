@@ -24,6 +24,7 @@ export type PathLesson = {
   goals: string[];
   sources: unknown[];
   completed: boolean;
+  gaps?: { skill: string; score: number; evidenceCount: number }[];
   modelScore?: number;
   components?: { bpr?: number; gru?: number; huspm?: number };
 };
@@ -45,9 +46,9 @@ export function planOptions(
   modelAvailable: boolean,
 ) {
   const completed = new Set(
-    lessons.filter((l) => l.completed).map((l) => l.id),
+    lessons.filter((l) => l.completed && !l.gaps?.length).map((l) => l.id),
   );
-  const remaining = lessons.filter((l) => !l.completed);
+  const remaining = lessons.filter((l) => !completed.has(l.id));
   const byId = new Map(lessons.map((l) => [l.id, l]));
   // Reject cycles and missing prerequisites instead of silently producing invalid curricula.
   const visiting = new Set<number>(),
@@ -132,7 +133,7 @@ export function planOptions(
       for (const l of remaining) {
         const kindMatch = v.kinds.includes(l.kind);
         if (
-          l.core ||
+          l.core || l.gaps?.length ||
           (kindMatch &&
             (v.id === 'deep' ||
               l.difficulty <=
@@ -158,6 +159,7 @@ export function planOptions(
             l.prerequisites.every((id) => satisfied.has(id)),
         );
         const priority = (l: PathLesson) =>
+          2 * Math.max(0, ...(l.gaps ?? []).map((gap) => 0.7 - gap.score)) +
           (modelAvailable ? v.weight * (l.modelScore ?? 0) : 0) +
           (l.goals.includes(p.occupation) ? 0.3 : 0) +
           (l.difficulty === level ? 0.15 : 0) +
@@ -177,7 +179,7 @@ export function planOptions(
         {
           lessonId: l.id,
           title: l.title,
-          activity: 'LEARN',
+          activity: l.gaps?.length ? 'REVIEW' : 'LEARN',
           estimatedSeconds: Math.max(1, l.seconds),
         },
         ...(ordered.length >= 3 && v.review > 0
@@ -246,7 +248,7 @@ export function planOptions(
             modelAvailable
               ? 'Có điểm BPR/GRU/HUSPM cho các bài đã mapping; dùng để xếp bài đủ điều kiện, không ghi đè quan hệ tiên quyết. Bài không có điểm dùng tiêu chí học thuật.'
               : 'Chưa có điểm mô hình phù hợp; phương án dựa trên chương trình, mục tiêu và tiên quyết (CURRICULUM), không giả nhận kết quả AI.',
-            'Lộ trình là kế hoạch học, không phải cam kết tăng điểm. Muốn cấp chứng nhận vẫn phải học đủ bài và đạt mọi quiz của khóa.',
+            'Lộ trình dự kiến giúp củng cố các kỹ năng còn yếu. Chứng nhận yêu cầu đạt mô-đun bắt buộc và đánh giá cuối khóa.',
           ],
           steps: ordered.map((l, i) => ({
             lessonId: l.id,
@@ -264,6 +266,7 @@ export function planOptions(
             score: l.modelScore ?? null,
             components: l.components ?? null,
             reasons: [
+              ...(l.gaps ?? []).map((gap) => `Cần ôn ${gap.skill}: ${Math.round(gap.score * 100)}% từ ${gap.evidenceCount} minh chứng, dưới mục tiêu gợi ý 70%.`),
               l.core
                 ? 'Nội dung nền bắt buộc của chương trình.'
                 : `Bổ sung cho hướng ${v.title.toLowerCase()}.`,

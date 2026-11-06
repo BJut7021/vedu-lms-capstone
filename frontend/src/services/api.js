@@ -45,6 +45,24 @@ function withToken(token) {
 }
 
 export const api = {
+  async saveCourseAssignment(id, token, form) {
+    const response = await fetch(`${API_BASE_URL}/platform/assignments/${id}/versions`, {
+      method: "POST", headers: withToken(token), body: form,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Không lưu được bài nộp");
+    return result;
+  },
+  async downloadCourseAssignment(id, token, name) {
+    const response = await fetch(`${API_BASE_URL}/platform/assignment-versions/${id}/file`, { headers: withToken(token) });
+    if (!response.ok) throw new Error("Không tải được tệp bài nộp");
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
   me: (token) => request("/users/me", { headers: withToken(token) }),
   health: () => request("/health"),
 

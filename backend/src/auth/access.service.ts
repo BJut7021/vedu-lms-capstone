@@ -85,43 +85,7 @@ async lesson(actor: Actor, courseId: number, lessonId: number) {
     return;
   }
 
-  // Bài đầu tiên luôn được mở cho học viên đã ghi danh.
-  if (index === 0) return;
-
-  // Các bài trước phải có ít nhất một lượt quiz đạt.
-  const previousIds = lessons
-    .slice(0, index)
-    .map((l) => Number(l.lesson_id));
-
-  const passedRows: { lesson_id: number }[] =
-    await this.db.query(
-      `SELECT DISTINCT q.lesson_id
-       FROM assessment.quizzes q
-       JOIN assessment.quiz_attempts a
-         ON a.quiz_id = q.quiz_id
-       WHERE q.course_id = $1
-         AND q.lesson_id = ANY($2::bigint[])
-         AND q.is_published = TRUE
-         AND NOT q.is_deleted
-         AND a.student_id = $3
-         AND a.status = 'GRADED'
-         AND a.score >= q.passing_score`,
-      [courseId, previousIds, actor.userId],
-    );
-
-  const passedIds = new Set(
-    passedRows.map((r) => Number(r.lesson_id)),
-  );
-
-  const missingIndex = previousIds.findIndex(
-    (id) => !passedIds.has(id),
-  );
-
-  if (missingIndex !== -1) {
-    throw new ForbiddenException(
-      `Cần đạt quiz Bài ${missingIndex + 1} trước khi học bài tiếp theo.`,
-    );
-  }
+  // Enrolled learners can read published lessons in any order.
 }
 
 }

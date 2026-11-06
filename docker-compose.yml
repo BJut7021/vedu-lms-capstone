@@ -16,6 +16,7 @@ services:
       - ./database/vedu/portal_demo_seed.sql:/docker-entrypoint-initdb.d/03-portal-demo-seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/docker-entrypoint-initdb.d/04-platform-upgrade.sql:ro
       - ./database/vedu/content_workflow.sql:/docker-entrypoint-initdb.d/05-content-workflow.sql:ro
+      - ./database/vedu/01_essay_migration.sql:/docker-entrypoint-initdb.d/06-final-essay.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -29,29 +30,35 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_DB}
     command:
-      - psql
-      - -v
-      - ON_ERROR_STOP=1
-      - -h
-      - db
-      - -U
-      - ${POSTGRES_USER}
-      - -d
-      - ${POSTGRES_DB}
-      - -f
-      - /seed/portal_demo_seed.sql
-      - -f
-      - /seed/platform_upgrade.sql
-      - -f
-      - /seed/content_workflow.sql
-      - -f
-      - /seed/curated_catalog.sql
+      - sh
+      - -ec
+      - |
+        until psql -Atqc "SELECT to_regclass('assessment.final_essay_submissions')" 2>/dev/null | grep -q final_essay_submissions; do
+          echo "Waiting for PostgreSQL initialization to finish..."
+          sleep 2
+        done
+        psql -v ON_ERROR_STOP=1 \
+          -f /seed/portal_demo_seed.sql \
+          -f /seed/platform_upgrade.sql \
+          -f /seed/content_workflow.sql \
+          -f /seed/curated_catalog.sql \
+          -f /seed/01_essay_migration.sql \
+          -f /seed/02_seed_16_prompts.sql \
+          -f /seed/03_course_learning_workflow.sql \
+          -f /seed/04_student_workflow_ux.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
       - ./database/vedu/content_workflow.sql:/seed/content_workflow.sql:ro
       - ./database/vedu/curated_catalog.sql:/seed/curated_catalog.sql:ro
+      - ./database/vedu/01_essay_migration.sql:/seed/01_essay_migration.sql:ro
+      - ./database/vedu/02_seed_16_prompts.sql:/seed/02_seed_16_prompts.sql:ro
+      - ./database/vedu/03_course_learning_workflow.sql:/seed/03_course_learning_workflow.sql:ro
+      - ./database/vedu/04_student_workflow_ux.sql:/seed/04_student_workflow_ux.sql:ro
     depends_on:
       db:
         condition: service_healthy

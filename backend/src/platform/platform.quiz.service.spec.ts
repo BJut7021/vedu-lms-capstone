@@ -146,10 +146,11 @@ describe('PlatformService scoped teacher quiz API', () => {
 
   it('soft-deletes a quiz and never deletes attempt history', async () => {
     const { db, service } = fixture();
-    db.query.mockResolvedValueOnce([{ ...quiz, attempt_count: 4 }]);
+    db.query.mockResolvedValueOnce([{ ...quiz, lesson_id: null, attempt_count: 4 }]);
     const manager = { query: jest.fn<any>() };
     manager.query
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ quiz_id: 5, lesson_id: null }])
       .mockResolvedValueOnce([{ quiz_id: 5 }]);
     db.transaction.mockImplementationOnce((callback: any) => callback(manager));
 

@@ -8,18 +8,18 @@ export default function QuizView({
   onSubmit,
   onSaveDraft,
   onContinue,
-  onResult,
   embedded = false,
   essayConfig = null,
   essayResult = null,
   onEssayUpload = null,
   onRefreshEssay = null,
+  finalPractical = null,
 }) {
   const [essayFile,setEssayFile] = useState(null);
   const [essayBusy,setEssayBusy] = useState(false);
   const [essayError,setEssayError] = useState('');
-  const [essayState,setEssayState] = useState(essayResult);
-  useEffect(()=>setEssayState(essayResult),[essayResult]);
+  const [updatedEssay,setEssayState] = useState(null);
+  const essayState = updatedEssay ?? essayResult;
   const uploadEssay=async()=>{
     if(!essayFile || !onEssayUpload) return;
     setEssayBusy(true);setEssayError('');
@@ -180,7 +180,7 @@ export default function QuizView({
         {isSubmitted && result && (
           <div
             className={`p-6 rounded-2xl border text-center space-y-3 ${
-              essayConfig ? "bg-blue-50 border-blue-200 text-blue-900" : result.passed
+              (essayConfig || finalPractical) ? "bg-blue-50 border-blue-200 text-blue-900" : result.passed
                 ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                 : "bg-red-50 border-red-200 text-red-900"
             }`}
@@ -192,12 +192,12 @@ export default function QuizView({
               />
             </div>
             <h2 className="text-2xl font-black">
-              {essayConfig ? "Đã nộp trắc nghiệm – chờ chấm tự luận" : result.passed
+              {finalPractical ? "Đã nộp trắc nghiệm – tiếp tục nộp sản phẩm" : essayConfig ? "Đã nộp trắc nghiệm – tiếp tục phần tự luận" : result.passed
                 ? "Chúc mừng! Bạn đã Đạt yêu cầu"
                 : "Chưa đạt điểm chuẩn"}
             </h2>
             <p className="text-sm">
-              {essayConfig ? "Điểm trắc nghiệm" : "Điểm số"}: <strong className="text-xl">{result.score}/10</strong> (
+              {essayConfig || finalPractical ? "Điểm trắc nghiệm" : "Điểm số"}: <strong className="text-xl">{result.score}/10</strong> (
               {result.correctCount}/{result.totalQuestions} câu đúng) • Thời
               gian làm: {result.timeSpent}
             </p>
@@ -257,11 +257,11 @@ export default function QuizView({
           })}
         </div>
 
-        {essayConfig && (
+        {essayConfig && !finalPractical && (
           <section className="bg-white rounded-2xl p-6 border border-blue-200 space-y-3">
-            <h2 className="text-xl font-bold text-gray-900">Phần 2 – Tự luận (60%)</h2>
+            <h2 className="text-xl font-bold text-gray-900">Phần 2 – Tự luận ({Math.round(essayConfig.weightEssay * 100)}%)</h2>
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{essayConfig.prompt || 'Chưa có đề tự luận. Vui lòng liên hệ giảng viên; hệ thống chưa thể nhận ảnh khi chưa có đề.'}</p>
-            <p className="text-xs text-gray-500">Nộp ảnh JPG, PNG hoặc WEBP tối đa 5MB. Giảng viên sẽ chấm theo thang 10. Điểm cuối khóa = trắc nghiệm × 40% + tự luận × 60%. Đạt từ 5/10.</p>
+            <p className="text-xs text-gray-500">Nộp ảnh JPG, PNG hoặc WEBP tối đa 5 MB. Trắc nghiệm chiếm {Math.round(essayConfig.weightMcq * 100)}%. Đạt từ {essayConfig.passingScore}/10.</p>
             {essayState?.status==='PENDING_REVIEW' && <p className="font-semibold text-amber-700">Đã nhận ảnh bài làm. Đang chờ giảng viên chấm.</p>}
             {essayState?.status==='GRADED' && <div className="bg-blue-50 rounded-xl p-3 text-sm space-y-1">
               <p>Điểm trắc nghiệm: {essayState.mcqScore}/10</p>
@@ -281,6 +281,7 @@ export default function QuizView({
           </section>
         )}
 
+        {isSubmitted && finalPractical}
         {!isSubmitted ? (
           <div className="text-center pt-4">
             {submitError && (

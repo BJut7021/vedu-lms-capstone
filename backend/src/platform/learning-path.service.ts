@@ -70,7 +70,7 @@ export class LearningPathService {
     await this.access.study(actor, courseId);
     const rows: any[] = await this.db.query(
       `SELECT l.*, m.difficulty,m.kind,m.is_core,m.skills,m.goals,m.prerequisites,m.outcomes,m.sources,
-      EXISTS(SELECT 1 FROM learning.lesson_progress lp WHERE lp.student_id=$2 AND lp.lesson_id=l.lesson_id AND lp.status='COMPLETED') AS completed
+      EXISTS(SELECT 1 FROM learning.lesson_progress lp WHERE lp.student_id=$2 AND lp.lesson_id=l.lesson_id AND lp.status='LEARNED') AS completed
       FROM lms.lessons l LEFT JOIN lms.lesson_pedagogy m USING(lesson_id)
       WHERE l.course_id=$1 AND l.is_published AND NOT l.is_deleted ORDER BY l.lesson_order,l.lesson_id`,
       [courseId, actor.userId],
@@ -79,6 +79,31 @@ export class LearningPathService {
       throw new BadRequestException(
         'Khóa quá 300 bài; hãy chia thành các khóa nhỏ để lập kế hoạch.',
       );
+    const evidenceRows: { skill: string; score: string; evidence_count: number }[] = await this.db.query(
+      `WITH latest_quiz AS (
+         SELECT DISTINCT ON (a.quiz_id) a.quiz_id,a.attempt_id
+         FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id)
+         WHERE a.student_id=$2 AND a.course_id=$1 AND a.status='GRADED' AND q.is_published AND NOT q.is_deleted
+         ORDER BY a.quiz_id,a.attempt_no DESC
+       ), latest_work AS (
+         SELECT DISTINCT ON (v.assignment_id) v.assignment_id,v.rubric_scores,t.rubric
+         FROM assessment.course_assignment_versions v JOIN assessment.course_assignments t USING(assignment_id)
+         WHERE v.student_id=$2 AND t.course_id=$1 AND v.rubric_scores IS NOT NULL
+         ORDER BY v.assignment_id,v.version_id DESC
+       ), signals AS (
+         SELECT qs.skill,CASE WHEN EXISTS (SELECT 1 FROM assessment.quiz_attempt_answers ans
+           WHERE ans.attempt_id=a.attempt_id AND ans.question_id=q.question_id AND ans.is_correct) THEN 1.0 ELSE 0.0 END AS score
+         FROM latest_quiz a JOIN assessment.questions q USING(quiz_id) JOIN assessment.question_skills qs USING(question_id)
+         UNION ALL
+         SELECT criterion->>'skill',(v.rubric_scores->>(criterion->>'id'))::numeric / NULLIF((criterion->>'max')::numeric,0)
+         FROM latest_work v CROSS JOIN LATERAL jsonb_array_elements(v.rubric) criterion
+         WHERE v.rubric_scores ? (criterion->>'id')
+       )
+       SELECT skill,avg(score) AS score,count(score)::int AS evidence_count FROM signals
+       WHERE skill IS NOT NULL GROUP BY skill HAVING count(score)>=2`,
+      [courseId, actor.userId],
+    );
+    const weakSkills = evidenceRows.filter((row) => Number(row.score) < 0.7);
     let ranking: any = {
       source: 'CURRICULUM',
       ranking: [],
@@ -94,6 +119,8 @@ export class LearningPathService {
       const score = ranking.ranking?.find(
         (s: any) => s.lessonId === Number(r.lesson_id),
       );
+      const gaps = weakSkills.filter((item) => r.skills?.includes(item.skill))
+        .map((item) => ({ skill: item.skill, score: Number(item.score), evidenceCount: item.evidence_count }));
       return {
         id: Number(r.lesson_id),
         title: r.title,
@@ -115,6 +142,7 @@ export class LearningPathService {
         goals: r.goals ?? [],
         sources: r.sources ?? [],
         completed: r.completed,
+        gaps,
         ...(ranking.source === 'MODEL' && score
           ? { modelScore: score.score, components: score.components }
           : {}),
@@ -127,7 +155,7 @@ export class LearningPathService {
       throw new BadRequestException((e as Error).message);
     }
     const evidence = {
-      version: 'vedu-path-planner-1.1',
+      version: 'vedu-path-planner-1.2',
       source: ranking.source === 'MODEL' ? 'MODEL_CONSTRAINED' : 'CURRICULUM',
       experimentId: ranking.source === 'MODEL' ? ranking.experimentId : null,
       reason: ranking.reason,
@@ -135,6 +163,7 @@ export class LearningPathService {
       requestedCount: p.count,
       actualCount: plans.length,
       completedLessons: lessons.filter((l) => l.completed).length,
+      weakSkills: weakSkills.map((item) => ({ skill: item.skill, score: Number(item.score), evidenceCount: item.evidence_count })),
       note:
         plans.length < p.count
           ? 'Chỉ có số phương án khác nhau như hiển thị do số bài còn lại/tiên quyết. Không nhân bản kế hoạch để đủ số lượng.'
@@ -174,7 +203,7 @@ export class LearningPathService {
     if (!row) throw new NotFoundException('Không có lộ trình thuộc tài khoản.');
     await this.access.study(actor, Number(row.course_id));
     const progress: any[] = await this.db.query(
-      "SELECT lesson_id FROM learning.lesson_progress WHERE student_id=$1 AND course_id=$2 AND status='COMPLETED'",
+      "SELECT lesson_id FROM learning.lesson_progress WHERE student_id=$1 AND course_id=$2 AND status='LEARNED'",
       [actor.userId, row.course_id],
     );
     const done = new Set(progress.map((r) => Number(r.lesson_id)));

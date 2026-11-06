@@ -1,0 +1,447 @@
+{
+  "environment": "local CPU",
+  "completed_runs": 20,
+  "model_rows": 160,
+  "epochs": [
+    20
+  ],
+  "seeds": [
+    13,
+    21,
+    42,
+    77,
+    101
+  ],
+  "checks": [
+    {
+      "run": "kaggle_logs\\global_temporal\\seed-101",
+      "items": 5,
+      "users": 300,
+      "train_rows": 6300,
+      "dataset": "kaggle_logs",
+      "protocol": "global_temporal",
+      "seed": 101,
+      "test_known_history": 298,
+      "test_all_targets": 298,
+      "test_unsupported": 0,
+      "model_sha256": "97813522eeafd77fcd6c6135047125c41f938f6cf1b282927c26e14d8cfcb51b",
+      "rank_rows": 4760,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\global_temporal\\seed-13",
+      "items": 5,
+      "users": 300,
+      "train_rows": 6300,
+      "dataset": "kaggle_logs",
+      "protocol": "global_temporal",
+      "seed": 13,
+      "test_known_history": 298,
+      "test_all_targets": 298,
+      "test_unsupported": 0,
+      "model_sha256": "0ae593bb5f236c4b95d9a70b0c577ee259dcc4bb0085cab9a07ac916d4285165",
+      "rank_rows": 4760,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\global_temporal\\seed-21",
+      "items": 5,
+      "users": 300,
+      "train_rows": 6300,
+      "dataset": "kaggle_logs",
+      "protocol": "global_temporal",
+      "seed": 21,
+      "test_known_history": 298,
+      "test_all_targets": 298,
+      "test_unsupported": 0,
+      "model_sha256": "3665d4b1b7432fd0c5acdbd2f991fc39c6eb25a8d7d86801581a8936d0c7bf75",
+      "rank_rows": 4760,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\global_temporal\\seed-42",
+      "items": 5,
+      "users": 300,
+      "train_rows": 6300,
+      "dataset": "kaggle_logs",
+      "protocol": "global_temporal",
+      "seed": 42,
+      "test_known_history": 298,
+      "test_all_targets": 298,
+      "test_unsupported": 0,
+      "model_sha256": "11e9388e544c08ef5c505755a4dc4bcc35758795ec5836f6da7fe47737aa916b",
+      "rank_rows": 4760,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\global_temporal\\seed-77",
+      "items": 5,
+      "users": 300,
+      "train_rows": 6300,
+      "dataset": "kaggle_logs",
+      "protocol": "global_temporal",
+      "seed": 77,
+      "test_known_history": 298,
+      "test_all_targets": 298,
+      "test_unsupported": 0,
+      "model_sha256": "05794fc67721136e1277837dd09a4bb04f77a53f219a07015cac06aa44e40cc4",
+      "rank_rows": 4760,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\per_user_temporal\\seed-101",
+      "items": 5,
+      "users": 300,
+      "train_rows": 8400,
+      "dataset": "kaggle_logs",
+      "protocol": "per_user_temporal",
+      "seed": 101,
+      "test_known_history": 300,
+      "test_all_targets": 300,
+      "test_unsupported": 0,
+      "model_sha256": "04c10bba8193f2353fb82190c667119c8effa01101ec296608a9501bf5e94b38",
+      "rank_rows": 4800,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\per_user_temporal\\seed-13",
+      "items": 5,
+      "users": 300,
+      "train_rows": 8400,
+      "dataset": "kaggle_logs",
+      "protocol": "per_user_temporal",
+      "seed": 13,
+      "test_known_history": 300,
+      "test_all_targets": 300,
+      "test_unsupported": 0,
+      "model_sha256": "5af5e8cfc8d0131d3607d9300e44ec72c4c6b79128e73deb8720b9cad3ab174c",
+      "rank_rows": 4800,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\per_user_temporal\\seed-21",
+      "items": 5,
+      "users": 300,
+      "train_rows": 8400,
+      "dataset": "kaggle_logs",
+      "protocol": "per_user_temporal",
+      "seed": 21,
+      "test_known_history": 300,
+      "test_all_targets": 300,
+      "test_unsupported": 0,
+      "model_sha256": "c3fbcfc90e0d457c77e80dc80a1fe4c34c8a88c2d8a80e2c03286d2d43a97741",
+      "rank_rows": 4800,
+      "hybrid_weights": [
+        0.0,
+        0.8,
+        0.2
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\per_user_temporal\\seed-42",
+      "items": 5,
+      "users": 300,
+      "train_rows": 8400,
+      "dataset": "kaggle_logs",
+      "protocol": "per_user_temporal",
+      "seed": 42,
+      "test_known_history": 300,
+      "test_all_targets": 300,
+      "test_unsupported": 0,
+      "model_sha256": "48a0e47c714959472642af26ebf2d1ae6794b47a0fdb84354f1d5deaaaa5931f",
+      "rank_rows": 4800,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_logs\\per_user_temporal\\seed-77",
+      "items": 5,
+      "users": 300,
+      "train_rows": 8400,
+      "dataset": "kaggle_logs",
+      "protocol": "per_user_temporal",
+      "seed": 77,
+      "test_known_history": 300,
+      "test_all_targets": 300,
+      "test_unsupported": 0,
+      "model_sha256": "c9c061471df591240384416c112366700ee1e2a3d51e15bf2fd36c6efd8e4764",
+      "rank_rows": 4800,
+      "hybrid_weights": [
+        0.25,
+        0.75,
+        0.0
+      ],
+      "patterns": 155,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\global_temporal\\seed-101",
+      "items": 746,
+      "users": 2314,
+      "train_rows": 15335,
+      "dataset": "kaggle_recommender",
+      "protocol": "global_temporal",
+      "seed": 101,
+      "test_known_history": 42,
+      "test_all_targets": 383,
+      "test_unsupported": 341,
+      "model_sha256": "d21e07d75b867da3ea372ed6a5d4edad15ef22605cb7e6955b6aa9dc035e759a",
+      "rank_rows": 6976,
+      "hybrid_weights": [
+        1,
+        0,
+        0.0
+      ],
+      "patterns": 19,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\global_temporal\\seed-13",
+      "items": 746,
+      "users": 2314,
+      "train_rows": 15335,
+      "dataset": "kaggle_recommender",
+      "protocol": "global_temporal",
+      "seed": 13,
+      "test_known_history": 42,
+      "test_all_targets": 383,
+      "test_unsupported": 341,
+      "model_sha256": "d6a81f756c71ca6607a30bf97f3e7486169a1ea75fb177c094512b7de095bfaa",
+      "rank_rows": 6976,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 19,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\global_temporal\\seed-21",
+      "items": 746,
+      "users": 2314,
+      "train_rows": 15335,
+      "dataset": "kaggle_recommender",
+      "protocol": "global_temporal",
+      "seed": 21,
+      "test_known_history": 42,
+      "test_all_targets": 383,
+      "test_unsupported": 341,
+      "model_sha256": "68812f85614bd0fc1ce3e3c8db10231ad1ae817a348d771de60855d3a5f76cde",
+      "rank_rows": 6976,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 19,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\global_temporal\\seed-42",
+      "items": 746,
+      "users": 2314,
+      "train_rows": 15335,
+      "dataset": "kaggle_recommender",
+      "protocol": "global_temporal",
+      "seed": 42,
+      "test_known_history": 42,
+      "test_all_targets": 383,
+      "test_unsupported": 341,
+      "model_sha256": "5e2023e7de3c155fd57e9daf00f2d24d9a618061b700094bdb0eedbd09c0256a",
+      "rank_rows": 6976,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 19,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\global_temporal\\seed-77",
+      "items": 746,
+      "users": 2314,
+      "train_rows": 15335,
+      "dataset": "kaggle_recommender",
+      "protocol": "global_temporal",
+      "seed": 77,
+      "test_known_history": 42,
+      "test_all_targets": 383,
+      "test_unsupported": 341,
+      "model_sha256": "68eeb96e79e60b037cf39acabf8d79a35e49e190a7b982fe99fea71fc193e1fd",
+      "rank_rows": 6976,
+      "hybrid_weights": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "patterns": 19,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\per_user_temporal\\seed-101",
+      "items": 930,
+      "users": 1068,
+      "train_rows": 15950,
+      "dataset": "kaggle_recommender",
+      "protocol": "per_user_temporal",
+      "seed": 101,
+      "test_known_history": 1055,
+      "test_all_targets": 1068,
+      "test_unsupported": 13,
+      "model_sha256": "51bf190b193984fb4455f6525dabb104259b4c2ab0a8627776fd15c2962fbca3",
+      "rank_rows": 17088,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 6,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\per_user_temporal\\seed-13",
+      "items": 930,
+      "users": 1068,
+      "train_rows": 15950,
+      "dataset": "kaggle_recommender",
+      "protocol": "per_user_temporal",
+      "seed": 13,
+      "test_known_history": 1055,
+      "test_all_targets": 1068,
+      "test_unsupported": 13,
+      "model_sha256": "71e39923bd3ff9bbd2edd7c7db08d08eeefa7340f1060812e96a64d6dd32c436",
+      "rank_rows": 17088,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 6,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\per_user_temporal\\seed-21",
+      "items": 930,
+      "users": 1068,
+      "train_rows": 15950,
+      "dataset": "kaggle_recommender",
+      "protocol": "per_user_temporal",
+      "seed": 21,
+      "test_known_history": 1055,
+      "test_all_targets": 1068,
+      "test_unsupported": 13,
+      "model_sha256": "4a588ec937616fabf0506530d1d9e0671bc7a7ee7fe1c6c7dfa309f5d26fefbb",
+      "rank_rows": 17088,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 6,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\per_user_temporal\\seed-42",
+      "items": 930,
+      "users": 1068,
+      "train_rows": 15950,
+      "dataset": "kaggle_recommender",
+      "protocol": "per_user_temporal",
+      "seed": 42,
+      "test_known_history": 1055,
+      "test_all_targets": 1068,
+      "test_unsupported": 13,
+      "model_sha256": "649017cd2a3531f377f8a07dea86a63d5f6e4ce528b29c015aedc8155bd0e033",
+      "rank_rows": 17088,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 6,
+      "reload_prediction": "PASS"
+    },
+    {
+      "run": "kaggle_recommender\\per_user_temporal\\seed-77",
+      "items": 930,
+      "users": 1068,
+      "train_rows": 15950,
+      "dataset": "kaggle_recommender",
+      "protocol": "per_user_temporal",
+      "seed": 77,
+      "test_known_history": 1055,
+      "test_all_targets": 1068,
+      "test_unsupported": 13,
+      "model_sha256": "8fd157258d5a2699200fd64e575188ac1509cc9afef3ad2ff7cfda1252c904aa",
+      "rank_rows": 17088,
+      "hybrid_weights": [
+        0,
+        1,
+        0.0
+      ],
+      "patterns": 6,
+      "reload_prediction": "PASS"
+    }
+  ],
+  "hybrid_huspm_weight_zero_runs": 19,
+  "limitations": [
+    "Kaggle-hosted data does not by itself establish real learner provenance.",
+    "The small module catalog makes Random Recall@3 intrinsically high.",
+    "Recall/NDCG measure next-item ranking, not learning gains or curriculum validity.",
+    "Per-user temporal is a warm-history diagnostic; global temporal is the deployment protocol.",
+    "Five seeds quantify initialization variance, not five independent datasets.",
+    "No test-set tuning; zero HUSPM weights and negative ablation deltas must be reported.",
+    "A local result is not evidence of execution on Kaggle."
+  ]
+}

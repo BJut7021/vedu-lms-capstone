@@ -28,13 +28,13 @@ export class ExamService {
     Number(quiz.lesson_id),
   );
 }
-    // Final exam is accessible without finishing previous lessons.
     return this.db.transaction(async (m) => {
       await m.query('SELECT pg_advisory_xact_lock(1447384169,$1::integer)', [
         quizId,
       ]);
       const [currentQuiz] = await m.query(
-        'SELECT * FROM assessment.quizzes WHERE quiz_id=$1 AND is_published AND NOT is_deleted',
+        `SELECT q.*,c.final_mode FROM assessment.quizzes q JOIN lms.courses c USING(course_id)
+         WHERE q.quiz_id=$1 AND q.is_published AND NOT q.is_deleted`,
         [quizId],
       );
       if (!currentQuiz)
@@ -47,23 +47,21 @@ export class ExamService {
       // A refresh MUST NOT create a new attempt while upload/review is pending.
       if (currentQuiz.lesson_id == null) {
         const [previous] = await m.query(
-          `SELECT a.attempt_id, a.status, a.score, s.grade AS essay_grade
+          `SELECT a.attempt_id, a.status, assessment.final_score(a.attempt_id) AS final_score, assessment.final_passed(a.attempt_id) AS passed
            FROM assessment.quiz_attempts a
-           LEFT JOIN assessment.final_essay_submissions s ON s.attempt_id=a.attempt_id
            WHERE a.quiz_id=$1 AND a.student_id=$2
            ORDER BY a.attempt_no DESC, a.attempt_id DESC LIMIT 1`,
           [quizId, actor.userId],
         );
         if (previous && previous.status !== 'IN_PROGRESS') {
-          const waiting = previous.essay_grade == null;
-          const finalScore = waiting ? null :
-            Math.round((Number(previous.score) * 0.4 + Number(previous.essay_grade) * 0.6) * 100) / 100;
-          if (waiting || (finalScore != null && finalScore >= 5)) {
+          const finalScore = previous.final_score == null ? null : Number(previous.final_score);
+          if (finalScore == null || previous.passed) {
             return {
               reviewOnly: true,
               attemptId: Number(previous.attempt_id),
               finalScore,
-              status: waiting ? 'PENDING_ESSAY' : 'PASSED',
+              finalMode: currentQuiz.final_mode,
+              status: finalScore == null ? 'PENDING_REVIEW' : 'PASSED',
             };
           }
           // Graded and failed: a new attempt may now be started.
@@ -74,10 +72,33 @@ export class ExamService {
         [quizId, actor.userId],
       );
       if (!a) {
+        if (currentQuiz.lesson_id == null) {
+          const missing = await m.query(
+            'SELECT title FROM assessment.module_results($1,$2) WHERE is_required AND NOT passed',
+            [currentQuiz.course_id, actor.userId],
+          );
+          if (missing.length)
+            throw new BadRequestException('Cần đạt mô-đun trước khi thi: ' + missing.map((row: {title: string}) => row.title).join(', '));
+          if (currentQuiz.final_mode === 'MCQ_ESSAY') {
+            const [prompt] = await m.query('SELECT 1 FROM assessment.final_essay_prompts WHERE quiz_id=$1 AND btrim(prompt_text)<>\'\'', [quizId]);
+            if (!prompt) throw new BadRequestException('Giảng viên chưa công bố đề tự luận.');
+          }
+          if (currentQuiz.final_mode !== 'MCQ_ONLY') {
+            const [assignment] = await m.query(
+              `SELECT 1 FROM assessment.course_assignments WHERE course_id=$1 AND section_id IS NULL
+               AND required AND is_published AND NOT is_archived LIMIT 1`,
+              [currentQuiz.course_id],
+            );
+            if (!assignment) throw new BadRequestException('Giảng viên chưa công bố bài nộp cuối khóa.');
+          }
+        }
         const [count] = await m.query(
           'SELECT count(*)::int n FROM assessment.quiz_attempts WHERE quiz_id=$1 AND student_id=$2',
           [quizId, actor.userId],
         );
+        const limit = currentQuiz.lesson_id == null ? Math.min(3, currentQuiz.max_attempts) : currentQuiz.max_attempts;
+        if (count.n >= limit)
+          throw new BadRequestException(`Bạn đã sử dụng hết ${limit} lượt thi.`);
         
         [a] = await m.query(
           `INSERT INTO assessment.quiz_attempts(quiz_id,course_id,student_id,attempt_no,status) VALUES($1,$2,$3,$4,'IN_PROGRESS') RETURNING *`,
@@ -90,6 +111,7 @@ export class ExamService {
       );
       return {
         attemptId: Number(a.attempt_id),
+        finalMode: currentQuiz.lesson_id == null ? currentQuiz.final_mode : null,
         startedAt: a.started_at,
         deadline: new Date(
           new Date(a.started_at).getTime() +
@@ -147,7 +169,7 @@ const [context] = await this.db.query(
 }
     return this.db.transaction(async (m) => {
       const [a] = await m.query(
-        `SELECT a.*,COALESCE(q.time_limit_seconds,600) AS time_limit_seconds,q.passing_score,q.lesson_id FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id) WHERE attempt_id=$1 AND student_id=$2 FOR UPDATE OF a`,
+        `SELECT a.*,COALESCE(q.time_limit_seconds,600) AS time_limit_seconds,q.passing_score,q.lesson_id,c.final_mode FROM assessment.quiz_attempts a JOIN assessment.quizzes q USING(quiz_id) JOIN lms.courses c ON c.course_id=a.course_id WHERE attempt_id=$1 AND student_id=$2 FOR UPDATE OF a`,
         [attemptId, actor.userId],
       );
       if (a.status !== 'IN_PROGRESS') return this.result(a);
@@ -244,7 +266,7 @@ const [context] = await this.db.query(
       );
       if (a.lesson_id && score >= Number(a.passing_score))
         await m.query(
-          `INSERT INTO learning.lesson_progress(student_id,course_id,lesson_id,status,progress_percent,completed_at) VALUES($1,$2,$3,'COMPLETED',100,now()) ON CONFLICT(student_id,lesson_id) DO UPDATE SET status='COMPLETED',progress_percent=100,completed_at=COALESCE(learning.lesson_progress.completed_at,now())`,
+          `INSERT INTO learning.lesson_progress(student_id,course_id,lesson_id,status,progress_percent,completed_at) VALUES($1,$2,$3,'LEARNED',100,now()) ON CONFLICT(student_id,lesson_id) DO UPDATE SET status='LEARNED',progress_percent=100,completed_at=COALESCE(learning.lesson_progress.completed_at,now())`,
           [actor.userId, a.course_id, a.lesson_id],
         );
       await m.query(
@@ -260,7 +282,7 @@ const [context] = await this.db.query(
         ],
       );
       return {
-        ...this.result({ ...graded, passing_score: a.passing_score, lesson_id: a.lesson_id }),
+        ...this.result({ ...a, ...graded }),
         correctCount,
         totalQuestions: questions.length,
         expired,
@@ -268,6 +290,7 @@ const [context] = await this.db.query(
     });
   }
   private result(a: any) {
+    const needsReview = a.lesson_id == null && a.final_mode !== 'MCQ_ONLY';
     return {
       attemptId: Number(a.attempt_id),
       quizId: Number(a.quiz_id),
@@ -275,8 +298,9 @@ const [context] = await this.db.query(
       score: Number(a.score),
       durationSeconds: a.duration_seconds,
       status: a.status,
-      passed: a.lesson_id == null ? null : Number(a.score) >= Number(a.passing_score),
-      finalEssayRequired: a.lesson_id == null,
+      passed: needsReview ? null : Number(a.score) >= Number(a.passing_score),
+      finalEssayRequired: needsReview && a.final_mode === 'MCQ_ESSAY',
+      finalMode: a.lesson_id == null ? a.final_mode : null,
       submittedAt: a.submitted_at,
     };
   }
