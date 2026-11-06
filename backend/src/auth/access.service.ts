@@ -86,6 +86,9 @@ async lesson(actor: Actor, courseId: number, lessonId: number) {
   }
 
   // Enrolled learners can read published lessons in any order.
+
+  // STUDENT: hoc vien da ghi danh duoc truy cap moi bai da cong bo;
+  // quiz cua moi bai chi quyet dinh trang thai hoan thanh bai do.
 }
 
 }
