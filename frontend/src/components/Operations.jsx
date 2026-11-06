@@ -1,3 +1,4 @@
+import TeacherGradingWorkspace from "./TeacherGradingWorkspace";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
@@ -98,7 +99,7 @@ const props = {
     reports: Reports,
     content: Content,
     "quiz-bank": TeacherQuizPage,
-    "final-essay": FinalEssayTeacherPanel,
+    "final-essay": TeacherGradingWorkspace,
     mining: Mining,
     assignments: Assignments,
     "ticket-chat": Tickets,

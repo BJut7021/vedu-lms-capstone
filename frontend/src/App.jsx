@@ -18,6 +18,7 @@ import CourseDetail from "./components/CourseDetail";
 import Classroom from "./components/Classroom";
 import QuizView from "./components/QuizView";
 import CourseAssignments from "./components/CourseAssignments";
+import FinalExamResult from "./components/FinalExamResult";
 import Portal from "./components/Portal";
 import CourseCatalog from "./components/CourseCatalog";
 import PublicSupport from "./components/PublicSupport";
@@ -359,29 +360,15 @@ function QuizAttemptPage({ auth }) {
         setEssayResult(refreshed);
       } catch(e) { setReviewError(e.message); }
     };
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
-      <section className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-7 shadow-sm space-y-5">
-        <h1 className="text-xl font-bold">Kết quả thi cuối khóa</h1>
-        {!essayResult ? <p>Đang tải bài thi đã nộp...</p> : <>
-          <p className="text-sm">Điểm trắc nghiệm: <b>{essayResult.mcqScore}/10</b> ({essayResult.mcqPercent}%)</p>
-          {finalMode !== "MCQ_ONLY" && <CourseAssignments courseId={courseId} token={auth.accessToken} attemptId={attemptId} />}
-          {essayResult.status === 'PENDING_REVIEW' && <p className="rounded-lg bg-amber-50 p-4 text-amber-800 font-semibold">Đã nhận bài tự luận. Đang chờ giảng viên chấm. Bạn chưa thể thi lại.</p>}
-          {essayResult.status === 'GRADED' && <div className="space-y-2 rounded-lg bg-slate-50 p-4">
-            {finalMode === "MCQ_ESSAY" && <p>Điểm tự luận: <b>{essayResult.essayScore}/10</b> ({100 - essayResult.mcqPercent}%)</p>}
-            <p className="font-bold">Tổng điểm: {essayResult.finalScore}/10 — {essayResult.passed?'Đã đạt khóa học':'Chưa đạt'}</p>
-            {essayResult.feedback && <p>Nhận xét: {essayResult.feedback}</p>}
-          </div>}
-        </>}
-        {attemptId && <SubmittedFinalExamReview key={attemptId} attemptId={attemptId} token={auth.accessToken} showImage={false} />}
-        {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
-        <div className="flex flex-wrap gap-3">
-          <button onClick={refreshResult} className="rounded-lg border px-4 py-2">Làm mới kết quả</button>
-          {essayResult?.passed === false && <Link className="rounded-lg bg-blue-700 px-4 py-2 text-white" to={`/student/learning-path?course=${courseId}`}>Lập lộ trình ôn tập</Link>}
-          {essayResult?.passed === false && <button onClick={() => window.location.reload()} className="rounded-lg border px-4 py-2">Thử lượt thi tiếp theo</button>}
-          <button onClick={()=>navigate(`/courses/${courseId}`)} className="rounded-lg bg-slate-800 px-4 py-2 text-white">Về khóa học</button>
-        </div>
-      </section>
-    </div>;
+    return <FinalExamResult
+      courseId={courseId}
+      token={auth.accessToken}
+      attemptId={attemptId}
+      finalMode={finalMode}
+      essayResult={essayResult}
+      error={reviewError}
+      onRefresh={refreshResult}
+    />;
   }
   return (
 

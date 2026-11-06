@@ -52,7 +52,7 @@ export class PortalService {
         `
                     SELECT
                         (SELECT COUNT(*)::int FROM enrollment.enrollments WHERE student_id=$1 AND status IN ('ACTIVE','COMPLETED')) AS "enrolledCourses",
-                        (SELECT COUNT(*)::int FROM learning.lesson_progress WHERE student_id=$1 AND status='LEARNED') AS "completedLessons",
+                        (SELECT COALESCE(SUM(completed_lessons),0)::int FROM learning.v_student_progress WHERE student_id=$1) AS "completedLessons",
                         (SELECT COUNT(*)::int FROM assessment.quiz_attempts WHERE student_id=$1 AND status IN ('SUBMITTED','GRADED')) AS "quizAttempts",
                         (SELECT COALESCE(ROUND(AVG(score),1),0) FROM assessment.quiz_attempts WHERE student_id=$1 AND status IN ('SUBMITTED','GRADED')) AS "averageScore"
                 `,

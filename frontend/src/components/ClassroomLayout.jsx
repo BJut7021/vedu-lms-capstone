@@ -163,6 +163,16 @@ export default function ClassroomLayout({
     ? "Chào mừng bạn đã đến với khóa học của VEDU! Hãy tiếp tục hành trình học tập."
     : exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
   const currentAssignments = section?.assignments || [];
+  // The C# inheritance/polymorphism practice belongs to the whole module,
+  // but its submission form should appear only on lesson 07 in course 61.
+  const isSharedCsharpPractice = (assignment) =>
+    Number(course.id) === 61 &&
+    /Thực hành C#/.test(String(assignment?.title || "")) &&
+    /Kế thừa/.test(String(assignment?.title || ""));
+  const isLesson07 = /^0?7\s*[.·:–—-]/.test(String(lesson.title || "").trim());
+  const visibleAssignments = currentAssignments.filter(
+    (assignment) => !isSharedCsharpPractice(assignment) || isLesson07,
+  );
   const assignmentId = searchParams.get("assignmentId");
   const hasQuiz = Number(lesson.quizId) > 0;
   const openAssignment = (assignment) => {
@@ -173,7 +183,9 @@ export default function ClassroomLayout({
       if (Number(course.finalQuizId) > 0) navigate(`/quiz/${course.id}/${course.finalQuizId}`);
       return;
     }
-    const targetLesson = ownerSection?.lessons?.find((item) => item.type !== "quiz");
+    const targetLesson = isSharedCsharpPractice(assignment)
+      ? ownerSection?.lessons?.find((item) => /^0?7\s*[.·:–—-]/.test(String(item.title || "").trim()))
+      : ownerSection?.lessons?.find((item) => item.type !== "quiz");
     if (targetLesson) navigate(`/learn/${course.id}/${targetLesson.id}?assignmentId=${assignment.assignment_id}`);
   };
   const qaRoute = `/student/discussions?${new URLSearchParams({
@@ -426,7 +438,7 @@ export default function ClassroomLayout({
               bài thi và nhận chứng nhận.
             </p>
           )}
-          {!isGuest && token && currentAssignments.length > 0 && <CourseAssignments courseId={course.id} token={token} sectionId={section?.id} assignmentId={assignmentId} />}
+          {!isGuest && token && visibleAssignments.length > 0 && <CourseAssignments courseId={course.id} token={token} sectionId={section?.id} assignmentId={assignmentId} allowedAssignmentIds={visibleAssignments.map((item) => item.assignment_id)} />}
           {notice && (
             <p
               role="status"

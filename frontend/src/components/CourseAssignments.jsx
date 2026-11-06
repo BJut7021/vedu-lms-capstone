@@ -99,7 +99,7 @@ function TeacherAssignmentEditor({ courseId, modules, assignment, token, refresh
   </form>;
 }
 
-export default function CourseAssignments({ courseId, token, attemptId, teacher = false, sectionId, assignmentId }) {
+export default function CourseAssignments({ courseId, token, attemptId, teacher = false, sectionId, assignmentId, allowedAssignmentIds }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [moduleFilter, setModuleFilter] = useState("");
@@ -117,6 +117,7 @@ export default function CourseAssignments({ courseId, token, attemptId, teacher 
     return () => { alive = false; };
   }, [courseId, token]);
   const assignments = data?.assignments?.filter((a) => {
+    if (Array.isArray(allowedAssignmentIds) && !allowedAssignmentIds.some((id) => Number(id) === Number(a.assignment_id))) return false;
     if (assignmentId && Number(a.assignment_id) !== Number(assignmentId)) return false;
     if (teacher) return true;
     if (attemptId) return !a.section_id;

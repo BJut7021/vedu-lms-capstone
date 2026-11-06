@@ -51,7 +51,11 @@ services:
           -f /seed/03_course_learning_workflow.sql \
           -f /seed/04_student_workflow_ux.sql \
           -f /seed/05_oop_demo_refinement.sql \
-          -f /seed/06_oop_lesson_quizzes_and_videos.sql
+          -f /seed/06_oop_lesson_quizzes_and_videos.sql \
+          -f /seed/07_oop_practice_optional.sql \
+          -f /seed/08_unified_student_progress.sql \
+          -f /seed/09_oop_quiz_70_additional.sql \
+          -f /seed/10_oop_verified_youtube.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
@@ -63,6 +67,10 @@ services:
       - ./database/vedu/04_student_workflow_ux.sql:/seed/04_student_workflow_ux.sql:ro
       - ./database/vedu/05_oop_demo_refinement.sql:/seed/05_oop_demo_refinement.sql:ro
       - ./database/vedu/06_oop_lesson_quizzes_and_videos.sql:/seed/06_oop_lesson_quizzes_and_videos.sql:ro
+      - ./database/vedu/07_oop_practice_optional.sql:/seed/07_oop_practice_optional.sql:ro
+      - ./database/vedu/08_unified_student_progress.sql:/seed/08_unified_student_progress.sql:ro
+      - ./database/vedu/09_oop_quiz_70_additional.sql:/seed/09_oop_quiz_70_additional.sql:ro
+      - ./database/vedu/10_oop_verified_youtube.sql:/seed/10_oop_verified_youtube.sql:ro
     depends_on:
       db:
         condition: service_healthy
