@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   Compass,
@@ -42,7 +42,11 @@ function Select({ label, options, value, onChange }) {
   );
 }
 export default function LearningPaths({ auth, data, act, busy }) {
-  const [course, setCourse] = useState("");
+  const [searchParams] = useSearchParams();
+  const [course, setCourse] = useState(() => {
+    const requested = searchParams.get("course");
+    return (data.courses || []).some((item) => String(item.courseId) === requested) ? requested : "";
+  });
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [form, setForm] = useState({

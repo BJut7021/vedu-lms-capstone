@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Navigate,
+  Link,
   Route,
   Routes,
   useLocation,
@@ -16,6 +17,7 @@ import AuthModal from "./components/AuthModal";
 import CourseDetail from "./components/CourseDetail";
 import Classroom from "./components/Classroom";
 import QuizView from "./components/QuizView";
+import CourseAssignments from "./components/CourseAssignments";
 import Portal from "./components/Portal";
 import CourseCatalog from "./components/CourseCatalog";
 import PublicSupport from "./components/PublicSupport";
@@ -235,8 +237,6 @@ function SubmittedFinalExamReview({ attemptId, token, showImage }) {
   useEffect(() => {
     if (!attemptId || !token) return;
     let alive = true;
-    setReview(null);
-    setReviewError('');
     api.platform(`/final-essays/attempts/${attemptId}/review`, token)
       .then((v) => { if (alive) setReview(v); })
       .catch((err) => { if (alive) setReviewError(err.message || 'Không xem lại được bài thi'); });
@@ -246,7 +246,6 @@ function SubmittedFinalExamReview({ attemptId, token, showImage }) {
     if (!attemptId || !token || !showImage) return;
     let alive = true;
     let objectUrl = null;
-    setImageError('');
     api.essayImage(attemptId, token)
       .then((url) => { objectUrl = url; if (alive) setImageUrl(url); else URL.revokeObjectURL(url); })
       .catch((err) => { if (alive) setImageError(err.message || 'Không tải được ảnh tự luận'); });
@@ -287,33 +286,36 @@ function SubmittedFinalExamReview({ attemptId, token, showImage }) {
   );
 }
 
-function QuizPage({ auth }) {
+function QuizPage(props) {
+  const { courseId, quizId } = useParams();
+  return <QuizAttemptPage key={`${courseId}:${quizId}:${props.auth?.user?.id}`} {...props} />;
+}
+
+function QuizAttemptPage({ auth }) {
   const { courseId, quizId } = useParams();
   const navigate = useNavigate();
   const [essayConfig,setEssayConfig] = useState(null);
   const [essayResult,setEssayResult] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
+  const [finalMode, setFinalMode] = useState(null);
   const [reviewOnly, setReviewOnly] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(false);
-  const [essayFile, setEssayFile] = useState(null);
   const [reviewError, setReviewError] = useState('');
   const [error, setError] = useState("");
   useEffect(() => {
     if (auth?.user?.role !== "STUDENT") return;
-    if (!validQuizId(quizId)) {
-      setError('Không tìm thấy mã bài kiểm tra. Vui lòng mở từ trang khóa học.');
-      return;
-    }
+    if (!validQuizId(quizId)) return;
+    let alive = true;
     api
       .enroll(courseId, auth.accessToken)
       .then(() =>
-        Promise.all([
-          api.playableQuiz(quizId, auth.accessToken),
-          api.startQuizAttempt(quizId, auth.accessToken),
-        ]),
+        api.playableQuiz(quizId, auth.accessToken).then(async (quizData) => {
+          if (Number(quizData.courseId) !== Number(courseId)) throw new Error("Bài kiểm tra không thuộc khóa học này.");
+          return [quizData, await api.startQuizAttempt(quizId, auth.accessToken)];
+        }),
       )
       .then(([quizData, attempt]) => {
+        if (!alive) return;
         setQuiz({
           ...quizData,
           deadline: attempt.deadline,
@@ -321,20 +323,26 @@ function QuizPage({ auth }) {
           savedAnswers: attempt.answers,
         });
         setAttemptId(attempt.attemptId);
+        setFinalMode(attempt.finalMode);
         setReviewOnly(Boolean(attempt.reviewOnly));
-        if (quizData.lessonId == null) {
-          api.essayPrompt(quizId,auth.accessToken).then(setEssayConfig).catch(()=>setEssayConfig(null));
-          api.essayResult(attempt.attemptId,auth.accessToken).then(setEssayResult).catch(e=>setReviewError(e.message));
+        if (attempt.finalMode === "MCQ_ESSAY") {
+          api.essayPrompt(quizId,auth.accessToken).then((value) => { if (alive) setEssayConfig(value); }).catch((e) => { if (alive) setError(e.message); });
         }
+        if (attempt.reviewOnly)
+          api.essayResult(attempt.attemptId,auth.accessToken).then((value) => { if (alive) setEssayResult(value); }).catch(e=>{ if (alive) setReviewError(e.message); });
       })
-      .catch((reason) => setError(reason.message));
+      .catch((reason) => { if (alive) setError(reason.message); });
+    return () => { alive = false; };
   }, [auth, quizId, courseId]);
   if (auth?.user?.role !== "STUDENT")
     return <Navigate to="/student/login" replace />;
-  if (error)
+  if (error || !validQuizId(quizId))
     return (
       <div className="grid min-h-screen place-items-center p-8 text-center font-bold text-red-600">
-        {error}
+        <div className="space-y-4">
+          <p>{error || "Mã bài kiểm tra không hợp lệ."}</p>
+          <button className="text-blue-700 underline" onClick={() => navigate(`/courses/${courseId}`)}>Về trang khóa học</button>
+        </div>
       </div>
     );
   if (!quiz || !attemptId)
@@ -349,44 +357,27 @@ function QuizPage({ auth }) {
         setReviewError('');
         const refreshed = await api.essayResult(attemptId, auth.accessToken);
         setEssayResult(refreshed);
-        if (refreshed.status === 'GRADED' && !refreshed.passed) {
-          // Only after the teacher has graded a failed attempt may a retake start.
-          window.location.reload();
-        }
       } catch(e) { setReviewError(e.message); }
-    };
-    const upload = async () => {
-      if (!essayFile) return;
-      setReviewLoading(true);setReviewError('');
-      try {
-        await api.essayUpload(attemptId,essayFile,auth.accessToken);
-        setEssayFile(null);
-        await refreshResult();
-      } catch(e) { setReviewError(e.message); }
-      finally { setReviewLoading(false); }
     };
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
       <section className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-7 shadow-sm space-y-5">
         <h1 className="text-xl font-bold">Kết quả thi cuối khóa</h1>
         {!essayResult ? <p>Đang tải bài thi đã nộp...</p> : <>
-          <p className="text-sm">Điểm trắc nghiệm: <b>{essayResult.mcqScore}/10</b> (40%)</p>
-          {essayResult.status === 'AWAITING_UPLOAD' && <div className="space-y-3">
-            <p className="font-semibold text-blue-700">Đã nộp trắc nghiệm. Hãy tải ảnh tự luận của lượt thi này.</p>
-            <p className="whitespace-pre-wrap text-sm">{essayConfig?.prompt || 'Đề tự luận của khóa học'}</p>
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setEssayFile(e.target.files?.[0]||null)} className="block w-full text-sm" />
-            <button disabled={reviewLoading||!essayFile} onClick={upload} className="rounded-lg bg-blue-600 px-4 py-2 text-white font-bold disabled:opacity-50">{reviewLoading?'Đang nộp ảnh...':'Nộp ảnh tự luận'}</button>
-          </div>}
+          <p className="text-sm">Điểm trắc nghiệm: <b>{essayResult.mcqScore}/10</b> ({essayResult.mcqPercent}%)</p>
+          {finalMode !== "MCQ_ONLY" && <CourseAssignments courseId={courseId} token={auth.accessToken} attemptId={attemptId} />}
           {essayResult.status === 'PENDING_REVIEW' && <p className="rounded-lg bg-amber-50 p-4 text-amber-800 font-semibold">Đã nhận bài tự luận. Đang chờ giảng viên chấm. Bạn chưa thể thi lại.</p>}
           {essayResult.status === 'GRADED' && <div className="space-y-2 rounded-lg bg-slate-50 p-4">
-            <p>Điểm tự luận: <b>{essayResult.essayScore}/10</b> (60%)</p>
+            {finalMode === "MCQ_ESSAY" && <p>Điểm tự luận: <b>{essayResult.essayScore}/10</b> ({100 - essayResult.mcqPercent}%)</p>}
             <p className="font-bold">Tổng điểm: {essayResult.finalScore}/10 — {essayResult.passed?'Đã đạt khóa học':'Chưa đạt'}</p>
             {essayResult.feedback && <p>Nhận xét: {essayResult.feedback}</p>}
           </div>}
         </>}
-        {attemptId && <SubmittedFinalExamReview attemptId={attemptId} token={auth.accessToken} showImage={essayResult?.status === 'PENDING_REVIEW' || essayResult?.status === 'GRADED'} />}
+        {attemptId && <SubmittedFinalExamReview key={attemptId} attemptId={attemptId} token={auth.accessToken} showImage={false} />}
         {reviewError && <p className="text-sm text-red-600">{reviewError}</p>}
         <div className="flex flex-wrap gap-3">
           <button onClick={refreshResult} className="rounded-lg border px-4 py-2">Làm mới kết quả</button>
+          {essayResult?.passed === false && <Link className="rounded-lg bg-blue-700 px-4 py-2 text-white" to={`/student/learning-path?course=${courseId}`}>Lập lộ trình ôn tập</Link>}
+          {essayResult?.passed === false && <button onClick={() => window.location.reload()} className="rounded-lg border px-4 py-2">Thử lượt thi tiếp theo</button>}
           <button onClick={()=>navigate(`/courses/${courseId}`)} className="rounded-lg bg-slate-800 px-4 py-2 text-white">Về khóa học</button>
         </div>
       </section>
@@ -398,6 +389,7 @@ function QuizPage({ auth }) {
   quizData={quiz}
   essayConfig={essayConfig}
   essayResult={essayResult}
+  finalPractical={finalMode !== "MCQ_ONLY" && finalMode ? <CourseAssignments courseId={courseId} token={auth.accessToken} attemptId={attemptId} /> : null}
   onEssayUpload={file=>api.essayUpload(attemptId,file,auth.accessToken)}
   onRefreshEssay={()=>api.essayResult(attemptId,auth.accessToken)}
   onBack={() => navigate(`/courses/${courseId}`)}

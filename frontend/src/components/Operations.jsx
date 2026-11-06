@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 import LearningPaths from "./LearningPaths";
 import PedagogyEditor from "./PedagogyEditor";
@@ -7,6 +7,7 @@ import ContentModeration from "./ContentModeration";
 import CourseOverviewEditor from "./CourseOverviewEditor";
 import { formatMinutes } from "../services/time";
 import TeacherQuizActions from "./TeacherQuizActions";
+import CourseAssignments from "./CourseAssignments";
 
 const button =
   "rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50";
@@ -93,6 +94,7 @@ const props = {
     catalog: ContentModeration,
     security: Security,
     discussions: Discussions,
+    submissions: StudentSubmissions,
     reports: Reports,
     content: Content,
     "quiz-bank": TeacherQuizPage,
@@ -210,8 +212,51 @@ function Security({ auth, act, busy, onLogout }) {
     </div>
   );
 }
+function StudentSubmissions({ auth }) {
+  const [rows, setRows] = useState(null);
+  const [filter, setFilter] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    api.platform("/my/assignments", auth.accessToken)
+      .then((result) => { if (alive) setRows(result); })
+      .catch((reason) => { if (alive) setError(reason.message); });
+    return () => { alive = false; };
+  }, [auth.accessToken]);
+  const statusLabel = { NOT_STARTED:"Chưa làm", DRAFT:"Bản nháp", SUBMITTED:"Đã nộp", UNDER_REVIEW:"Đang chấm", NEEDS_REVISION:"Cần sửa", GRADED:"Đã chấm" };
+  const visible = (rows || []).filter((row) => !filter || (row.status || "NOT_STARTED") === filter);
+  return <Card title="Bài nộp của tôi">
+    <p className="text-sm text-slate-600">Mở thẳng đúng mô-đun hoặc đánh giá cuối khóa; bài cần sửa luôn được ưu tiên đầu danh sách.</p>
+    <select className={field} value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Lọc trạng thái bài nộp">
+      <option value="">Tất cả trạng thái</option>
+      {Object.entries(statusLabel).map(([value,label]) => <option key={value} value={value}>{label}</option>)}
+    </select>
+    {error && <p role="alert" className="text-red-700">{error}</p>}
+    {!rows && !error && <p>Đang tải…</p>}
+    {visible.map((row) => {
+      const status = row.status || "NOT_STARTED";
+      const target = row.section_id != null && row.lesson_id
+        ? `/learn/${row.course_id}/${row.lesson_id}?assignmentId=${row.assignment_id}`
+        : row.final_quiz_id ? `/quiz/${row.course_id}/${row.final_quiz_id}` : `/courses/${row.course_id}`;
+      return <article key={row.assignment_id} className={`rounded-xl border p-4 ${status === "NEEDS_REVISION" ? "border-amber-300 bg-amber-50" : "border-slate-200"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h3 className="font-bold">{row.title}</h3><p className="text-sm text-slate-600">{row.course_name} · {row.section_title || "Cuối khóa"}</p></div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{statusLabel[status] || status}</span>
+        </div>
+        {row.feedback && <p className="mt-2 text-sm">Phản hồi: {row.feedback}</p>}
+        <Link className="mt-3 inline-block rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white" to={target}>{status === "NEEDS_REVISION" ? "Sửa và nộp lại" : "Mở bài"}</Link>
+      </article>;
+    })}
+    {rows && !visible.length && <p className="text-sm text-slate-500">Không có bài ở trạng thái này.</p>}
+  </Card>;
+}
 function Discussions({ auth, data, act, busy }) {
-  const [course, setCourse] = useState(""),
+  const [params] = useSearchParams();
+  const contextualCourse = params.get("courseId") || "";
+  const lessonId = params.get("lessonId") || "";
+  const questionId = params.get("questionId") || "";
+  const returnTo = params.get("returnTo") || "";
+  const [course, setCourse] = useState(contextualCourse),
     [questions, setQuestions] = useState([]),
     [subject, setSubject] = useState(""),
     [body, setBody] = useState(""),
@@ -220,8 +265,27 @@ function Discussions({ auth, data, act, busy }) {
     api
       .platform(`/courses/${course}/questions`, auth.accessToken)
       .then(setQuestions);
+  useEffect(() => {
+    if (!course) return;
+    let alive = true;
+    api.platform(`/courses/${course}/questions`, auth.accessToken)
+      .then((rows) => { if (alive) setQuestions(rows); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [course, auth.accessToken]);
+  useEffect(() => {
+    if (!questionId || !questions.length) return;
+    document.getElementById(`question-${questionId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [questionId, questions]);
+  const selectedCourse = (data.courses || []).find((item) => String(item.id ?? item.courseId ?? item.course_id) === String(course));
   return (
     <Card title="Hỏi đáp khóa học">
+      {contextualCourse && <div className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+        <strong>{selectedCourse?.title || selectedCourse?.courseName || selectedCourse?.course_name || "Khóa học đang mở"}</strong>
+        {lessonId && <p className="mt-1">Hội thoại đang gắn với bài học #{lessonId}.</p>}
+        {returnTo && <Link className="mt-2 inline-block font-bold text-blue-700" to={returnTo}>← Quay lại bài học</Link>}
+      </div>}
+      {!contextualCourse && <>
       <CourseSelect
         courses={data.courses || []}
         value={course}
@@ -230,13 +294,7 @@ function Discussions({ auth, data, act, busy }) {
           setQuestions([]);
         }}
       />
-      <button
-        className={button}
-        disabled={!course || busy}
-        onClick={() => act(load)}
-      >
-        Mở hội thoại
-      </button>
+      </>}
       {course && (
         <form
           className="grid gap-3"
@@ -246,7 +304,7 @@ function Discussions({ auth, data, act, busy }) {
               await api.platform(
                 `/courses/${course}/questions`,
                 auth.accessToken,
-                { subject, body },
+                { subject, body, ...(lessonId ? { lessonId: Number(lessonId) } : {}) },
               );
               setSubject("");
               setBody("");
@@ -277,9 +335,11 @@ function Discussions({ auth, data, act, busy }) {
       {questions.map((q) => (
         <article
           key={q.question_id}
+          id={`question-${q.question_id}`}
           className="space-y-3 rounded-xl border p-4"
         >
           <h3 className="font-bold">{q.subject}</h3>
+          {q.lesson_title && <p className="text-xs font-semibold text-blue-700">Bài học: {q.lesson_title}</p>}
           {q.messages.map((m) => (
             <div key={m.id} className="rounded-lg bg-slate-50 p-3 text-sm">
               <strong>
@@ -288,7 +348,7 @@ function Discussions({ auth, data, act, busy }) {
               <p className="mt-1 whitespace-pre-wrap">{m.body}</p>
             </div>
           ))}
-          <div className="flex gap-2">
+          {(auth.user.role !== "STUDENT" || Number(q.author_id) === Number(auth.user.userId ?? auth.user.id)) && <div className="flex gap-2">
             <input
               aria-label={`Trả lời ${q.subject}`}
               className={field}
@@ -315,7 +375,7 @@ function Discussions({ auth, data, act, busy }) {
             >
               Trả lời
             </button>
-          </div>
+          </div>}
         </article>
       ))}
     </Card>
@@ -754,7 +814,7 @@ function LessonEditor({ lesson, sections, auth, act, busy, reload }) {
 function TeacherQuizPage(props) {
   return (
     <div className="space-y-5">
-      <QuizEditor {...props} />
+      <QuizEditor key={props.initialCourseId || "general"} {...props} />
       <TeacherQuizList auth={props.auth} data={props.data} />
     </div>
   );
@@ -766,7 +826,6 @@ function QuizEditor({
   act,
   busy,
   initialCourseId,
-  initialLessonId,
   initialLessons,
 }) {
   // Khi mở từ trang Soạn khóa học, lấy khóa học đang chọn.
@@ -774,7 +833,7 @@ function QuizEditor({
   const [course, setCourse] = useState(() => String(initialCourseId ?? "")),
     [title, setTitle] = useState(""),
     [duration, setDuration] = useState(600),
-    [passing, setPassing] = useState(5),
+    [passing, setPassing] = useState(7),
     [questions, setQuestions] = useState([
       {
         text: "",
@@ -794,24 +853,7 @@ function QuizEditor({
     );
     const [quizLessonError, setQuizLessonError] = useState("");
 
-  // Chỉ cập nhật KHÓA HỌC khi người dạy chuyển khóa ở cột trái.
-  // Bài học luôn để giảng viên chủ động chọn, không gán initialLessonId.
-  useEffect(() => {
-    if (!initialCourseId) return;
-    setCourse(String(initialCourseId));
-    setQuizLessonId("");
-    setQuizLessonError("");
-  }, [initialCourseId]);
-
-  // Danh sách bài học được Soạn khóa học tải từ backend và truyền sang.
-  useEffect(() => {
-    if (!initialCourseId) return;
-    setQuizLessons(
-      (Array.isArray(initialLessons) ? initialLessons : []).filter(
-        (lesson) => !lesson.is_deleted,
-      ),
-    );
-  }, [initialCourseId, initialLessons]);
+  const availableLessons = initialCourseId ? (initialLessons ?? []).filter((lesson) => !lesson.is_deleted) : quizLessons;
 
   const edit = (index, changes) =>
     setQuestions(
@@ -896,7 +938,7 @@ api.platform(`/courses/${course}/quizzes`, auth.accessToken, {
   >
     <option value="">-- Chọn bài học --</option>
 
-    {quizLessons.map((lesson) => (
+    {availableLessons.map((lesson) => (
       <option
         key={lesson.lesson_id}
         value={lesson.lesson_id}
@@ -1919,11 +1961,12 @@ function FinalEssayTeacherPanel({auth,data,initialCourseId}){
    setSubmissions(rows);setMessage('');
   }catch(e){setMessage(e.message)}
  },[course,auth.accessToken]);
- useEffect(()=>{load()},[load]);
+ useEffect(()=>{Promise.resolve().then(load)},[load]);
  const showImage=async id=>{try {const url=await api.essayImage(id,auth.accessToken);setImages(old=>({...old,[id]:url}))}catch(e){setMessage(e.message)}};
  const loadPrompt=async id=>{setSelected(id);try{const p=await api.essayPrompt(id,auth.accessToken);setPrompt(p.prompt)}catch(e){setMessage(e.message)}};
- return <Card title="Chấm tự luận cuối khóa (40% TN + 60% TL)">
+ return <Card title="Chấm bài nộp và tự luận cuối khóa">
   <CourseSelect courses={data.courses||[]} value={course} onChange={v=>{setCourse(v);setSelected('')}} />
+  {course && <CourseAssignments key={course} courseId={course} token={auth.accessToken} teacher />}
   <button className={button} onClick={load} disabled={!course}>Làm mới danh sách</button>
   <label className="block text-sm">Chọn đề cuối khóa
    <select className={field} value={selected} onChange={e=>loadPrompt(e.target.value)}>
@@ -1940,7 +1983,7 @@ function FinalEssayTeacherPanel({auth,data,initialCourseId}){
   </div>
   {submissions.map(s=><div key={s.attempt_id} className="border rounded-xl p-3 space-y-2 text-sm">
    <p><b>{s.student_name}</b> – {s.quiz_title} – trắc nghiệm {s.mcq_score}/10</p>
-   <p>{s.grade==null?'Chờ chấm':`Đã chấm: ${s.grade}/10 · Tổng kết: ${(Number(s.mcq_score)*0.4+Number(s.grade)*0.6).toFixed(2)}/10 · ${(Number(s.mcq_score)*0.4+Number(s.grade)*0.6)>=5?'Đạt':'Chưa đạt'}`}</p>
+   <p>{s.grade==null?'Chờ chấm':`Đã chấm: ${s.grade}/10 · Tổng kết: ${s.final_score}/10 · ${Number(s.final_score)>=Number(s.passing_score)?'Đạt':'Chưa đạt'}`}</p>
    <button className="underline text-blue-700" onClick={()=>showImage(s.attempt_id)}>Xem ảnh bài nộp</button>
    {images[s.attempt_id]&&<img className="max-h-96 object-contain" src={images[s.attempt_id]} alt="Bài tự luận học viên"/>}
    {s.grade==null&&<div className="flex flex-wrap gap-2 items-center">

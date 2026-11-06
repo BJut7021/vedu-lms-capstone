@@ -4,6 +4,7 @@ import { PlatformController } from './platform.controller';
 import { PlatformService } from './platform.service';
 import { ExamService } from './exam.service';
 import { FinalEssayService } from './final-essay.service';
+import { CourseAssignmentService } from './course-assignment.service';
 import { MomoService } from './momo.service';
 import { RecommendationService } from './recommendation.service';
 import { LearningPathService } from './learning-path.service';
@@ -16,6 +17,7 @@ import { ManualPaymentService } from './manual-payment.service';
     PlatformService,
     ExamService,
     FinalEssayService,
+    CourseAssignmentService,
     MomoService,
     RecommendationService,
     LearningPathService,

@@ -137,11 +137,25 @@ try {
       {
         id: 1,
         title: "Chương 1",
+        assignments: [
+          {
+            assignment_id: 5,
+            section_id: 1,
+            title: "Bài thực hành cần sửa",
+            instructions: "Bổ sung minh chứng.",
+            required: true,
+            passing_score: 7,
+            allowed_file_types: ["pdf"],
+            rubric: [{ id: "evidence", label: "Minh chứng", skill: "evidence", max: 10, min: 7 }],
+            latestVersion: { status: "NEEDS_REVISION" },
+          },
+        ],
         lessons: [
           {
             id: 11,
             title: "Bài một",
             type: "document",
+            completed: true,
             content: "Nội dung thứ nhất",
             durationSeconds: 600,
             resources: [],
@@ -183,17 +197,45 @@ try {
       },
     ],
   };
+  const pathPlatform = api.platform;
+  let markedLessonPath = "";
+  api.platform = async (path, token, data) => {
+    if (path.includes("learning-status")) {
+      markedLessonPath = path;
+      return { status: "LEARNED" };
+    }
+    if (path.includes("study-state")) return { finalExamPassed: false };
+    if (path.includes("/assignments")) return {
+      assignments: course.sections[0].assignments,
+      versions: [{
+        version_id: 9,
+        assignment_id: 5,
+        version_no: 1,
+        status: "NEEDS_REVISION",
+        answer_text: "Bản cũ",
+        feedback: "Bổ sung minh chứng.",
+      }],
+      modules: [{ section_id: 1, title: "Chương 1" }],
+    };
+    return pathPlatform(path, token, data);
+  };
+  let refreshedCourse = false;
   function Room() {
     const p = useParams();
-    return React.createElement(Classroom, {
-      course,
-      activeLessonId: Number(p.lessonId),
-      token: "test",
-      header: React.createElement("header", null, "VEDU"),
-      onBack: () => {},
-      onOpenQuiz: () => {},
-      onLogEvent: async () => ({}),
-    });
+    const current = useLocation();
+    return React.createElement(React.Fragment, null,
+      React.createElement("output", { "data-testid": "classroom-route" }, current.pathname + current.search),
+      React.createElement(Classroom, {
+        course,
+        activeLessonId: Number(p.lessonId),
+        token: "test",
+        header: React.createElement("header", null, "VEDU"),
+        onBack: () => {},
+        onOpenQuiz: () => {},
+        onLogEvent: async () => ({}),
+        onRefreshCourse: async () => { refreshedCourse = true; },
+      }),
+    );
   }
   render(
     React.createElement(
@@ -209,8 +251,10 @@ try {
       ),
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Tôi đã đọc tài liệu" }));
-  await waitFor(() => screen.getByRole("button", { name: "Đã đọc tài liệu" }));
+  check(
+    "Reading alone does not mark an assessment complete",
+    screen.queryByRole("button", { name: "Tôi đã đọc tài liệu" }) === null,
+  );
   scrolls.length = 0;
   fireEvent.click(screen.getByRole("button", { name: "Bài kế tiếp" }));
   await waitFor(() =>
@@ -225,6 +269,18 @@ try {
     scrolls.some(
       (s) => s.top === 0 && s.left === 0 && s.behavior === "instant",
     ),
+  );
+  check(
+    "Contextual Q&A keeps course, lesson and return route",
+    screen.getByRole("link", { name: "Hỏi đáp khóa học" }).getAttribute("href").includes("courseId=68") &&
+      screen.getByRole("link", { name: "Hỏi đáp khóa học" }).getAttribute("href").includes("lessonId=12") &&
+      screen.getByRole("link", { name: "Hỏi đáp khóa học" }).getAttribute("href").includes("returnTo="),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Đánh dấu đã học" }));
+  await waitFor(() => assert.ok(markedLessonPath && refreshedCourse));
+  check(
+    "Lesson without quiz uses explicit LEARNED endpoint and refreshes server state",
+    markedLessonPath === "/courses/68/lessons/12/learning-status" && refreshedCourse,
   );
   check(
     "Completed progress retained when changing lesson",
@@ -242,26 +298,31 @@ try {
       screen.getByText("bài đang học").textContent.startsWith("1") &&
       screen.getByText("bài chưa học").textContent.startsWith("0"),
   );
-  fireEvent.click(screen.getByRole("tab", { name: "Tài liệu" }));
   check(
-    "Documents tab displays actual lesson attachment",
-    screen.getAllByText("Tài liệu bài hai").length > 0,
+    "Documents section displays actual lesson attachment",
+    screen.getAllByRole("link", { name: /Tài liệu bài hai/ }).some(
+      (link) => link.getAttribute("href") === "/test.pdf",
+    ),
   );
   for (const label of ["PDF", "PPT", "DOC", "WEB"])
     check(
       `Related resources display correct ${label} file icon`,
       screen.getAllByRole("img", { name: `Định dạng ${label}` }).length > 0,
     );
-  fireEvent.keyDown(screen.getByRole("tab", { name: "Tài liệu" }), {
-    key: "ArrowLeft",
-  });
+  fireEvent.click(screen.getByRole("button", { name: /Bài thực hành cần sửa/ }));
+  await waitFor(() =>
+    assert.match(
+      screen.getByTestId("classroom-route").textContent,
+      /assignmentId=5/,
+    ),
+  );
   check(
-    "Tabs support keyboard switching",
-    screen
-      .getByRole("tab", { name: "Bài giảng" })
-      .getAttribute("aria-selected") === "true",
+    "Assignment tree opens the exact module submission by deep link",
+    screen.getByTestId("classroom-route").textContent ===
+      "/learn/68/11?assignmentId=5",
   );
   cleanup();
+  api.platform = pathPlatform;
   const { default: Header } = await server.ssrLoadModule(
     "/src/components/Header.jsx",
   );
@@ -555,11 +616,12 @@ try {
     "/src/services/courseCovers.js",
   );
   const networkCourse = { id: 69, title: "Mạng máy tính", image: null };
+  const reviewedNetworkCover = "/images/course-covers/v3/course-69-496b629d.webp";
   render(React.createElement(CourseImage, { course: networkCourse }));
   check(
     "Reviewed course uses its own local cover",
     screen.getByRole("img", { name: "Mạng máy tính" }).getAttribute("src") ===
-      "/images/course-covers/v2/course-69.webp",
+      reviewedNetworkCover,
   );
   cleanup();
   render(
@@ -577,7 +639,7 @@ try {
   check(
     "Broken uploaded image falls back to the matching local course cover",
     coverImage.getAttribute("src") ===
-      "/images/course-covers/v2/course-69.webp",
+      reviewedNetworkCover,
   );
   fireEvent.error(coverImage);
   check(
@@ -588,16 +650,14 @@ try {
   check(
     "Old stock placeholders are replaced by reviewed artwork",
     resolveCourseCover({
-      id: 3,
-      title: "PostgreSQL và thiết kế dữ liệu LMS",
+      ...networkCourse,
       image: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=900",
-    }).primary === "/images/course-covers/v2/course-3.webp",
+    }).primary === reviewedNetworkCover,
   );
   const unknown = resolveCourseCover({ id: 99999, title: "Mạng máy tính" });
   check(
-    "Different course with the same name never reuses another course cover",
-    !unknown.primary &&
-      unknown.fallback !== resolveCourseCover(networkCourse).fallback,
+    "Catalog cover stays stable across different database IDs",
+    unknown.primary === reviewedNetworkCover,
   );
   const { default: ManualCheckout } = await server.ssrLoadModule(
     "/src/components/ManualCheckout.jsx",
@@ -660,9 +720,10 @@ try {
       }),
     ),
   );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Tôi đã chuyển MoMo — gửi đối soát" }),
-  );
+  fireEvent.change(screen.getByLabelText("Mã giao dịch MoMo"), {
+    target: { value: "VEDUTESTPAY01" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Tôi đã chuyển MoMo — gửi đối soát" }));
   await waitFor(() => assert.equal(refreshed, 1));
   check(
     "Learner payment report calls review request and never self-unlocks classroom",
@@ -976,7 +1037,7 @@ try {
   fireEvent.keyDown(document, { key: "Escape" });
   check("Escape closes the enlarged QR", !screen.queryByRole("dialog"));
   cleanup();
-  writeFileSync(
+  if (process.env.VEDU_WRITE_UI_REPORT === "1") writeFileSync(
     new URL("../docs/validation/ui-interactions.json", import.meta.url),
     JSON.stringify(
       {

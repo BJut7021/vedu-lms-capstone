@@ -166,7 +166,13 @@ export class CoursesService {
     );
 
     const chapters: any[] = await this.dataSource.query(
-      'SELECT section_id AS id,title FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',
+      'SELECT section_id AS id,title,module_type AS "moduleType",outcomes,is_required AS "required",week_start AS "weekStart",week_end AS "weekEnd" FROM lms.course_sections WHERE course_id=$1 ORDER BY section_order',
+      [courseId],
+    );
+    const assignments: any[] = await this.dataSource.query(
+      `SELECT assignment_id,section_id,title,instructions,rubric,passing_score,required,allowed_file_types,due_at
+       FROM assessment.course_assignments WHERE course_id=$1 AND is_published AND NOT is_archived
+       ORDER BY assignment_id`,
       [courseId],
     );
     const result = {
@@ -209,7 +215,7 @@ export class CoursesService {
             };
           }),
         },
-      ],
+      ] as any[],
     };
     const mapped = result.sections[0].lessons as {
       id: number;
@@ -220,16 +226,18 @@ export class CoursesService {
     }[];
     result.sections = [
       ...chapters.map((s) => ({
+        ...s,
         id: String(s.id),
-        title: s.title,
         lessons: mapped.filter((l) => String(l.sectionId) === String(s.id)),
+        assignments: assignments.filter((a) => String(a.section_id) === String(s.id)),
       })),
       {
         id: 'course-content',
         title: 'Nội dung khóa học',
         lessons: mapped.filter((l) => !l.sectionId),
+        assignments: [],
       },
-    ].filter((s) => s.lessons.length > 0);
+    ].filter((s) => s.lessons.length > 0 || s.assignments.length > 0);
     const courseQuizzes: any[] = await this.dataSource.query(
       'SELECT quiz_id,title,time_limit_seconds FROM assessment.quizzes WHERE course_id=$1 AND lesson_id IS NULL AND is_published AND NOT is_deleted ORDER BY quiz_id',
       [courseId],
@@ -238,6 +246,7 @@ export class CoursesService {
       result.sections.push({
         id: 'course-assessment',
         title: 'Bài kiểm tra khóa học',
+        assignments: assignments.filter((a) => a.section_id == null),
         lessons: courseQuizzes.map((q) => ({
           id: -Number(q.quiz_id),
           title: q.title,
@@ -270,9 +279,12 @@ export class CoursesService {
           ),
         ];
     const quizzes: any[] = await this.dataSource.query(
-      `SELECT title,passing_score,max_attempts,COALESCE(time_limit_seconds,600) AS time_limit_seconds,
-       (lesson_id IS NULL AND title LIKE 'Thi cuối khóa —%') AS requires_completed_lessons
-       FROM assessment.quizzes WHERE course_id=$1 AND is_published AND NOT is_deleted ORDER BY quiz_id`,
+      `SELECT q.title,q.passing_score,q.max_attempts,COALESCE(q.time_limit_seconds,600) AS time_limit_seconds,
+       (q.lesson_id IS NULL AND EXISTS(SELECT 1 FROM lms.course_sections s WHERE s.course_id=q.course_id AND s.is_required)) AS requires_completed_lessons,
+       CASE WHEN q.lesson_id IS NULL THEN c.final_mode END AS final_mode,
+       CASE WHEN q.lesson_id IS NULL AND c.final_mode<>'MCQ_ONLY' THEN c.final_mcq_percent ELSE 100 END AS mcq_percent
+       FROM assessment.quizzes q JOIN lms.courses c USING(course_id)
+       WHERE q.course_id=$1 AND q.is_published AND NOT q.is_deleted ORDER BY q.quiz_id`,
       [courseId],
     );
     const [count] = await this.dataSource.query(
@@ -289,9 +301,11 @@ export class CoursesService {
       assessments: quizzes.map((q) => ({
         title: q.title,
         passingScore: Number(q.passing_score),
-        maxAttempts: Number(q.max_attempts),
+        maxAttempts: q.final_mode ? Math.min(3, Number(q.max_attempts)) : Number(q.max_attempts),
         durationSeconds: Number(q.time_limit_seconds),
         requiresCompletedLessons: q.requires_completed_lessons,
+        finalMode: q.final_mode,
+        mcqPercent: Number(q.mcq_percent),
       })),
       syllabus: resource
         ? {

@@ -13,8 +13,8 @@ export default function CourseStartGuide({ compact = false }) {
       </h2>
 
       <p className="mt-2 text-sm leading-6">
-        Học viên cần hoàn thành bài kiểm tra của từng bài học
-        trước khi chuyển sang bài tiếp theo.
+        Bạn có thể xem các bài đã công bố theo thứ tự phù hợp.
+        Hãy xem chuẩn đầu ra và danh sách mô-đun bắt buộc trước khi bắt đầu.
       </p>
 
       <ol className="mt-4 grid gap-4 text-sm leading-6 sm:grid-cols-2">
@@ -29,28 +29,25 @@ export default function CourseStartGuide({ compact = false }) {
         <li>
           <strong>02 · Học nội dung bài học</strong>
           <p className="mt-1 opacity-90">
-            Học theo thứ tự được mở khóa. Xem video,
+            Học theo đề cương hoặc lộ trình gợi ý. Xem video,
             đọc tài liệu PDF và nghiên cứu nội dung
             do giảng viên cung cấp.
           </p>
         </li>
 
         <li>
-          <strong>03 · Làm quiz để mở bài tiếp theo</strong>
+          <strong>03 · Đánh giá theo mô-đun</strong>
           <p className="mt-1 opacity-90">
-            Hoàn thành quiz của bài hiện tại và đạt
-            mức điểm quy định để được mở bài tiếp theo.
-            Nếu chưa đạt, học viên cần ôn tập và làm lại.
+            Làm quiz và nộp bài thực hành nếu mô-đun yêu cầu.
+            Dùng kết quả và phản hồi để chọn phần cần ôn hoặc sửa bài.
           </p>
         </li>
 
         <li>
           <strong>04 · Luyện tập và hoàn thành khóa học</strong>
           <p className="mt-1 opacity-90">
-            Nếu giảng viên giao bài tập PDF, học viên
-            có thể nộp để luyện tập thêm. Bài tập này
-            không ảnh hưởng đến việc mở khóa bài học.
-            Hoàn thành các yêu cầu để nhận chứng nhận.
+            Sau khi đạt các mô-đun bắt buộc, hoàn thành đánh giá cuối khóa
+            theo hình thức đã công bố để nhận chứng nhận.
           </p>
         </li>
       </ol>
@@ -62,10 +59,8 @@ export default function CourseStartGuide({ compact = false }) {
             : "bg-white text-blue-800"
         }`}
       >
-        <strong>Lưu ý:</strong> Chỉ đạt quiz mới được
-        công nhận hoàn thành bài học. Việc xem hết
-        video hoặc đọc xong tài liệu không tự động
-        mở khóa bài tiếp theo.
+        <strong>Lưu ý:</strong> Tiến độ xem video cho biết bạn đã học đến đâu.
+        Kết quả quiz và bài nộp là minh chứng để xét đạt mô-đun.
       </div>
     </section>
   );

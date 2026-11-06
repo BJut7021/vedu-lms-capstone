@@ -1,6 +1,6 @@
 -- VEDU: Seed 16 original essay prompts for existing published course final quizzes.
 -- Safe rerun: preserve nonempty teacher-written prompts; no new quiz is created.
--- 56-60 deliberately excluded.
+-- Numbers in prompt labels are stable seed labels, not database identities.
 BEGIN;
 SET LOCAL client_min_messages TO notice;
 DO $vedu$
@@ -107,17 +107,27 @@ Thang chấm 10: vẽ và bậc 3đ; liên thông 2đ; đường đi/chu trình 
 3) Trình bày quá trình một máy gửi yêu cầu truy cập website theo vai trò DNS, TCP/IP, router và NAT.
 4) Đề xuất ít nhất 4 giải pháp tăng an toàn và khả năng xử lý sự cố mạng.
 Thang chấm 10: sơ đồ 2đ; chia mạng 4đ; giải thích giao tiếp 2đ; an toàn/vận hành 2đ.$prompt_64$::text)
-    ) AS v(course_id, course_name, prompt_text)
+    ) AS v(seed_label, course_name, prompt_text)
   LOOP
+    IF item.course_name = 'Mạng máy tính' THEN
+      -- Repair only the exact legacy seed value. Preserve teacher edits and submissions.
+      UPDATE assessment.final_essay_prompts p SET prompt_text='', updated_at=now()
+      FROM assessment.quizzes q JOIN lms.curated_courses cc USING(course_id)
+      WHERE p.quiz_id=q.quiz_id AND cc.course_key='word'
+        AND p.updated_by IS NULL
+        AND replace(p.prompt_text,chr(13),'')=replace(item.prompt_text,chr(13),'')
+        AND NOT EXISTS (SELECT 1 FROM assessment.final_essay_submissions s WHERE s.quiz_id=p.quiz_id);
+    END IF;
     SELECT q.quiz_id INTO selected_quiz
     FROM assessment.quizzes q
     JOIN lms.courses c ON c.course_id = q.course_id
-    WHERE q.course_id = item.course_id
+    JOIN lms.curated_courses cc ON cc.course_id = c.course_id
+    WHERE lower(btrim(c.course_name)) = lower(btrim(item.course_name))
       AND q.lesson_id IS NULL AND q.is_published AND NOT q.is_deleted
-      AND c.is_deleted = false
+      AND c.status = 'PUBLISHED' AND NOT c.is_deleted
     ORDER BY q.quiz_id DESC LIMIT 1;
     IF selected_quiz IS NULL THEN
-      RAISE WARNING 'Course % (%) has no published final quiz; skipped', item.course_id, item.course_name;
+      RAISE WARNING 'Course % has no published final quiz; skipped', item.course_name;
       CONTINUE;
     END IF;
     INSERT INTO assessment.final_essay_prompts(quiz_id,prompt_text)
@@ -131,12 +141,12 @@ Thang chấm 10: sơ đồ 2đ; chia mạng 4đ; giải thích giao tiếp 2đ; 
 END;
 $vedu$;
 SELECT c.course_id,c.course_name,q.quiz_id,
-       CASE WHEN p.quiz_id IS NULL THEN 'MISSING' ELSE 'READY' END AS essay_prompt
+       CASE WHEN COALESCE(btrim(p.prompt_text),'')='' THEN 'NONE' ELSE 'READY' END AS essay_prompt
 FROM lms.courses c
 LEFT JOIN LATERAL (SELECT quiz_id FROM assessment.quizzes
   WHERE course_id=c.course_id AND lesson_id IS NULL AND is_published AND NOT is_deleted
   ORDER BY quiz_id DESC LIMIT 1) q ON TRUE
 LEFT JOIN assessment.final_essay_prompts p ON p.quiz_id=q.quiz_id
-WHERE c.course_id IN (44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 61, 62, 63, 64)
+WHERE c.status='PUBLISHED' AND NOT c.is_deleted
 ORDER BY c.course_id;
 COMMIT;

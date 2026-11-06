@@ -31,28 +31,38 @@ export class PlatformService {
     const lessons = course.sections
       .flatMap((s) => s.lessons)
       .filter((l) => l.id > 0 && l.type !== 'quiz');
-    const [progress, quizzes] = await Promise.all([
+    const [progress, quizzes, assignmentVersions] = await Promise.all([
       this.db.query(
         'SELECT lesson_id,status,last_viewed_at,updated_at FROM learning.lesson_progress WHERE student_id=$1 AND course_id=$2',
         [actor.userId, courseId],
       ),
       this.db.query(
         `SELECT q.quiz_id, q.lesson_id, q.title,
-        EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND a.status IN ('SUBMITTED','GRADED') AND ((q.lesson_id IS NOT NULL AND a.score>=q.passing_score) OR (q.lesson_id IS NULL AND EXISTS(SELECT 1 FROM assessment.final_essay_submissions s WHERE s.attempt_id=a.attempt_id AND s.grade IS NOT NULL AND (a.score*0.4+s.grade*0.6)>=5)))) AS passed,
+        EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND a.status IN ('SUBMITTED','GRADED')
+          AND (CASE WHEN q.lesson_id IS NULL THEN assessment.final_passed(a.attempt_id) ELSE a.score>=q.passing_score END)) AS passed,
         EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2) AS attempted
         FROM assessment.quizzes q WHERE q.course_id=$1 AND q.is_published AND NOT q.is_deleted ORDER BY q.quiz_id`,
         [courseId, actor.userId],
       ),
+      this.db.query(
+        `SELECT DISTINCT ON (t.assignment_id) t.assignment_id,t.section_id,t.title,t.required,v.version_id,v.status,v.outcome,v.updated_at
+         FROM assessment.course_assignments t LEFT JOIN assessment.course_assignment_versions v
+           ON v.assignment_id=t.assignment_id AND v.student_id=$2
+         WHERE t.course_id=$1 AND t.is_published AND NOT t.is_archived
+         ORDER BY t.assignment_id,v.version_no DESC NULLS LAST`,
+        [courseId, actor.userId],
+      ),
     ]);
     
-const done = new Set<number>(
-  quizzes
+const done = new Set<number>([
+  ...progress.filter((p: any) => p.status === 'LEARNED').map((p: any) => Number(p.lesson_id)),
+  ...quizzes
     .filter(
       (q: any) =>
         q.lesson_id != null && q.passed === true,
     )
     .map((q: any) => Number(q.lesson_id)),
-);
+]);
 
     const previewIds = course.sections
       .flatMap((s) => s.lessons)
@@ -79,14 +89,14 @@ const done = new Set<number>(
     const finalQuizzes = quizzes.filter((q: any) => q.lesson_id == null);
     const finalExamPassed = finalQuizzes.length > 0 &&
       finalQuizzes.every((q: any) => q.passed === true);
-    const completed = !actor.isGuest && (
-      finalQuizzes.length > 0
-        ? finalExamPassed
-        : (lessons.length > 0 && lessons.every((l) => done.has(l.id)) && quizzes.every((q: any) => q.passed))
-    );
+    const modules = await this.db.query('SELECT * FROM assessment.module_results($1,$2)', [courseId, actor.userId]);
+    const missingModules = modules.filter((module: { is_required: boolean; passed: boolean }) => module.is_required && !module.passed);
+    const completed = !actor.isGuest && finalExamPassed && !missingModules.length;
     const started =
       progress.some((p: any) => p.status !== 'NOT_STARTED') ||
-      quizzes.some((q: any) => q.attempted);
+      quizzes.some((q: any) => q.attempted) || assignmentVersions.some((v: any) => v.version_id);
+    const pendingAssignment = assignmentVersions.find((v: any) => v.status === 'NEEDS_REVISION')
+      ?? assignmentVersions.find((v: any) => v.required && (!v.version_id || v.status === 'DRAFT' || (v.status === 'GRADED' && v.outcome !== 'PASS')));
     const review =
       allowed.find(
         (l) =>
@@ -102,18 +112,14 @@ const done = new Set<number>(
     return {
       state: completed ? 'COMPLETED' : started ? 'IN_PROGRESS' : 'NEW',
       finalExamPassed,
+      modules,
+      missingModules,
+      pendingAssignment,
+      eligibleForFinal: !actor.isGuest && !missingModules.length && finalQuizzes.length > 0,
       coursePassed: completed,
       lessonId: target?.id ?? (!quiz ? review?.id : null) ?? null,
       quizId: quiz ? Number(quiz.quiz_id) : null,
-      // Course-level final test does not have lesson_id.
-      finalQuizId: Number(
-        [...quizzes]
-          .reverse()
-          .find((q: any) =>
-            q.lesson_id == null &&
-            /(?:thi|kiểm tra|bài thi|đánh giá).*(?:cuối khóa|tổng kết)|(?:cuối khóa|tổng kết)/i.test(q.title ?? ''),
-          )?.quiz_id ?? 0,
-      ) || null,
+      finalQuizId: Number(finalQuizzes.at(-1)?.quiz_id) || null,
       completedLessonIds: lessons
         .filter((l) => done.has(l.id))
         .map((l) => l.id),
@@ -148,6 +154,26 @@ const done = new Set<number>(
       `SELECT p.*,v.ranges,v.position_seconds,v.actual_seconds,v.duration_seconds FROM learning.lesson_progress p LEFT JOIN learning.video_state v USING(student_id,lesson_id) WHERE p.student_id=$1 AND p.course_id=$2`,
       [actor.userId, courseId],
     );
+    const assignmentVersions: any[] = actor.role === 'STUDENT' && !actor.isGuest
+      ? await this.db.query(
+          `SELECT DISTINCT ON (v.assignment_id) v.assignment_id,v.version_id,v.version_no,v.status,v.outcome,v.score,v.feedback,v.updated_at
+           FROM assessment.course_assignment_versions v JOIN assessment.course_assignments a USING(assignment_id)
+           WHERE a.course_id=$1 AND v.student_id=$2 ORDER BY v.assignment_id,v.version_no DESC`,
+          [courseId, actor.userId],
+        )
+      : [];
+    const versionByAssignment = new Map(assignmentVersions.map((v) => [Number(v.assignment_id), v]));
+    const moduleResults: any[] = actor.role === 'STUDENT' && !actor.isGuest
+      ? await this.db.query('SELECT * FROM assessment.module_results($1,$2)', [courseId, actor.userId])
+      : [];
+    for (const section of course.sections) {
+      const module = moduleResults.find((m) => String(m.section_id) === String(section.id));
+      if (module) Object.assign(section, { mastery: module });
+      section.assignments = (section.assignments || []).map((assignment: any) => ({
+        ...assignment,
+        latestVersion: versionByAssignment.get(Number(assignment.assignment_id)) ?? null,
+      }));
+    }
 
     
     // Học tự do: không dùng thứ tự bài học để quyết định quyền xem.
@@ -191,10 +217,7 @@ const done = new Set<number>(
 
         // Mọi bài đã công bố đều truy cập được, không phụ thuộc quiz bài trước.
         // Chỉ kết quả quiz đạt của chính bài học mới đánh dấu hoàn thành.
-        const completed =
-          actor.role === 'STUDENT' && !actor.isGuest
-            ? passedLessonIds.has(lessonId)
-            : p?.status === 'COMPLETED';
+        const completed = p?.status === 'LEARNED' || passedLessonIds.has(lessonId);
 
         Object.assign(lesson, {
           locked: false,
@@ -214,17 +237,13 @@ const done = new Set<number>(
             })),
         );
 
-        // Không dùng trạng thái COMPLETED cũ do video tạo ra
-        // để hiển thị bài đã hoàn thành cho học viên.
         const safeProgress =
           p && actor.role === 'STUDENT' && !actor.isGuest
             ? {
                 ...p,
                 status: completed
-                  ? 'COMPLETED'
-                  : p.status === 'COMPLETED'
-                    ? 'IN_PROGRESS'
-                    : p.status,
+                  ? 'LEARNED'
+                  : p.status,
               }
             : (p ?? null);
 
@@ -304,23 +323,43 @@ const finalQuizzes: any[] = await this.db.query(
    ORDER BY quiz_id DESC`,
   [courseId],
 );
-const finalQuizId = Number(
-  finalQuizzes.find((q: any) =>
-    /(?:thi|kiểm tra|bài thi|đánh giá).*(?:cuối khóa|tổng kết)|(?:cuối khóa|tổng kết)/i.test(q.title ?? ''),
-  )?.quiz_id ?? 0,
-) || null;
+const finalQuizId = Number(finalQuizzes[0]?.quiz_id) || null;
+const finalIds = new Set(finalQuizzes.map((quiz) => Number(quiz.quiz_id)));
 (course as any).finalQuizId = finalQuizId;
 for (const section of course.sections) {
   for (const lesson of section.lessons) {
     (lesson as any).quizId =
       lesson.type === 'quiz'
-        ? (finalQuizId ?? null)
+        ? (finalIds.has(-Number(lesson.id)) ? -Number(lesson.id) : null)
         : (quizByLesson.get(Number(lesson.id)) ?? null);
   }
 }
 
 
     return course;
+  }
+
+  async markLessonLearned(actor: Actor, courseId: number, lessonId: number) {
+    if (actor.role !== 'STUDENT' || actor.isGuest) throw new ForbiddenException();
+    await this.access.study(actor, courseId);
+    await this.access.lesson(actor, courseId, lessonId);
+    const [lesson] = await this.db.query(
+      `SELECT l.lesson_id,
+       EXISTS(SELECT 1 FROM assessment.quizzes q WHERE q.lesson_id=l.lesson_id AND q.is_published AND NOT q.is_deleted) AS has_quiz
+       FROM lms.lessons l WHERE l.lesson_id=$1 AND l.course_id=$2 AND l.is_published AND NOT l.is_deleted`,
+      [lessonId, courseId],
+    );
+    if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
+    if (lesson.has_quiz) throw new ConflictException('Bài này có quiz; hãy đạt quiz để ghi nhận đã học');
+    const [saved] = await this.db.query(
+      `INSERT INTO learning.lesson_progress(student_id,course_id,lesson_id,status,progress_percent,completed_at,last_viewed_at)
+       VALUES($1,$2,$3,'LEARNED',100,now(),now())
+       ON CONFLICT(student_id,lesson_id) DO UPDATE SET status='LEARNED',progress_percent=100,
+         completed_at=COALESCE(learning.lesson_progress.completed_at,now()),last_viewed_at=now()
+       RETURNING lesson_id,status,completed_at`,
+      [actor.userId, courseId, lessonId],
+    );
+    return { lessonId: Number(saved.lesson_id), status: saved.status, completedAt: saved.completed_at };
   }
   private async resourceUrl(r: any, actor: Actor) {
     if (!r.resource_url.startsWith('vedu-file:')) return r.resource_url;
@@ -1226,11 +1265,13 @@ if (data.isPublished && !l.is_published) {
   async questions(actor: Actor, courseId: number) {
     await this.access.study(actor, courseId);
     return this.db.query(
-      `SELECT q.*,u.full_name,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',m.message_id,'body',m.body,'author',a.full_name,'role',a.role,'createdAt',m.created_at) ORDER BY m.created_at,m.message_id) FROM lms.course_messages m JOIN auth.users a ON a.user_id=m.author_id WHERE m.question_id=q.question_id),'[]') AS messages FROM lms.course_questions q JOIN auth.users u ON u.user_id=q.author_id WHERE course_id=$1 ORDER BY q.created_at DESC`,
+      `SELECT q.*,u.full_name,l.title AS lesson_title,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',m.message_id,'body',m.body,'author',a.full_name,'role',a.role,'createdAt',m.created_at) ORDER BY m.created_at,m.message_id) FROM lms.course_messages m JOIN auth.users a ON a.user_id=m.author_id WHERE m.question_id=q.question_id),'[]') AS messages
+       FROM lms.course_questions q JOIN auth.users u ON u.user_id=q.author_id LEFT JOIN lms.lessons l ON l.lesson_id=q.lesson_id
+       WHERE q.course_id=$1 ORDER BY q.created_at DESC`,
       [courseId],
     );
   }
-  async ask(actor: Actor, courseId: number, subject: string, body: string) {
+  async ask(actor: Actor, courseId: number, subject: string, body: string, lessonId?: number) {
     await this.access.study(actor, courseId);
     if (
       !subject?.trim() ||
@@ -1239,14 +1280,28 @@ if (data.isPublished && !l.is_published) {
       body.length > 5000
     )
       throw new BadRequestException('Tiêu đề 1-200 và nội dung 1-5000 ký tự');
+    const normalizedLessonId = lessonId == null ? null : Number(lessonId);
+    if (normalizedLessonId !== null) {
+      const [lesson] = await this.db.query(
+        'SELECT 1 FROM lms.lessons WHERE lesson_id=$1 AND course_id=$2 AND is_published AND NOT is_deleted',
+        [normalizedLessonId, courseId],
+      );
+      if (!lesson) throw new BadRequestException('Bài học không thuộc khóa học');
+    }
     return this.db.transaction(async (m) => {
       const [q] = await m.query(
-        'INSERT INTO lms.course_questions(course_id,author_id,subject) VALUES($1,$2,$3) RETURNING *',
-        [courseId, actor.userId, subject.trim()],
+        'INSERT INTO lms.course_questions(course_id,author_id,subject,lesson_id) VALUES($1,$2,$3,$4) RETURNING *',
+        [courseId, actor.userId, subject.trim(), normalizedLessonId],
       );
       await m.query(
         'INSERT INTO lms.course_messages(question_id,author_id,body) VALUES($1,$2,$3)',
         [q.question_id, actor.userId, body.trim()],
+      );
+      await m.query(
+        `INSERT INTO auth.notifications(user_id,title,body,route)
+         SELECT teacher_id,'Câu hỏi mới trong khóa học',$2,$3 FROM lms.courses WHERE course_id=$1
+         UNION SELECT teacher_id,'Câu hỏi mới trong khóa học',$2,$3 FROM lms.course_teachers WHERE course_id=$1`,
+        [courseId, subject.trim(), `/teacher/discussions?courseId=${courseId}&questionId=${q.question_id}`],
       );
       return q;
     });
@@ -1258,12 +1313,19 @@ if (data.isPublished && !l.is_published) {
     );
     if (!q) throw new NotFoundException();
     await this.access.study(actor, Number(q.course_id));
+    if (actor.role === 'STUDENT' && Number(q.author_id) !== actor.userId)
+      throw new ForbiddenException('Chỉ tác giả câu hỏi được tiếp tục hội thoại này');
     if (!body?.trim() || body.length > 5000)
       throw new BadRequestException('Nội dung 1-5000 ký tự');
     await this.db.query(
       'INSERT INTO lms.course_messages(question_id,author_id,body) VALUES($1,$2,$3)',
       [questionId, actor.userId, body.trim()],
     );
+    if (actor.role !== 'STUDENT' && Number(q.author_id) !== actor.userId)
+      await this.db.query(
+        `INSERT INTO auth.notifications(user_id,title,body,route) VALUES($1,'Giảng viên đã trả lời câu hỏi',$2,$3)`,
+        [q.author_id, q.subject, `/student/discussions?courseId=${q.course_id}&questionId=${questionId}`],
+      );
     return { message: 'Đã gửi trả lời' };
   }
   async ticket(actor: Actor, id: number) {
@@ -1369,48 +1431,26 @@ if (data.isPublished && !l.is_published) {
         'SELECT enrollment_id FROM enrollment.enrollments WHERE enrollment_id=$1 FOR UPDATE',
         [e.enrollment_id],
       );
-      const [missing] = await m.query(
-        `SELECT count(*)::int n
-         FROM lms.lessons l
-         WHERE l.course_id=$1 AND l.is_published AND NOT l.is_deleted
-           AND NOT EXISTS (
-             SELECT 1
-             FROM assessment.quizzes q
-             JOIN assessment.quiz_attempts a ON a.quiz_id=q.quiz_id
-             WHERE q.lesson_id=l.lesson_id
-               AND q.course_id=l.course_id
-               AND q.is_published AND NOT q.is_deleted
-               AND a.student_id=$2
-               AND a.status IN ('GRADED','SUBMITTED')
-               AND a.score >= q.passing_score
-           )`,
-        [courseId, actor.userId],
-      );
-      const [total] = await m.query(
-        'SELECT count(*)::int n FROM lms.lessons WHERE course_id=$1 AND is_published AND NOT is_deleted',
-        [courseId],
-      );
-      const [failed] = await m.query(
-        `SELECT count(*)::int n FROM assessment.quizzes q WHERE course_id=$1 AND lesson_id IS NOT NULL AND is_published AND NOT is_deleted AND NOT EXISTS(SELECT 1 FROM assessment.quiz_attempts a WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND a.status IN ('GRADED','SUBMITTED') AND a.score>=q.passing_score)`,
+      const missing = await m.query(
+        'SELECT title FROM assessment.module_results($1,$2) WHERE is_required AND NOT passed',
         [courseId, actor.userId],
       );
       const [finalExams] = await m.query(
         `SELECT count(*)::int total,
           count(*) FILTER (WHERE EXISTS (
             SELECT 1 FROM assessment.quiz_attempts a
-            JOIN assessment.final_essay_submissions s ON s.attempt_id=a.attempt_id
-            WHERE a.quiz_id=q.quiz_id AND a.student_id=$2 AND s.grade IS NOT NULL
-            AND (a.score*0.4+s.grade*0.6)>=5
+            WHERE a.quiz_id=q.quiz_id AND a.student_id=$2
+            AND assessment.final_passed(a.attempt_id)
           ))::int passed
          FROM assessment.quizzes q
          WHERE q.course_id=$1 AND q.lesson_id IS NULL AND q.is_published AND NOT q.is_deleted`,
         [courseId,actor.userId],
       );
       if (Number(finalExams.total)===0 || Number(finalExams.passed) < Number(finalExams.total))
-        throw new BadRequestException('Cần nộp bài tự luận, chờ giảng viên chấm và đạt tổng điểm cuối khóa từ 5/10 trước khi cấp chứng nhận.');
-      if (!total.n || missing.n || failed.n)
+        throw new BadRequestException('Cần đạt tất cả đánh giá cuối khóa trước khi cấp chứng nhận.');
+      if (missing.length)
         throw new BadRequestException(
-          `Cần hoàn thành tất cả bài học và đạt tất cả quiz. Còn ${missing.n} bài học, ${failed.n} quiz chưa đạt.`,
+          'Cần đạt mô-đun: ' + missing.map((row: { title: string }) => row.title).join(', '),
         );
       await m.query(
         "UPDATE enrollment.enrollments SET status='COMPLETED',completed_at=COALESCE(completed_at,now()) WHERE enrollment_id=$1",
@@ -1456,7 +1496,7 @@ if (data.isPublished && !l.is_published) {
     return this.db.query(
       `SELECT e.enrollment_id,c.course_name,u.full_name,u.username,e.enrolled_at,e.status,
       COALESCE(o.status,'NO_ORDER') AS payment_status,e.final_price,
-      (SELECT count(*) FROM learning.lesson_progress p WHERE p.student_id=e.student_id AND p.course_id=e.course_id AND p.status='COMPLETED')::int AS completed_lessons,
+      (SELECT count(*) FROM learning.lesson_progress p WHERE p.student_id=e.student_id AND p.course_id=e.course_id AND p.status='LEARNED')::int AS completed_lessons,
       (SELECT COALESCE(sum(p.watch_duration_seconds),0) FROM learning.lesson_progress p WHERE p.student_id=e.student_id AND p.course_id=e.course_id)::int AS actual_seconds,
       (SELECT max(score) FROM assessment.quiz_attempts a WHERE a.course_id=e.course_id AND a.student_id=e.student_id AND status='GRADED') AS best_score
       FROM enrollment.enrollments e JOIN lms.courses c USING(course_id) JOIN auth.users u ON u.user_id=e.student_id LEFT JOIN payment.orders o USING(enrollment_id)
@@ -1661,9 +1701,9 @@ if (quiz.lesson_id != null) {
 }
 
       const [archived] = await m.query(
-        `UPDATE assessment.quizzes
+        `WITH archived AS (UPDATE assessment.quizzes
          SET is_published=false,is_deleted=true,deleted_at=now(),updated_at=now()
-         WHERE quiz_id=$1 AND NOT is_deleted RETURNING quiz_id`,
+         WHERE quiz_id=$1 AND NOT is_deleted RETURNING quiz_id) SELECT * FROM archived`,
         [quizId],
       );
       if (!archived) throw new NotFoundException('Quiz không tồn tại');
@@ -1687,7 +1727,7 @@ if (quiz.lesson_id != null) {
   private validateQuizPayload(data: any) {
     const title = typeof data?.title === 'string' ? data.title.trim() : '';
     const timeLimitSeconds = Number(data?.timeLimitSeconds);
-    const passingScore = Number(data?.passingScore ?? 5);
+    const passingScore = Number(data?.passingScore ?? 7);
     const maxAttempts = Number(data?.maxAttempts ?? 3);
     if (
       !title ||
@@ -1962,12 +2002,12 @@ const [lessonProgress] = await m.query(
     ON CONFLICT (student_id, lesson_id)
     DO UPDATE SET
       status = CASE
-        WHEN learning.lesson_progress.status = 'COMPLETED'
-        THEN 'COMPLETED'
+        WHEN learning.lesson_progress.status = 'LEARNED'
+        THEN 'LEARNED'
         ELSE 'IN_PROGRESS'
       END,
       progress_percent = CASE
-        WHEN learning.lesson_progress.status = 'COMPLETED'
+        WHEN learning.lesson_progress.status = 'LEARNED'
         THEN 100
         ELSE EXCLUDED.progress_percent
       END,
@@ -1990,8 +2030,8 @@ const result = {
   uniqueSeconds: Math.floor(unique),
   percent,
 
-  // Chỉ quiz đạt mới được công nhận hoàn thành bài học.
-  completed: lessonProgress?.status === 'COMPLETED',
+  // Watch time is behavioural evidence only; it never marks a lesson learned.
+  completed: lessonProgress?.status === 'LEARNED',
 
   // Theo dõi riêng việc xem đủ video.
   videoCompleted: percent >= 85,

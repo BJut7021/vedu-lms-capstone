@@ -24,6 +24,7 @@ import { Public } from '../auth/public.decorator';
 import { PlatformService } from './platform.service';
 import { ExamService } from './exam.service';
 import { FinalEssayService } from './final-essay.service';
+import { CourseAssignmentService } from './course-assignment.service';
 import { MomoService } from './momo.service';
 import { ManualPaymentService } from './manual-payment.service';
 import { RecommendationService } from './recommendation.service';
@@ -39,7 +40,42 @@ export class PlatformController {
     private readonly manualPayments: ManualPaymentService,
     private readonly recommendations: RecommendationService,
     private readonly paths: LearningPathService,
+    private readonly courseAssignments: CourseAssignmentService,
   ) {}
+  @Get('courses/:id/assignments') @Roles('STUDENT','TEACHER','ADMIN')
+  listAssignments(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.courseAssignments.list(r.user, id);
+  }
+  @Get('my/assignments') @Roles('STUDENT')
+  myAssignments(@Req() r: AuthRequest) {
+    return this.courseAssignments.mine(r.user);
+  }
+  @Post('courses/:id/assignments') @Roles('TEACHER','ADMIN')
+  createAssignment(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>) {
+    return this.courseAssignments.create(r.user, id, body);
+  }
+  @Patch('assignments/:id') @Roles('TEACHER','ADMIN')
+  updateAssignment(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>) {
+    return this.courseAssignments.update(r.user, id, body);
+  }
+  @Delete('assignments/:id') @Roles('TEACHER','ADMIN')
+  archiveCourseAssignment(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.courseAssignments.archive(r.user, id);
+  }
+  @Post('assignments/:id/versions') @Roles('STUDENT')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  saveAssignment(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>, @UploadedFile() file?: { buffer: Buffer; originalname: string }) {
+    return this.courseAssignments.save(r.user, id, body, file);
+  }
+  @Patch('assignment-versions/:id/grade') @Roles('TEACHER','ADMIN')
+  gradeAssignment(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>) {
+    return this.courseAssignments.grade(r.user, id, body);
+  }
+  @Get('assignment-versions/:id/file') @Roles('STUDENT','TEACHER','ADMIN')
+  async assignmentFile(@Req() r: AuthRequest, @Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+    const file = await this.courseAssignments.download(r.user, id);
+    res.attachment(file.name).type('application/octet-stream').set('Cache-Control','private, no-store').set('X-Content-Type-Options','nosniff').send(file.data);
+  }
   @Get('courses/:id/study-state') @Roles('STUDENT') studyState(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
@@ -51,6 +87,14 @@ export class PlatformController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.service.classroom(r.user, id);
+  }
+  @Patch('courses/:courseId/lessons/:lessonId/learning-status') @Roles('STUDENT')
+  markLessonLearned(
+    @Req() r: AuthRequest,
+    @Param('courseId', ParseIntPipe) courseId: number,
+    @Param('lessonId', ParseIntPipe) lessonId: number,
+  ) {
+    return this.service.markLessonLearned(r.user, courseId, lessonId);
   }
   @Get('courses/:id/content') @Roles('ADMIN', 'TEACHER') content(
     @Req() r: AuthRequest,
@@ -275,9 +319,9 @@ async practiceFile(
   @Post('courses/:id/questions') ask(
     @Req() r: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
-    @Body() b: { subject: string; body: string },
+    @Body() b: { subject: string; body: string; lessonId?: number },
   ) {
-    return this.service.ask(r.user, id, b.subject, b.body);
+    return this.service.ask(r.user, id, b.subject, b.body, b.lessonId);
   }
   @Post('questions/:id/messages') reply(
     @Req() r: AuthRequest,

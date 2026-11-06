@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +16,7 @@ import {
 import CourseImage from "./CourseImage";
 import InlineLessonQuiz from "./InlineLessonQuiz";
 import CourseStartGuide from "./CourseStartGuide";
+import CourseAssignments from "./CourseAssignments";
 import ResourceFileIcon from "./ResourceFileIcon";
 import { resourceFormat } from "../services/resources";
 import { formatMinutes } from "../services/time";
@@ -61,14 +62,19 @@ export default function ClassroomLayout({
   header,
   token,
   onRefreshCourse,
+  onMarkLearned,
 }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const index = lessons.findIndex((l) => l.id === lesson.id),
     next = lessons[index + 1],
     previous = lessons[index - 1];
   const section = course.sections.find((s) =>
     s.lessons.some((l) => l.id === lesson.id),
   );
-  const [open, setOpen] = useState({ [section?.id]: true });
+  const urgentSection = course.sections.find((s) => (s.assignments || []).some((a) => a.latestVersion?.status === "NEEDS_REVISION"));
+  const [open, setOpen] = useState({ [urgentSection?.id || section?.id]: true });
   const resources = lesson.resources || [],
     documents = resources.filter((r) => r.type !== "VIDEO");
   const localSlide = documents.find(
@@ -104,6 +110,27 @@ export default function ClassroomLayout({
     });
   };
   const lectureText = exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
+  const currentAssignments = section?.assignments || [];
+  const assignmentId = searchParams.get("assignmentId");
+  const urgentAssignment = course.sections.flatMap((s) => s.assignments || []).find((a) => a.latestVersion?.status === "NEEDS_REVISION")
+    || course.sections.flatMap((s) => s.assignments || []).find((a) => a.required && (!a.latestVersion || a.latestVersion.status === "DRAFT"));
+  const hasQuiz = Number(lesson.quizId) > 0;
+  const openAssignment = (assignment) => {
+    const ownerSection = course.sections.find((item) =>
+      (item.assignments || []).some((candidate) => Number(candidate.assignment_id) === Number(assignment.assignment_id)),
+    );
+    if (assignment.section_id == null) {
+      if (Number(course.finalQuizId) > 0) navigate(`/quiz/${course.id}/${course.finalQuizId}`);
+      return;
+    }
+    const targetLesson = ownerSection?.lessons?.find((item) => item.type !== "quiz");
+    if (targetLesson) navigate(`/learn/${course.id}/${targetLesson.id}?assignmentId=${assignment.assignment_id}`);
+  };
+  const qaRoute = `/student/discussions?${new URLSearchParams({
+    courseId: String(course.id),
+    lessonId: String(lesson.id),
+    returnTo: `${location.pathname}${location.search}`,
+  })}`;
 
   return (
     <div className="classroom-shell min-h-screen bg-slate-50 text-slate-800">
@@ -165,6 +192,7 @@ export default function ClassroomLayout({
                       `${s.lessons.length} bài thi`
                     )}
                   </span>
+                  {(s.assignments?.length || s.mastery) && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.mastery?.state === "PASSED" ? "bg-emerald-50 text-emerald-700" : s.mastery?.state === "NEEDS_REVISION" ? "bg-amber-100 text-amber-800" : "bg-blue-50 text-blue-700"}`}>{s.mastery?.state === "PASSED" ? "Đạt" : s.mastery?.state === "NEEDS_REVISION" ? "Cần sửa" : `${s.assignments?.length || 0} bài nộp`}</span>}
                   <ChevronDown
                     size={16}
                     className={`shrink-0 ${open[s.id] ? "rotate-180" : ""}`}
@@ -216,8 +244,9 @@ export default function ClassroomLayout({
       <span className="min-w-0">
         <span className="home-balanced block font-medium leading-5">{l.title}</span>
         {done[l.id] && (
-          <small className="mt-1 block text-xs text-emerald-700">Đã hoàn thành quiz</small>
+          <small className="mt-1 block text-xs text-emerald-700">Đã học / đạt quiz</small>
         )}
+        {l.type !== "quiz" && Number(l.quizId) > 0 && !done[l.id] && <small className="mt-1 block text-xs font-semibold text-amber-700">Có quiz mô-đun</small>}
         {l.type === "quiz" && l.durationSeconds > 0 && (
           <small className="mt-1 block text-slate-400">
             {formatMinutes(l.durationSeconds)} làm bài
@@ -227,6 +256,9 @@ export default function ClassroomLayout({
     </button>
   </div>
 ))}
+                    {(s.assignments || []).map((assignment) => <button key={`assignment-${assignment.assignment_id}`} type="button" onClick={() => openAssignment(assignment)} className={`ml-3 flex w-[calc(100%-0.75rem)] items-start gap-2 rounded-xl p-3 text-left text-sm ${assignment.latestVersion?.status === "NEEDS_REVISION" ? "bg-amber-50 text-amber-800" : "bg-violet-50 text-violet-800"}`}>
+                      <FileText size={16} className="mt-0.5 shrink-0" /><span><strong className="block">{assignment.title}</strong><small>{assignment.latestVersion?.status === "NEEDS_REVISION" ? "Cần sửa và nộp lại" : assignment.latestVersion?.status === "GRADED" ? "Đã chấm" : assignment.latestVersion?.status === "SUBMITTED" ? "Đã nộp" : "Bài nộp"}</small></span>
+                    </button>)}
 
                   </div>
                 )}
@@ -250,7 +282,7 @@ export default function ClassroomLayout({
             </button>
             {!isGuest && (
               <Link
-                to="/student/discussions"
+                to={qaRoute}
                 className="flex items-center gap-2 py-2 text-sm text-blue-700"
               >
                 <MessageCircle size={17} />
@@ -293,6 +325,7 @@ export default function ClassroomLayout({
             <span>{course.title}</span>
             <ChevronRight size={13} />
             <span>{section?.title}</span>
+            {section?.weekStart && <span>Tuần gợi ý {section.weekStart}–{section.weekEnd}</span>}
           </div>
           <select
             aria-label="Chọn bài học"
@@ -340,6 +373,14 @@ export default function ClassroomLayout({
               bài thi và nhận chứng nhận.
             </p>
           )}
+          {!isGuest && token && <section className={`rounded-2xl border p-4 ${urgentAssignment?.latestVersion?.status === "NEEDS_REVISION" ? "border-amber-300 bg-amber-50" : "border-blue-200 bg-blue-50"}`}>
+            <h2 className="font-bold">Việc cần làm tiếp theo</h2>
+            <p className="mt-1 text-sm text-slate-700">
+              {urgentAssignment ? `${urgentAssignment.latestVersion?.status === "NEEDS_REVISION" ? "Ưu tiên sửa bài: " : "Hoàn thành bài bắt buộc: "}${urgentAssignment.title}` : hasQuiz && !done[lesson.id] ? "Làm quiz của bài học khi đã sẵn sàng." : !done[lesson.id] ? "Đánh dấu đã học sau khi đọc nội dung và tài liệu." : next ? `Tiếp tục: ${next.title}` : "Bạn đã xử lý các hoạt động hiện có."}
+            </p>
+            {urgentAssignment && <button type="button" onClick={() => openAssignment(urgentAssignment)} className="mt-3 rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white">Mở việc cần làm</button>}
+          </section>}
+          {!isGuest && token && currentAssignments.length > 0 && <CourseAssignments courseId={course.id} token={token} sectionId={section?.id} assignmentId={assignmentId} />}
           {notice && (
             <p
               role="status"
@@ -516,8 +557,11 @@ export default function ClassroomLayout({
 {lesson.type !== "quiz" && (
   <div className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm text-blue-800">
     {done[lesson.id]
-      ? "Bài học đã được ghi nhận hoàn thành."
-      : "Hãy học nội dung và đạt quiz của bài này để hoàn thành."}
+      ? "Bài học đã được ghi nhận là đã học."
+      : hasQuiz
+        ? "Hãy học nội dung và đạt quiz của bài này để ghi nhận đã học."
+        : "Bài này không có quiz. Hãy tự xác nhận sau khi đã học nội dung; việc này không tự làm mô-đun đạt."}
+    {!done[lesson.id] && !hasQuiz && <button type="button" onClick={() => onMarkLearned(lesson.id)} className="ml-3 rounded-lg bg-blue-700 px-3 py-1.5 font-bold text-white">Đánh dấu đã học</button>}
   </div>
 )}
 

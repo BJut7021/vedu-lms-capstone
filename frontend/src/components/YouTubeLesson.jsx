@@ -128,7 +128,7 @@ export default function YouTubeLesson({
       player?.destroy();
       mediaRef.current = null;
     };
-  }, [url, mediaRef]);
+  }, [url, mediaRef, title]);
   return (
     <div className="space-y-3">
       <div
