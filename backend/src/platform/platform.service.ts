@@ -29,6 +29,7 @@ export class PlatformService {
     // Public curriculum metadata plus only this account's progress; this GET never enrolls or unlocks content.
     const course = await this.courses.findOne(courseId, false);
     const lessons = course.sections
+      .filter((section) => section.moduleType !== 'INTRO')
       .flatMap((s) => s.lessons)
       .filter((l) => l.id > 0 && l.type !== 'quiz');
     const [progress, quizzes, assignmentVersions] = await Promise.all([
@@ -73,18 +74,7 @@ const done = new Set<number>([
       ? lessons.filter((l) => previewIds.includes(l.id))
       : lessons;
     const pending = allowed.filter((l) => !done.has(l.id));
-    const last = progress
-      .filter(
-        (p: any) =>
-          p.status === 'IN_PROGRESS' &&
-          pending.some((l) => l.id === Number(p.lesson_id)),
-      )
-      .sort(
-        (a: any, b: any) =>
-          new Date(b.last_viewed_at ?? b.updated_at).getTime() -
-          new Date(a.last_viewed_at ?? a.updated_at).getTime(),
-      )[0];
-    // Course-level final exam (40% MCQ + 60% graded essay) determines course pass.
+    // Course-level pass follows the configured final mode and required modules.
     // Lesson quizzes still mark individual lessons as completed independently.
     const finalQuizzes = quizzes.filter((q: any) => q.lesson_id == null);
     const finalExamPassed = finalQuizzes.length > 0 &&
@@ -834,7 +824,7 @@ async lessonPracticeFile(
       )
     )
       throw new BadRequestException(
-        'Thông tin giới thiệu không hợp lệ: tối đa 30 chuẩn đầu ra, mỗi dòng 500 ký tự.',
+        'Thông tin giới thiệu khóa học không hợp lệ.',
       );
     const rid = data.syllabusResourceId;
     if (rid != null) {
@@ -1450,7 +1440,7 @@ if (data.isPublished && !l.is_published) {
         throw new BadRequestException('Cần đạt tất cả đánh giá cuối khóa trước khi cấp chứng nhận.');
       if (missing.length)
         throw new BadRequestException(
-          'Cần đạt mô-đun: ' + missing.map((row: { title: string }) => row.title).join(', '),
+          'Cần đạt module: ' + missing.map((row: { title: string }) => row.title).join(', '),
         );
       await m.query(
         "UPDATE enrollment.enrollments SET status='COMPLETED',completed_at=COALESCE(completed_at,now()) WHERE enrollment_id=$1",

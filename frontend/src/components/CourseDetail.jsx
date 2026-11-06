@@ -29,7 +29,9 @@ export default function CourseDetail({
     : String(studyState.pendingAssignment.section_id);
   const isSectionOpen = (sectionId) => openSections[sectionId] ?? String(sectionId) === String(urgentSectionId);
 
-  const allLessons = course.sections.flatMap((section) => section.lessons);
+  const learningLessons = course.sections
+    .filter((section) => section.moduleType !== "INTRO")
+    .flatMap((section) => section.lessons);
   const validQuizId = (id) => Number.isSafeInteger(Number(id)) && Number(id) > 0;
   const resolveQuizId = (lesson) =>
     validQuizId(lesson?.quizId)
@@ -37,7 +39,7 @@ export default function CourseDetail({
       : lesson?.type === 'quiz' && validQuizId(studyState?.finalQuizId)
         ? Number(studyState.finalQuizId)
         : null;
-  const firstLearningLesson = allLessons.find(
+  const firstLearningLesson = learningLessons.find(
     (lesson) => lesson.type !== "quiz",
   );
   const completed = studyState?.state === "COMPLETED";
@@ -171,8 +173,8 @@ export default function CourseDetail({
               </p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-gray-100 rounded-lg text-gray-600">
-              {allLessons.filter((l) => Number(l.id) > 0).length} bài học ·{" "}
-              {allLessons.filter((l) => Boolean(resolveQuizId(l))).length} bài kiểm tra
+              {learningLessons.filter((l) => Number(l.id) > 0).length} bài học ·{" "}
+              {learningLessons.filter((l) => Boolean(resolveQuizId(l))).length} bài kiểm tra
             </span>
           </div>
 
@@ -190,7 +192,6 @@ export default function CourseDetail({
                     {section.weekStart && <small className="ml-2 font-normal text-slate-500">Tuần gợi ý {section.weekStart}–{section.weekEnd}</small>}
                     {section.required && <small className="ml-2 text-blue-700">Bắt buộc</small>}
                     {section.required && studyState?.modules?.find((item) => String(item.section_id) === String(section.id))?.passed && <small className="ml-2 text-emerald-700">Đã đạt</small>}
-                    {section.assignments?.length > 0 && <small className="ml-2 text-violet-700">{section.assignments.length} bài nộp</small>}
                   </span>
                   {isSectionOpen(section.id) ? (
                     <ChevronUp size={20} />
@@ -201,12 +202,8 @@ export default function CourseDetail({
 
                 {isSectionOpen(section.id) && (
                   <div className="divide-y divide-gray-100">
-                    {section.outcomes?.length > 0 && <div className="p-4 text-sm text-slate-600">
-                      <strong>Chuẩn đầu ra</strong>
-                      <ul className="list-disc pl-5">{section.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
-                    </div>}
                     {section.id === "course-assessment" && studyState?.missingModules?.length > 0 && !studyState.finalExamPassed && <p className="p-4 text-sm text-amber-800">
-                      Cần đạt mô-đun trước khi thi: {studyState.missingModules.map((module) => module.title).join(", ")}.
+                      Cần đạt module trước khi thi: {studyState.missingModules.map((module) => module.title).join(", ")}.
                     </p>}
                     {section.lessons.map((lesson) => (
                       <div
@@ -239,7 +236,7 @@ export default function CourseDetail({
                                 ? (studyLoading ? 'Đang tải bài kiểm tra…' : 'Chưa có bài kiểm tra được công bố')
                                 : lesson.type}
                             </span>
-                            {lesson.type !== "quiz" && validQuizId(lesson.quizId) && <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Quiz mô-đun</span>}
+                            {section.moduleType !== "INTRO" && lesson.type !== "quiz" && validQuizId(lesson.quizId) && <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Quiz cuối bài</span>}
                           </div>
                         </div>
 
@@ -263,7 +260,7 @@ export default function CourseDetail({
                       </div>
                     ))}
                     {(section.assignments || []).map((assignment) => <div key={`assignment-${assignment.assignment_id}`} className="flex items-center justify-between gap-3 bg-violet-50/50 p-4">
-                      <div><p className="text-sm font-semibold text-violet-900">{assignment.title}</p><p className="text-xs text-violet-700">Bài nộp {assignment.required ? "bắt buộc" : "tự luyện"} · đạt từ {assignment.passing_score}/10</p></div>
+                      <div><p className="text-sm font-semibold text-violet-900">{assignment.title}</p><p className="text-xs text-violet-700">{assignment.required && "Bắt buộc · "}Đạt từ {assignment.passing_score}/10</p></div>
                       <button className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white" onClick={() => {
                         const first = section.lessons.find((item) => item.type !== "quiz");
                         if (first) onStartLearning(first.id);

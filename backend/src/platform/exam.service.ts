@@ -78,7 +78,7 @@ export class ExamService {
             [currentQuiz.course_id, actor.userId],
           );
           if (missing.length)
-            throw new BadRequestException('Cần đạt mô-đun trước khi thi: ' + missing.map((row: {title: string}) => row.title).join(', '));
+            throw new BadRequestException('Cần đạt module trước khi thi: ' + missing.map((row: {title: string}) => row.title).join(', '));
           if (currentQuiz.final_mode === 'MCQ_ESSAY') {
             const [prompt] = await m.query('SELECT 1 FROM assessment.final_essay_prompts WHERE quiz_id=$1 AND btrim(prompt_text)<>\'\'', [quizId]);
             if (!prompt) throw new BadRequestException('Giảng viên chưa công bố đề tự luận.');

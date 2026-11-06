@@ -101,7 +101,7 @@ export class CourseAssignmentService {
     const sectionId = body.sectionId == null || body.sectionId === '' ? null : Number(body.sectionId);
     if (sectionId !== null) {
       const [section] = await this.db.query('SELECT 1 FROM lms.course_sections WHERE section_id=$1 AND course_id=$2', [sectionId, courseId]);
-      if (!section) throw new BadRequestException('Mô-đun không thuộc khóa học');
+      if (!section) throw new BadRequestException('Module không thuộc khóa học');
     }
     const title = String(body.title ?? '').trim();
     const instructions = String(body.instructions ?? '').trim();
@@ -155,7 +155,7 @@ export class CourseAssignmentService {
         );
         if (!attempt) throw new ForbiddenException('Lượt thi không hợp lệ');
       } else if (attemptId !== null) {
-        throw new BadRequestException('Bài mô-đun không gắn với lượt thi cuối khóa');
+        throw new BadRequestException('Bài module không gắn với lượt thi cuối khóa');
       }
       const [latest] = await m.query(
         `SELECT version_id,status,outcome,version_no,file_name FROM assessment.course_assignment_versions

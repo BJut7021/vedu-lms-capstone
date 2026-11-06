@@ -11,25 +11,25 @@ const button = "rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white di
 
 function StudentForm({ assignment, draft, attemptId, token, refresh, report }) {
   const [busy, setBusy] = useState(false);
+  const [selectedFile, setSelectedFile] = useState("");
   return <form className="space-y-3" onSubmit={async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     if (!form.get("file")?.size) form.delete("file");
-    form.set("submit", String(event.nativeEvent.submitter?.value === "submit"));
+    form.set("submit", "true");
     if (attemptId) form.set("attemptId", attemptId);
     setBusy(true);
     try { await api.saveCourseAssignment(assignment.assignment_id, token, form); await refresh(); }
     catch (error) { report(error.message); }
     finally { setBusy(false); }
   }}>
-    <label className="block">Nội dung<textarea className={field} name="answer" maxLength={20000} defaultValue={draft?.answer_text} /></label>
-    <label className="block">Liên kết HTTPS<input className={field} name="link" type="url" defaultValue={draft?.answer_url || ""} /></label>
-    <label className="block">Tệp tối đa 5 MB ({(assignment.allowed_file_types || []).join(", ").toUpperCase()})<input className={field} name="file" type="file" accept={(assignment.allowed_file_types || ["pdf","docx","xlsx","pptx","zip"]).map((x) => `.${x}`).join(",")} /></label>
-    {draft?.file_name && <p>Tệp đã lưu: {draft.file_name}. Chọn tệp mới để thay.</p>}
-    <div className="flex gap-2">
-      <button className={button} disabled={busy} value="draft">Lưu nháp</button>
-      <button className={button} disabled={busy} value="submit">Nộp bài</button>
-    </div>
+    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 p-5 text-center text-blue-800 hover:border-blue-400">
+      <span className="text-lg font-bold">＋ Thêm hoặc chọn tệp</span>
+      <span className="text-xs">Tối đa 5 MB · {(assignment.allowed_file_types || []).join(", ").toUpperCase()}</span>
+      <input className="sr-only" name="file" type="file" required={!draft?.file_name} accept={(assignment.allowed_file_types || ["pdf","docx","xlsx","pptx","zip"]).map((x) => `.${x}`).join(",")} onChange={(event) => setSelectedFile(event.target.files?.[0]?.name || "")} />
+    </label>
+    {(selectedFile || draft?.file_name) && <p className="rounded-lg bg-slate-50 p-3 text-sm">Tệp đã chọn: <strong>{selectedFile || draft.file_name}</strong></p>}
+    <button className={button} disabled={busy}>{busy ? "Đang nộp…" : "Nộp bài"}</button>
   </form>;
 }
 
@@ -84,7 +84,7 @@ function TeacherAssignmentEditor({ courseId, modules, assignment, token, refresh
     } catch (error) { report(error.message); } finally { setBusy(false); }
   }}>
     <h3 className="font-bold">{assignment ? "Sửa bài tập" : "Tạo bài tập"}</h3>
-    <label className="block">Mô-đun<select className={field} name="sectionId" defaultValue={assignment?.section_id ?? ""}><option value="">Đánh giá cuối khóa</option>{modules.map((m) => <option key={m.section_id} value={m.section_id}>{m.title}</option>)}</select></label>
+    <label className="block">Module<select className={field} name="sectionId" defaultValue={assignment?.section_id ?? ""}><option value="">Đánh giá cuối khóa</option>{modules.map((m) => <option key={m.section_id} value={m.section_id}>{m.title}</option>)}</select></label>
     <label className="block">Tiêu đề<input className={field} name="title" maxLength={250} required defaultValue={assignment?.title || ""} /></label>
     <label className="block">Hướng dẫn<textarea className={field} name="instructions" maxLength={10000} required defaultValue={assignment?.instructions || ""} /></label>
     <label className="block">Điểm đạt<input className={field} name="passingScore" type="number" min="0" max="10" step="0.1" defaultValue={assignment?.passing_score ?? 7} required /></label>
@@ -131,8 +131,8 @@ export default function CourseAssignments({ courseId, token, attemptId, teacher 
     {teacher && data && <div><button className={button} onClick={() => setEditing("new")}>Tạo bài tập</button></div>}
     {teacher && data && editing && <TeacherAssignmentEditor courseId={courseId} modules={data.modules || []} assignment={editing === "new" ? null : editing} token={token} refresh={refresh} close={() => setEditing(null)} report={setError} />}
     {teacher && data && <div className="flex flex-wrap gap-2">
-      <select className="rounded-lg border p-2" aria-label="Lọc mô-đun" value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
-        <option value="">Tất cả mô-đun</option>
+      <select className="rounded-lg border p-2" aria-label="Lọc module" value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
+        <option value="">Tất cả module</option>
         {[...new Map(assignments.map((a) => [String(a.section_id ?? "final"), a.section_title || "Cuối khóa"]))].map(([id,label]) => <option key={id} value={id}>{label}</option>)}
       </select>
       <select className="rounded-lg border p-2" aria-label="Lọc trạng thái" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>

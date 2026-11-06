@@ -250,7 +250,7 @@ w.restored = true;
       onMarkLearned={async (lessonId) => {
         try {
           await api.platform(`/courses/${course.id}/lessons/${lessonId}/learning-status`, token, {}, "PATCH");
-          setNotice("Đã ghi nhận bài học. Trạng thái đạt mô-đun vẫn phụ thuộc quiz và bài nộp bắt buộc.");
+          setNotice("Đã ghi nhận bài học. Trạng thái đạt module vẫn phụ thuộc quiz và bài nộp bắt buộc.");
           await onRefreshCourse();
         } catch (error) {
           setNotice(error.message);

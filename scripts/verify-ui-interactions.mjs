@@ -137,6 +137,7 @@ try {
       {
         id: 1,
         title: "Chương 1",
+        required: true,
         assignments: [
           {
             assignment_id: 5,
@@ -309,7 +310,11 @@ try {
       `Related resources display correct ${label} file icon`,
       screen.getAllByRole("img", { name: `Định dạng ${label}` }).length > 0,
     );
-  fireEvent.click(screen.getByRole("button", { name: /Bài thực hành cần sửa/ }));
+  const assignmentTreeButton = screen
+    .getAllByRole("button", { name: /Bài thực hành cần sửa/ })
+    .find((candidate) => candidate.textContent.includes("Cần sửa và nộp lại"));
+  assert.ok(assignmentTreeButton);
+  fireEvent.click(assignmentTreeButton);
   await waitFor(() =>
     assert.match(
       screen.getByTestId("classroom-route").textContent,
@@ -512,10 +517,13 @@ try {
     }),
   );
   check(
-    "Course introduction shows published outcomes, preparation and real assessment rules before enrollment",
-    !!screen.getByText("Vận dụng kế thừa") &&
+    "Course introduction shows lesson contents, preparation and only required modules before enrollment",
+    !!screen.getByText("Nội dung chính của khóa học") &&
+      !!screen.getByText("Bài một") &&
       !!screen.getByText("Cài C# để thực hành") &&
-      screen.getByText(/Đạt từ 7\/10/).textContent.includes("20 phút"),
+      screen.getAllByText("Chương 1").length >= 2 &&
+      !screen.queryByText(/Đạt từ 7\/10/) &&
+      !screen.queryByText("Thi cuối khóa"),
   );
   check(
     "Syllabus preview and original-document link are available before starting",

@@ -59,7 +59,7 @@ Invoke-Docker compose cp "db:$containerDump" (Join-Path $backup "vedu-$stamp.dum
 Invoke-Docker compose exec -T db rm -- $containerDump
 Write-Host "Database backup saved under .work\backups\vedu-$stamp.dump"
 Invoke-Docker compose build backend frontend ml
-# Applies schema upgrades and the course workflow seeds in dependency order.
+# Applies schema upgrades, course workflow seeds and OOP demo refinement in dependency order.
 Invoke-Docker compose run --rm --no-deps demo-seed
 Invoke-Docker compose run --rm --no-deps course-materials
 Invoke-Docker compose up -d --no-deps --force-recreate --wait ml backend frontend

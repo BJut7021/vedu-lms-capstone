@@ -8,12 +8,10 @@ export default function CourseOverviewEditor({
   busy,
   reload,
 }) {
-  const saved = content.overviewSettings,
-    view = content.overview;
+  const saved = content.overviewSettings;
   const [form, setForm] = useState({
     audience: saved?.audience || "",
     preparation: saved?.preparation || "",
-    outcomes: (saved?.outcomes || []).join("\n"),
     practiceNote: saved?.practice_note || "",
     syllabusResourceId: saved?.syllabus_resource_id
       ? String(saved.syllabus_resource_id)
@@ -32,10 +30,8 @@ export default function CourseOverviewEditor({
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-lg font-bold">Giới thiệu trước khi học</h2>
       <p className="text-sm leading-6 text-slate-600">
-  Cung cấp thông tin tổng quan về khóa học, đối tượng học viên,
-  môn học tiên quyết và chuẩn đầu ra. Học viên cần đạt bài quiz
-  của từng bài học để được mở bài tiếp theo. Bài tập PDF
-  chỉ phục vụ luyện tập bổ sung và không bắt buộc.
+  Cung cấp thông tin tổng quan, đối tượng học viên, kiến thức nền,
+  đề cương và hướng dẫn học tập trước khi học viên vào phòng học.
 </p>
       <form
         className="space-y-4"
@@ -47,10 +43,7 @@ export default function CourseOverviewEditor({
               auth.accessToken,
               {
                 ...form,
-                outcomes: form.outcomes
-                  .split("\n")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
+                outcomes: [],
                 syllabusResourceId: form.syllabusResourceId
                   ? Number(form.syllabusResourceId)
                   : null,
@@ -70,11 +63,6 @@ export default function CourseOverviewEditor({
     3000,
   ],
   [
-    "outcomes",
-    "Chuẩn đầu ra (mỗi dòng một mục, tối đa 30 mục)",
-    15030,
-  ],
-  [
     "practiceNote",
     "Hướng dẫn học tập và bài tập luyện tập bổ sung",
     3000,
@@ -84,7 +72,7 @@ export default function CourseOverviewEditor({
             {label}
             <textarea
               className={field}
-              rows={key === "outcomes" ? 5 : 3}
+              rows={3}
               maxLength={max}
               value={form[key]}
               onChange={(e) => setForm({ ...form, [key]: e.target.value })}
@@ -94,16 +82,9 @@ export default function CourseOverviewEditor({
 
         <p className="rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-800">
   <strong>Lưu ý cho giảng viên:</strong> Nếu khóa học không yêu cầu
-  môn học tiên quyết, hãy ghi "Không có". Chuẩn đầu ra cần mô tả
-  những kiến thức hoặc kỹ năng học viên đạt được sau khóa học,
-  không chỉ liệt kê tên các bài học.
+  kiến thức nền, hãy ghi "Không có". Hãy chọn đúng tệp đề cương
+  để học viên có thể đọc trước khi bắt đầu.
 </p>
-
-        {!form.outcomes && view?.outcomes?.length > 0 && (
-          <p className="text-xs text-slate-500">
-            Để trống để tự lấy chuẩn đầu ra từ các bài học đã công bố.
-          </p>
-        )}
         <label className="block text-sm font-medium">
           Đề cương cho phép đọc công khai trước khi học
           <select

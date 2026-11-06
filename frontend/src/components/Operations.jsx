@@ -226,7 +226,7 @@ function StudentSubmissions({ auth }) {
   const statusLabel = { NOT_STARTED:"Chưa làm", DRAFT:"Bản nháp", SUBMITTED:"Đã nộp", UNDER_REVIEW:"Đang chấm", NEEDS_REVISION:"Cần sửa", GRADED:"Đã chấm" };
   const visible = (rows || []).filter((row) => !filter || (row.status || "NOT_STARTED") === filter);
   return <Card title="Bài nộp của tôi">
-    <p className="text-sm text-slate-600">Mở thẳng đúng mô-đun hoặc đánh giá cuối khóa; bài cần sửa luôn được ưu tiên đầu danh sách.</p>
+    <p className="text-sm text-slate-600">Mở thẳng đúng module hoặc đánh giá cuối khóa; bài cần sửa luôn được ưu tiên đầu danh sách.</p>
     <select className={field} value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Lọc trạng thái bài nộp">
       <option value="">Tất cả trạng thái</option>
       {Object.entries(statusLabel).map(([value,label]) => <option key={value} value={value}>{label}</option>)}

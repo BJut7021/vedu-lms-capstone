@@ -1,21 +1,19 @@
 import {
   BookOpen,
-  CheckCircle2,
   ClipboardCheck,
   ExternalLink,
   FileText,
-  GraduationCap,
   Users,
 } from "lucide-react";
-import { formatMinutes } from "../services/time";
 export default function CourseIntroduction({ course }) {
   const overview = course.overview || {},
-    outcomes = overview.outcomes || [],
-    syllabus = overview.syllabus,
-    quizzes = overview.assessments || [];
+    syllabus = overview.syllabus;
   const lessons = course.sections
     .flatMap((s) => s.lessons)
     .filter((l) => l.type !== "quiz");
+  const requiredModules = course.sections.filter(
+    (section) => section.moduleType !== "INTRO" && section.required === true,
+  );
   const pdf = syllabus?.type === "PDF";
   return (
     <section
@@ -52,39 +50,17 @@ export default function CourseIntroduction({ course }) {
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="rounded-2xl bg-slate-50 p-5">
           <h3 className="flex items-center gap-2 font-bold text-slate-900">
-            <GraduationCap size={20} className="text-blue-600" />
-            Bạn sẽ học được gì?
+            <BookOpen size={20} className="text-blue-600" />
+            Nội dung chính của khóa học
           </h3>
-          {outcomes.length ? (
-            <>
-              <ul className="mt-4 space-y-3">
-                {outcomes.map((o, i) => (
-                  <li
-                    key={i}
-                    className="flex items-start gap-2 text-sm leading-6 text-slate-700"
-                  >
-                    <CheckCircle2
-                      size={17}
-                      className="mt-1 shrink-0 text-emerald-600"
-                    />
-                    <span>{o}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Giảng viên chưa công bố chuẩn đầu ra riêng. Nội dung hiện có của
-                khóa:
-              </p>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
-                {lessons.slice(0, 5).map((l) => (
-                  <li key={l.id}>{l.title}</li>
-                ))}
-              </ul>
-            </>
-          )}
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Các bài học và tài liệu đã được sắp xếp theo đúng thứ tự của khóa:
+          </p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
+            {lessons.slice(0, 6).map((l) => (
+              <li key={l.id}>{l.title}</li>
+            ))}
+          </ul>
         </div>
         <div className="space-y-5">
           <div className="rounded-2xl border border-slate-200 p-5">
@@ -111,39 +87,23 @@ export default function CourseIntroduction({ course }) {
               Điều kiện hoàn thành & chứng nhận
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-700">
-              Bạn có thể học các bài đã công bố theo thứ tự phù hợp.
-              Chứng nhận yêu cầu đạt mô-đun bắt buộc và đánh giá cuối khóa.
-              Hãy kiểm tra quiz và bài nộp cần đạt trong từng mô-đun.
+              Hoàn thành các module bắt buộc dưới đây và đạt đánh giá cuối khóa
+              để được xét cấp chứng nhận.
             </p>
-            {quizzes.length > 0 && (
-              <ul className="mt-3 space-y-3">
-                {quizzes.map((q, i) => (
-                  <li
-                    key={i}
-                    className="rounded-xl bg-white/80 p-3 text-sm leading-6"
-                  >
-                    <strong className="block text-slate-800">{q.title}</strong>
-                    <span className="text-slate-600">
-                      Đạt từ {q.passingScore}/10 · {q.maxAttempts} lượt ·{" "}
-                      {formatMinutes(q.durationSeconds)}
-                    </span>
-                    {q.requiresCompletedLessons && (
-                      <p className="mt-1 text-xs text-emerald-800">
-                        Mở sau khi đạt các mô-đun bắt buộc.
-                      </p>
-                    )}
-                    {q.finalMode && <p className="mt-1 text-xs text-slate-600">
-                      {q.finalMode === "MCQ_ONLY" ? "Trắc nghiệm 100%" : `Trắc nghiệm ${q.mcqPercent}% · ${q.finalMode === "MCQ_PRACTICAL" ? "Sản phẩm thực hành" : "Tự luận"} ${100 - q.mcqPercent}%`}
-                    </p>}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {overview.practiceNote && (
-              <p className="mt-3 whitespace-pre-line text-xs leading-5 text-slate-600">
-                {overview.practiceNote}
-              </p>
-            )}
+            <ul className="mt-3 space-y-2">
+              {requiredModules.map((module) => (
+                <li
+                  key={module.id}
+                  className="flex items-start gap-2 rounded-xl bg-white/80 px-3 py-2.5 text-sm font-semibold leading-5 text-slate-800"
+                >
+                  <ClipboardCheck
+                    size={16}
+                    className="mt-0.5 shrink-0 text-emerald-700"
+                  />
+                  <span>{module.title}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

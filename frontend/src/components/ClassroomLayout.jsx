@@ -20,6 +20,7 @@ import CourseAssignments from "./CourseAssignments";
 import ResourceFileIcon from "./ResourceFileIcon";
 import { resourceFormat } from "../services/resources";
 import { formatMinutes } from "../services/time";
+import { youtubeId } from "../services/video";
 
 function ResourceLinks({ resources }) {
   return (
@@ -44,6 +45,45 @@ function ResourceLinks({ resources }) {
           </a>
         );
       })}
+    </div>
+  );
+}
+
+function SupplementaryVideos({ resources, primaryUrl }) {
+  const videos = resources.filter(
+    (resource) => resource.type === "VIDEO" && resource.url !== primaryUrl,
+  );
+  if (!videos.length) return null;
+  return (
+    <div className="space-y-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
+      <h3 className="font-bold text-slate-900">Video bổ trợ của bài học</h3>
+      {videos.map((resource) => {
+        const id = youtubeId(resource.url);
+        return (
+          <div key={resource.id} className="space-y-2">
+            <p className="text-sm font-semibold text-slate-700">{resource.title}</p>
+            {id ? (
+              <iframe
+                title={resource.title}
+                src={`https://www.youtube-nocookie.com/embed/${id}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="aspect-video w-full rounded-xl bg-black"
+              />
+            ) : (
+              <video
+                controls
+                preload="metadata"
+                src={resource.url}
+                className="aspect-video w-full rounded-xl bg-black"
+              />
+            )}
+          </div>
+        );
+      })}
+      <p className="text-xs leading-5 text-slate-500">
+        Video bổ trợ phát trực tiếp trong VEDU nhưng không cộng dồn vào chỉ số xem của video chính.
+      </p>
     </div>
   );
 }
@@ -73,6 +113,7 @@ export default function ClassroomLayout({
   const section = course.sections.find((s) =>
     s.lessons.some((l) => l.id === lesson.id),
   );
+  const isIntroduction = section?.moduleType === "INTRO";
   const urgentSection = course.sections.find((s) => (s.assignments || []).some((a) => a.latestVersion?.status === "NEEDS_REVISION"));
   const [open, setOpen] = useState({ [urgentSection?.id || section?.id]: true });
   const resources = lesson.resources || [],
@@ -82,17 +123,26 @@ export default function ClassroomLayout({
       r.url?.startsWith("/course-materials/") && !r.url.endsWith("/00.html"),
   );
   const text = lesson.content?.replace(/^\[VEDU-LESSON:.*\]\n/, "") || "";
-  const exercise = text.match(
+  const detectedExercise = text.match(
     /(?:BÀI TẬP NHỎ|BÀI TẬP|NHIỆM VỤ|THỰC HÀNH)[\s\S]*/i,
   )?.[0];
-  const study = lessons.filter((l) => l.type !== "quiz"),
+  const exercise = isIntroduction ? null : detectedExercise;
+  const introLessonIds = new Set(
+    course.sections
+      .filter((item) => item.moduleType === "INTRO")
+      .flatMap((item) => item.lessons)
+      .map((item) => item.id),
+  );
+  const study = lessons.filter(
+    (l) => l.type !== "quiz" && !introLessonIds.has(l.id),
+  ),
     completed = study.filter((l) => done[l.id]).length;
   const percent = study.length
     ? Math.round((completed / study.length) * 100)
     : 0;
-  const sectionStudy = (section?.lessons || []).filter(
-    (l) => l.type !== "quiz",
-  );
+  const sectionStudy = isIntroduction
+    ? []
+    : (section?.lessons || []).filter((l) => l.type !== "quiz");
   const sectionDone = sectionStudy.filter((l) => done[l.id]).length;
   const sectionCurrent = sectionStudy.filter(
     (l) =>
@@ -109,11 +159,11 @@ export default function ClassroomLayout({
       block: "start",
     });
   };
-  const lectureText = exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
+  const lectureText = isIntroduction
+    ? "Chào mừng bạn đã đến với khóa học của VEDU! Hãy tiếp tục hành trình học tập."
+    : exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
   const currentAssignments = section?.assignments || [];
   const assignmentId = searchParams.get("assignmentId");
-  const urgentAssignment = course.sections.flatMap((s) => s.assignments || []).find((a) => a.latestVersion?.status === "NEEDS_REVISION")
-    || course.sections.flatMap((s) => s.assignments || []).find((a) => a.required && (!a.latestVersion || a.latestVersion.status === "DRAFT"));
   const hasQuiz = Number(lesson.quizId) > 0;
   const openAssignment = (assignment) => {
     const ownerSection = course.sections.find((item) =>
@@ -131,7 +181,6 @@ export default function ClassroomLayout({
     lessonId: String(lesson.id),
     returnTo: `${location.pathname}${location.search}`,
   })}`;
-
   return (
     <div className="classroom-shell min-h-screen bg-slate-50 text-slate-800">
       {header}
@@ -179,7 +228,9 @@ export default function ClassroomLayout({
                 >
                   <span className="home-balanced flex-1">{s.title}</span>
                   <span className="shrink-0 text-xs font-medium tabular-nums text-slate-400">
-                    {s.lessons.some((l) => l.type !== "quiz") ? (
+                  {s.moduleType === "INTRO" ? (
+                    "Thông tin"
+                  ) : s.lessons.some((l) => l.type !== "quiz") ? (
                       <>
                         {
                           s.lessons.filter(
@@ -192,7 +243,9 @@ export default function ClassroomLayout({
                       `${s.lessons.length} bài thi`
                     )}
                   </span>
-                  {(s.assignments?.length || s.mastery) && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.mastery?.state === "PASSED" ? "bg-emerald-50 text-emerald-700" : s.mastery?.state === "NEEDS_REVISION" ? "bg-amber-100 text-amber-800" : "bg-blue-50 text-blue-700"}`}>{s.mastery?.state === "PASSED" ? "Đạt" : s.mastery?.state === "NEEDS_REVISION" ? "Cần sửa" : `${s.assignments?.length || 0} bài nộp`}</span>}
+                  {s.mastery?.state === "PASSED" && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Đạt</span>}
+                  {s.mastery?.state === "NEEDS_REVISION" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Cần sửa</span>}
+                  {s.required && s.mastery?.state !== "PASSED" && s.mastery?.state !== "NEEDS_REVISION" && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Bắt buộc</span>}
                   <ChevronDown
                     size={16}
                     className={`shrink-0 ${open[s.id] ? "rotate-180" : ""}`}
@@ -243,10 +296,10 @@ export default function ClassroomLayout({
       </span>
       <span className="min-w-0">
         <span className="home-balanced block font-medium leading-5">{l.title}</span>
-        {done[l.id] && (
+        {!introLessonIds.has(l.id) && done[l.id] && (
           <small className="mt-1 block text-xs text-emerald-700">Đã học / đạt quiz</small>
         )}
-        {l.type !== "quiz" && Number(l.quizId) > 0 && !done[l.id] && <small className="mt-1 block text-xs font-semibold text-amber-700">Có quiz mô-đun</small>}
+        {!introLessonIds.has(l.id) && l.type !== "quiz" && Number(l.quizId) > 0 && !done[l.id] && <small className="mt-1 block text-xs font-semibold text-amber-700">Có quiz cuối bài</small>}
         {l.type === "quiz" && l.durationSeconds > 0 && (
           <small className="mt-1 block text-slate-400">
             {formatMinutes(l.durationSeconds)} làm bài
@@ -350,14 +403,14 @@ export default function ClassroomLayout({
                 Học từng bước, thực hành và lưu lại tiến độ của bạn.
               </p>
             </div>
-            <span
+            {!isIntroduction && <span
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${done[lesson.id] ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}
             >
               <CheckCircle2 size={15} />
               {done[lesson.id] ? "Đã hoàn thành" : "Đang học"}
-            </span>
+            </span>}
           </div>
-          {index === 0 && (
+          {isIntroduction && (
             <details className="rounded-xl border border-blue-100 bg-white p-4">
               <summary className="cursor-pointer text-sm font-semibold text-blue-700">
                 Hướng dẫn học khóa học
@@ -373,13 +426,6 @@ export default function ClassroomLayout({
               bài thi và nhận chứng nhận.
             </p>
           )}
-          {!isGuest && token && <section className={`rounded-2xl border p-4 ${urgentAssignment?.latestVersion?.status === "NEEDS_REVISION" ? "border-amber-300 bg-amber-50" : "border-blue-200 bg-blue-50"}`}>
-            <h2 className="font-bold">Việc cần làm tiếp theo</h2>
-            <p className="mt-1 text-sm text-slate-700">
-              {urgentAssignment ? `${urgentAssignment.latestVersion?.status === "NEEDS_REVISION" ? "Ưu tiên sửa bài: " : "Hoàn thành bài bắt buộc: "}${urgentAssignment.title}` : hasQuiz && !done[lesson.id] ? "Làm quiz của bài học khi đã sẵn sàng." : !done[lesson.id] ? "Đánh dấu đã học sau khi đọc nội dung và tài liệu." : next ? `Tiếp tục: ${next.title}` : "Bạn đã xử lý các hoạt động hiện có."}
-            </p>
-            {urgentAssignment && <button type="button" onClick={() => openAssignment(urgentAssignment)} className="mt-3 rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white">Mở việc cần làm</button>}
-          </section>}
           {!isGuest && token && currentAssignments.length > 0 && <CourseAssignments courseId={course.id} token={token} sectionId={section?.id} assignmentId={assignmentId} />}
           {notice && (
             <p
@@ -390,7 +436,7 @@ export default function ClassroomLayout({
             </p>
           )}
           <>
-              <section
+              {!isIntroduction && <section
                 id="lesson-video"
                 className="scroll-mt-24 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
               >
@@ -424,6 +470,7 @@ export default function ClassroomLayout({
                         xác nhận hoàn thành bài học. Các bài khác luôn có thể xem.
                       </p>
                     </div>
+                    <SupplementaryVideos resources={resources} primaryUrl={lesson.videoUrl} />
                   </>
                 ) : (
                   <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">
@@ -431,7 +478,7 @@ export default function ClassroomLayout({
                     và làm quiz nếu bài đã có quiz.
                   </p>
                 )}
-              </section>
+              </section>}
 
               <section
                 id="lesson-documents"
@@ -439,7 +486,7 @@ export default function ClassroomLayout({
               >
                 <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
                   <FileText size={21} className="text-blue-600" />
-                  2. Tài liệu bài học (PDF / slide)
+                  {isIntroduction ? "Tài liệu giới thiệu và đề cương" : "2. Tài liệu bài học (PDF / slide)"}
                 </h2>
                 {documents.length ? (
                   <>
@@ -455,7 +502,7 @@ export default function ClassroomLayout({
                 )}
               </section>
 
-              {lesson.type !== "quiz" && (
+              {!isIntroduction && lesson.type !== "quiz" && hasQuiz && (
                 <div id="lesson-quiz" className="scroll-mt-24">
                   {isGuest ? (
                     <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
@@ -518,15 +565,12 @@ export default function ClassroomLayout({
                 </details>
               )}
           </>
-          {lesson.pedagogy && (
+          {lesson.pedagogy?.sources?.length > 0 && (
             <details className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
               <summary className="cursor-pointer font-semibold">
-                Đầu ra và nguồn học liệu
+                Nguồn học liệu
               </summary>
               <div className="mt-3 space-y-3">
-                {lesson.pedagogy.outcomes.map((t) => (
-                  <p key={t}>• {t}</p>
-                ))}
                 {lesson.pedagogy.sources.map((s, i) => (
                   <div key={i}>
                     <a
@@ -554,13 +598,13 @@ export default function ClassroomLayout({
             </button>
             <div className="flex flex-wrap gap-2">
               
-{lesson.type !== "quiz" && (
+{!isIntroduction && lesson.type !== "quiz" && (
   <div className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm text-blue-800">
     {done[lesson.id]
       ? "Bài học đã được ghi nhận là đã học."
       : hasQuiz
         ? "Hãy học nội dung và đạt quiz của bài này để ghi nhận đã học."
-        : "Bài này không có quiz. Hãy tự xác nhận sau khi đã học nội dung; việc này không tự làm mô-đun đạt."}
+        : "Bài này không có quiz. Hãy tự xác nhận sau khi đã học nội dung; việc này không tự làm module đạt."}
     {!done[lesson.id] && !hasQuiz && <button type="button" onClick={() => onMarkLearned(lesson.id)} className="ml-3 rounded-lg bg-blue-700 px-3 py-1.5 font-bold text-white">Đánh dấu đã học</button>}
   </div>
 )}
@@ -581,7 +625,7 @@ export default function ClassroomLayout({
           </div>
         </main>
         <aside className="classroom-related hidden space-y-5 p-4 xl:block 2xl:p-5">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          {!isIntroduction && <section className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="font-bold">Tài liệu liên quan</h2>
               <button
@@ -598,7 +642,7 @@ export default function ClassroomLayout({
                 Chưa có tài liệu đính kèm.
               </p>
             )}
-          </section>
+          </section>}
           {exercise && (
             <section className="rounded-2xl border border-slate-200 bg-white p-4">
               <h2 className="font-bold">Bài tập của bài học</h2>

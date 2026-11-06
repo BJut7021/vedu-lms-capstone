@@ -34,27 +34,6 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGDATABASE: ${POSTGRES_DB}
     command:
-      - psql
-      - -v
-      - ON_ERROR_STOP=1
-      - -h
-      - db
-      - -U
-      - ${POSTGRES_USER}
-      - -d
-      - ${POSTGRES_DB}
-      - -f
-      - /seed/portal_demo_seed.sql
-      - -f
-      - /seed/platform_upgrade.sql
-      - -f
-      - /seed/content_workflow.sql
-      - -f
-      - /seed/curated_catalog.sql
-      - -f
-      - /seed/01_essay_migration.sql
-      - -f
-      - /seed/02_seed_16_prompts.sql
       - sh
       - -ec
       - |
@@ -70,7 +49,9 @@ services:
           -f /seed/01_essay_migration.sql \
           -f /seed/02_seed_16_prompts.sql \
           -f /seed/03_course_learning_workflow.sql \
-          -f /seed/04_student_workflow_ux.sql
+          -f /seed/04_student_workflow_ux.sql \
+          -f /seed/05_oop_demo_refinement.sql \
+          -f /seed/06_oop_lesson_quizzes_and_videos.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
@@ -80,6 +61,8 @@ services:
       - ./database/vedu/02_seed_16_prompts.sql:/seed/02_seed_16_prompts.sql:ro
       - ./database/vedu/03_course_learning_workflow.sql:/seed/03_course_learning_workflow.sql:ro
       - ./database/vedu/04_student_workflow_ux.sql:/seed/04_student_workflow_ux.sql:ro
+      - ./database/vedu/05_oop_demo_refinement.sql:/seed/05_oop_demo_refinement.sql:ro
+      - ./database/vedu/06_oop_lesson_quizzes_and_videos.sql:/seed/06_oop_lesson_quizzes_and_videos.sql:ro
     depends_on:
       db:
         condition: service_healthy

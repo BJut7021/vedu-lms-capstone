@@ -248,7 +248,7 @@ export function planOptions(
             modelAvailable
               ? 'Có điểm BPR/GRU/HUSPM cho các bài đã mapping; dùng để xếp bài đủ điều kiện, không ghi đè quan hệ tiên quyết. Bài không có điểm dùng tiêu chí học thuật.'
               : 'Chưa có điểm mô hình phù hợp; phương án dựa trên chương trình, mục tiêu và tiên quyết (CURRICULUM), không giả nhận kết quả AI.',
-            'Lộ trình dự kiến giúp củng cố các kỹ năng còn yếu. Chứng nhận yêu cầu đạt mô-đun bắt buộc và đánh giá cuối khóa.',
+            'Lộ trình dự kiến giúp củng cố các kỹ năng còn yếu. Chứng nhận yêu cầu đạt module bắt buộc và đánh giá cuối khóa.',
           ],
           steps: ordered.map((l, i) => ({
             lessonId: l.id,

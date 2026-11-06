@@ -131,12 +131,12 @@ DO $module_quizzes$
 DECLARE sample record; target record; quiz bigint; question bigint; item jsonb; n integer; i integer;
 BEGIN
   FOR sample IN SELECT * FROM (VALUES
-    ('oop',8,'Kiểm tra mô-đun — Kế thừa và đa hình','[
+    ('oop',8,'Kiểm tra module — Kế thừa và đa hình','[
       {"text":"Trong C#, từ khóa nào dùng để cài đặt lại phương thức virtual của lớp cha?","skill":"polymorphism","options":["override","static","readonly"]},
       {"text":"Một XeMay là một Xe. Quan hệ này phù hợp nhất với cơ chế nào?","skill":"inheritance","options":["Kế thừa","Tham chiếu ô","Nạp chồng constructor"]},
       {"text":"Nếu B : A và constructor A nhận một mã bắt buộc, lớp B truyền mã cho A bằng cú pháp nào?","skill":"inheritance","options":["base(mã)","this.mã()","static(mã)"]}
     ]'),
-    ('excel',3,'Kiểm tra mô-đun — Bảng và công thức','[
+    ('excel',3,'Kiểm tra module — Bảng và công thức','[
       {"text":"Trong Excel, ô B2 là số lượng, C2 là đơn giá. Công thức thành tiền ở D2 là gì?","skill":"excel-formulas","options":["=B2*C2","=B2+C2","=SUM(B2:C2)"]},
       {"text":"Để cố định cả hàng lẫn cột của ô G3 khi sao chép, dùng tham chiếu nào?","skill":"excel-formulas","options":["$G$3","G3","G$3"]},
       {"text":"Để tính tổng chính xác, cột số tiền nên lưu dưới kiểu nào?","skill":"excel-tables","options":["Số, có thể định dạng tiền tệ","Văn bản gõ thêm chữ đồng","Ngày tháng"]}
@@ -149,7 +149,7 @@ BEGIN
       CONTINUE;
     END IF;
     INSERT INTO assessment.quizzes(course_id,lesson_id,title,description,time_limit_seconds,passing_score,max_attempts,is_published)
-    VALUES(target.course_id,target.lesson_id,sample.title,'Câu kiểm tra vận dụng học liệu trong mô-đun VEDU.',600,7,10,true)
+    VALUES(target.course_id,target.lesson_id,sample.title,'Câu kiểm tra vận dụng học liệu trong module VEDU.',600,7,10,true)
     RETURNING quiz_id INTO quiz;
     n:=0;
     FOR item IN SELECT value FROM jsonb_array_elements(sample.questions::jsonb) LOOP
@@ -188,8 +188,8 @@ WHERE p.lesson_id=l.lesson_id AND cc.course_key IN ('oop','excel') AND l.lesson_
 
 UPDATE lms.course_overviews o SET practice_note=CASE c.final_mode
   WHEN 'MCQ_ONLY' THEN 'Đánh giá cuối khóa bằng trắc nghiệm. Hoạt động thực hành trong học liệu dùng để tự luyện.'
-  WHEN 'MCQ_PRACTICAL' THEN 'Đạt mô-đun bắt buộc trước khi thi. Điểm cuối khóa gồm trắc nghiệm và sản phẩm thực hành do giảng viên chấm.'
-  ELSE 'Điểm cuối khóa gồm trắc nghiệm và tự luận do giảng viên chấm. Nếu khóa có mô-đun bắt buộc, cần đạt mô-đun trước khi thi.' END
+  WHEN 'MCQ_PRACTICAL' THEN 'Đạt module bắt buộc trước khi thi. Điểm cuối khóa gồm trắc nghiệm và sản phẩm thực hành do giảng viên chấm.'
+  ELSE 'Điểm cuối khóa gồm trắc nghiệm và tự luận do giảng viên chấm. Nếu khóa có module bắt buộc, cần đạt module trước khi thi.' END
 FROM lms.courses c JOIN lms.curated_courses cc USING(course_id) WHERE o.course_id=c.course_id;
 
 CREATE OR REPLACE FUNCTION assessment.final_score(p_attempt bigint)
