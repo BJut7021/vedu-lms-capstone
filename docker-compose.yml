@@ -57,7 +57,8 @@ services:
           -f /seed/09_oop_quiz_70_additional.sql \
           -f /seed/10_oop_verified_youtube.sql \
           -f /seed/11_all_courses_learning_quizzes.sql \
-          -f /seed/12_excel_ga_excel_upgrade.sql
+          -f /seed/12_excel_ga_excel_upgrade.sql \
+          -f /seed/13_oop_single_required_module.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
@@ -75,6 +76,7 @@ services:
       - ./database/vedu/10_oop_verified_youtube.sql:/seed/10_oop_verified_youtube.sql:ro
       - ./database/vedu/11_all_courses_learning_quizzes.sql:/seed/11_all_courses_learning_quizzes.sql:ro
       - ./database/vedu/12_excel_ga_excel_upgrade.sql:/seed/12_excel_ga_excel_upgrade.sql:ro
+      - ./database/vedu/13_oop_single_required_module.sql:/seed/13_oop_single_required_module.sql:ro
     depends_on:
       db:
         condition: service_healthy
