@@ -202,9 +202,6 @@ export default function CourseDetail({
 
                 {isSectionOpen(section.id) && (
                   <div className="divide-y divide-gray-100">
-                    {section.id === "course-assessment" && studyState?.missingModules?.length > 0 && !studyState.finalExamPassed && <p className="p-4 text-sm text-amber-800">
-                      Cần đạt module trước khi thi: {studyState.missingModules.map((module) => module.title).join(", ")}.
-                    </p>}
                     {section.lessons.map((lesson) => (
                       <div
                         key={lesson.id}
