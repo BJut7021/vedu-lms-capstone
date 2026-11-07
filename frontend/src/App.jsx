@@ -16,6 +16,7 @@ import AuthModal from "./components/AuthModal";
 import CourseDetail from "./components/CourseDetail";
 import Classroom from "./components/Classroom";
 import QuizView from "./components/QuizView";
+import LockedFinalExamPage, { isFinalExamPrerequisiteError } from "./components/LockedFinalExamPage";
 import CourseAssignments from "./components/CourseAssignments";
 import FinalExamResult from "./components/FinalExamResult";
 import Portal from "./components/Portal";
@@ -336,7 +337,17 @@ function QuizAttemptPage({ auth }) {
   }, [auth, quizId, courseId]);
   if (auth?.user?.role !== "STUDENT")
     return <Navigate to="/student/login" replace />;
-  if (error || !validQuizId(quizId))
+  if (error || !validQuizId(quizId)) {
+    if (validQuizId(quizId) && isFinalExamPrerequisiteError(error)) {
+      return (
+        <LockedFinalExamPage
+          message={error}
+          onContinue={() => navigate(`/courses/${courseId}`)}
+          onBack={() => navigate(`/courses/${courseId}`)}
+        />
+      );
+    }
+
     return (
       <div className="grid min-h-screen place-items-center p-8 text-center font-bold text-red-600">
         <div className="space-y-4">
@@ -345,6 +356,7 @@ function QuizAttemptPage({ auth }) {
         </div>
       </div>
     );
+  }
   if (!quiz || !attemptId)
     return (
       <div className="grid min-h-screen place-items-center font-bold text-blue-700">
