@@ -3,7 +3,6 @@ import {
   ClipboardCheck,
   ExternalLink,
   FileText,
-  Users,
 } from "lucide-react";
 export default function CourseIntroduction({ course }) {
   const overview = course.overview || {},
@@ -64,14 +63,7 @@ export default function CourseIntroduction({ course }) {
         </div>
         <div className="space-y-5">
           <div className="rounded-2xl border border-slate-200 p-5">
-            <h3 className="flex items-center gap-2 font-bold">
-              <Users size={19} className="text-blue-600" />
-              Khóa học dành cho ai?
-            </h3>
-            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">
-              {overview.audience ||
-                "Bạn có thể xem danh sách bài học bên dưới để đối chiếu với mục tiêu học tập của mình."}
-            </p>
+
             <h3 className="mt-5 flex items-center gap-2 font-bold">
               <BookOpen size={19} className="text-blue-600" />
               Kiến thức nền tảng & công cụ cần chuẩn bị
