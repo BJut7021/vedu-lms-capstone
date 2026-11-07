@@ -199,12 +199,7 @@ try {
     ],
   };
   const pathPlatform = api.platform;
-  let markedLessonPath = "";
   api.platform = async (path, token, data) => {
-    if (path.includes("learning-status")) {
-      markedLessonPath = path;
-      return { status: "LEARNED" };
-    }
     if (path.includes("study-state")) return { finalExamPassed: false };
     if (path.includes("/assignments")) return {
       assignments: course.sections[0].assignments,
@@ -220,7 +215,6 @@ try {
     };
     return pathPlatform(path, token, data);
   };
-  let refreshedCourse = false;
   function Room() {
     const p = useParams();
     const current = useLocation();
@@ -234,7 +228,7 @@ try {
         onBack: () => {},
         onOpenQuiz: () => {},
         onLogEvent: async () => ({}),
-        onRefreshCourse: async () => { refreshedCourse = true; },
+        onRefreshCourse: async () => {},
       }),
     );
   }
@@ -277,11 +271,9 @@ try {
       screen.getByRole("link", { name: "Hỏi đáp khóa học" }).getAttribute("href").includes("lessonId=12") &&
       screen.getByRole("link", { name: "Hỏi đáp khóa học" }).getAttribute("href").includes("returnTo="),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Đánh dấu đã học" }));
-  await waitFor(() => assert.ok(markedLessonPath && refreshedCourse));
   check(
-    "Lesson without quiz uses explicit LEARNED endpoint and refreshes server state",
-    markedLessonPath === "/courses/68/lessons/12/learning-status" && refreshedCourse,
+    "Lesson without quiz has no learner self-completion control",
+    screen.queryByRole("button", { name: "Đánh dấu đã học" }) === null,
   );
   check(
     "Completed progress retained when changing lesson",
@@ -488,7 +480,9 @@ try {
   const { default: CourseDetail } = await server.ssrLoadModule(
     "/src/components/CourseDetail.jsx",
   );
-  const { formatMinutes } = await server.ssrLoadModule("/src/services/time.js");
+  const { formatMinutes, formatMinutesSeconds } = await server.ssrLoadModule(
+    "/src/services/time.js",
+  );
   render(
     React.createElement(CourseDetail, {
       course: {
@@ -538,7 +532,8 @@ try {
     "Course minutes preserve short and fractional durations",
     formatMinutes(900) === "15 phút" &&
       formatMinutes(90) === "1,5 phút" &&
-      formatMinutes(1) === "0,02 phút",
+      formatMinutes(1) === "0,02 phút" &&
+      formatMinutesSeconds(895) === "14 phút 55 giây",
   );
   for (const [state, label, lessonId, quizId] of [
     ["NEW", "Bắt đầu học", 11, null],
@@ -594,7 +589,11 @@ try {
       React.createElement(ClassroomLayout, {
         course,
         lessons: course.sections[0].lessons,
-        lesson: { ...course.sections[0].lessons[0], type: "video" },
+        lesson: {
+          ...course.sections[0].lessons[0],
+          type: "video",
+          quizId: 99,
+        },
         done: {},
         stats: {
           actualSeconds: 90,
@@ -611,10 +610,41 @@ try {
     ),
   );
   check(
-    "Classroom uses minutes for real watch duration and removes estimated sidebar line",
-    screen.getByText("1,5 phút").textContent === "1,5 phút" &&
-      !document.body.textContent.includes("giây") &&
-      !document.body.textContent.includes("đọc dự kiến"),
+    "Classroom uses minutes and seconds for real watch duration and removes estimated sidebar line",
+    document.body.textContent.includes("Đã xem thực: 1 phút 30 giây") &&
+      document.body.textContent.includes("Nội dung duy nhất: 1 phút 0 giây") &&
+      document.body.textContent.includes("Thời lượng video: 10 phút 0 giây") &&
+      !document.body.textContent.includes("đọc dự kiến") &&
+      !document.body.textContent.includes("Có quiz cuối bài") &&
+      !document.body.textContent.includes("Tiến độ xem video được lưu tự động"),
+  );
+  cleanup();
+  const introductionCourse = {
+    ...course,
+    sections: [
+      {
+        ...course.sections[0],
+        moduleType: "INTRO",
+      },
+    ],
+  };
+  render(
+    React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(ClassroomLayout, {
+        course: introductionCourse,
+        lessons: introductionCourse.sections[0].lessons,
+        lesson: introductionCourse.sections[0].lessons[0],
+        done: {},
+        onSelect: () => {},
+        onBack: () => {},
+      }),
+    ),
+  );
+  check(
+    "Course introduction no longer shows the learning guide panel",
+    !document.body.textContent.includes("Hướng dẫn học khóa học"),
   );
   cleanup();
   const { default: CourseImage } = await server.ssrLoadModule(

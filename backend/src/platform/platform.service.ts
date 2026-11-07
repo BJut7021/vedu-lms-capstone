@@ -193,7 +193,8 @@ const done = new Set<number>([
     );
 
     const resources: any[] = await this.db.query(
-      `SELECT r.* FROM lms.lesson_resources r JOIN lms.lessons l USING(lesson_id) WHERE l.course_id=$1 ORDER BY r.resource_id`,
+      `SELECT r.* FROM lms.lesson_resources r JOIN lms.lessons l USING(lesson_id)
+       WHERE l.course_id=$1 ORDER BY r.display_order,r.resource_id`,
       [courseId],
     );
     

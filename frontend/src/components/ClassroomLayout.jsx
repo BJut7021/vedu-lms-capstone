@@ -15,11 +15,10 @@ import {
 } from "lucide-react";
 import CourseImage from "./CourseImage";
 import InlineLessonQuiz from "./InlineLessonQuiz";
-import CourseStartGuide from "./CourseStartGuide";
 import CourseAssignments from "./CourseAssignments";
 import ResourceFileIcon from "./ResourceFileIcon";
 import { resourceFormat } from "../services/resources";
-import { formatMinutes } from "../services/time";
+import { formatMinutes, formatMinutesSeconds } from "../services/time";
 import { youtubeId } from "../services/video";
 
 function ResourceLinks({ resources }) {
@@ -65,7 +64,7 @@ function SupplementaryVideos({ resources, primaryUrl }) {
             {id ? (
               <iframe
                 title={resource.title}
-                src={`https://www.youtube-nocookie.com/embed/${id}`}
+                src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=0&controls=1&rel=0&playsinline=1`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 className="aspect-video w-full rounded-xl bg-black"
@@ -74,6 +73,7 @@ function SupplementaryVideos({ resources, primaryUrl }) {
               <video
                 controls
                 preload="metadata"
+                playsInline
                 src={resource.url}
                 className="aspect-video w-full rounded-xl bg-black"
               />
@@ -102,7 +102,6 @@ export default function ClassroomLayout({
   header,
   token,
   onRefreshCourse,
-  onMarkLearned,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -159,14 +158,11 @@ export default function ClassroomLayout({
       block: "start",
     });
   };
-  const lectureText = isIntroduction
-    ? "Chào mừng bạn đã đến với khóa học của VEDU! Hãy tiếp tục hành trình học tập."
-    : exercise ? text.slice(0, text.indexOf(exercise)).trim() : text;
   const currentAssignments = section?.assignments || [];
   // The C# inheritance/polymorphism practice belongs to the whole module,
-  // but its submission form should appear only on lesson 07 in course 61.
+  // but its submission form should appear only on lesson 07. Match by stable
+  // assignment content instead of a database ID that changes between machines.
   const isSharedCsharpPractice = (assignment) =>
-    Number(course.id) === 61 &&
     /Thực hành C#/.test(String(assignment?.title || "")) &&
     /Kế thừa/.test(String(assignment?.title || ""));
   const isLesson07 = /^0?7\s*[.·:–—-]/.test(String(lesson.title || "").trim());
@@ -175,6 +171,17 @@ export default function ClassroomLayout({
   );
   const assignmentId = searchParams.get("assignmentId");
   const hasQuiz = Number(lesson.quizId) > 0;
+  const focusAssignment = (id, attempt = 0) => {
+    const element = document.getElementById(`assignment-${id}`);
+    if (element) {
+      element.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      element.focus?.({ preventScroll: true });
+      return;
+    }
+    if (attempt < 20) {
+      window.setTimeout(() => focusAssignment(id, attempt + 1), 50);
+    }
+  };
   const openAssignment = (assignment) => {
     const ownerSection = course.sections.find((item) =>
       (item.assignments || []).some((candidate) => Number(candidate.assignment_id) === Number(assignment.assignment_id)),
@@ -186,7 +193,10 @@ export default function ClassroomLayout({
     const targetLesson = isSharedCsharpPractice(assignment)
       ? ownerSection?.lessons?.find((item) => /^0?7\s*[.·:–—-]/.test(String(item.title || "").trim()))
       : ownerSection?.lessons?.find((item) => item.type !== "quiz");
-    if (targetLesson) navigate(`/learn/${course.id}/${targetLesson.id}?assignmentId=${assignment.assignment_id}`);
+    if (targetLesson) {
+      navigate(`/learn/${course.id}/${targetLesson.id}?assignmentId=${assignment.assignment_id}`);
+      window.setTimeout(() => focusAssignment(assignment.assignment_id), 0);
+    }
   };
   const qaRoute = `/student/discussions?${new URLSearchParams({
     courseId: String(course.id),
@@ -311,7 +321,6 @@ export default function ClassroomLayout({
         {!introLessonIds.has(l.id) && done[l.id] && (
           <small className="mt-1 block text-xs text-emerald-700">Đã học / đạt quiz</small>
         )}
-        {!introLessonIds.has(l.id) && l.type !== "quiz" && Number(l.quizId) > 0 && !done[l.id] && <small className="mt-1 block text-xs font-semibold text-amber-700">Có quiz cuối bài</small>}
         {l.type === "quiz" && l.durationSeconds > 0 && (
           <small className="mt-1 block text-slate-400">
             {formatMinutes(l.durationSeconds)} làm bài
@@ -422,16 +431,6 @@ export default function ClassroomLayout({
               {done[lesson.id] ? "Đã hoàn thành" : "Đang học"}
             </span>}
           </div>
-          {isIntroduction && (
-            <details className="rounded-xl border border-blue-100 bg-white p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-blue-700">
-                Hướng dẫn học khóa học
-              </summary>
-              <div className="mt-3">
-                <CourseStartGuide />
-              </div>
-            </details>
-          )}
           {isGuest && (
             <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
               Bạn đang học thử 2 bài đầu. Đăng ký tài khoản để học đầy đủ, làm
@@ -461,14 +460,14 @@ export default function ClassroomLayout({
                     {video}
                     <div className="space-y-3 rounded-xl bg-blue-50 p-4 text-sm">
                       <p>
-                        Đã xem thực: <strong>{formatMinutes(stats?.actualSeconds || 0)}</strong>
-                        {" · "}Nội dung duy nhất: {formatMinutes(stats?.uniqueSeconds || 0)}
+                        Đã xem thực: <strong>{formatMinutesSeconds(stats?.actualSeconds || 0)}</strong>
+                        {" · "}Nội dung duy nhất: {formatMinutesSeconds(stats?.uniqueSeconds || 0)}
                         {" "}({stats?.percent || 0}%)
                       </p>
                       <p className="text-xs text-slate-500">
                         Thời lượng video:{" "}
                         {stats?.durationSeconds > 0
-                          ? formatMinutes(stats.durationSeconds)
+                          ? formatMinutesSeconds(stats.durationSeconds)
                           : "đang đo từ trình phát"}
                       </p>
                       <div className="h-2 overflow-hidden rounded-full bg-blue-100">
@@ -477,10 +476,6 @@ export default function ClassroomLayout({
                           style={{ width: `${stats?.percent || 0}%` }}
                         />
                       </div>
-                      <p className="text-xs leading-5 text-slate-600">
-                        Tiến độ xem video được lưu tự động. Chỉ kết quả quiz đạt mới
-                        xác nhận hoàn thành bài học. Các bài khác luôn có thể xem.
-                      </p>
                     </div>
                     <SupplementaryVideos resources={resources} primaryUrl={lesson.videoUrl} />
                   </>
@@ -529,28 +524,6 @@ export default function ClassroomLayout({
                     />
                   )}
                 </div>
-              )}
-
-              {(lectureText || localSlide) && (
-                <details className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                  <summary className="cursor-pointer font-semibold text-slate-800">
-                    Nội dung bài giảng bổ sung
-                  </summary>
-                  <div className="mt-4 space-y-4">
-                    {localSlide && (
-                      <iframe
-                        title={localSlide.title}
-                        src={localSlide.url}
-                        className="h-[58vh] min-h-80 w-full rounded-xl border border-slate-200"
-                      />
-                    )}
-                    {lectureText && (
-                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                        {lectureText}
-                      </p>
-                    )}
-                  </div>
-                </details>
               )}
 
               {exercise && (
@@ -610,14 +583,9 @@ export default function ClassroomLayout({
             </button>
             <div className="flex flex-wrap gap-2">
               
-{!isIntroduction && lesson.type !== "quiz" && (
+{!isIntroduction && lesson.type !== "quiz" && done[lesson.id] && (
   <div className="rounded-xl bg-blue-50 px-4 py-2.5 text-sm text-blue-800">
-    {done[lesson.id]
-      ? "Bài học đã được ghi nhận là đã học."
-      : hasQuiz
-        ? "Hãy học nội dung và đạt quiz của bài này để ghi nhận đã học."
-        : "Bài này không có quiz. Hãy tự xác nhận sau khi đã học nội dung; việc này không tự làm module đạt."}
-    {!done[lesson.id] && !hasQuiz && <button type="button" onClick={() => onMarkLearned(lesson.id)} className="ml-3 rounded-lg bg-blue-700 px-3 py-1.5 font-bold text-white">Đánh dấu đã học</button>}
+    Bài học đã được ghi nhận là đã học.
   </div>
 )}
 

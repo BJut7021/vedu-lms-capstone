@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Clock, CheckCircle2, ArrowLeft, Award, Sparkles } from "lucide-react";
-import { formatMinutes } from "../services/time";
+import { formatMinutesSeconds } from "../services/time";
 
 export default function QuizView({
   quizData,
@@ -118,7 +118,7 @@ export default function QuizView({
       const timeSpent = response.durationSeconds;
       setResult({
         ...response,
-        timeSpent: formatMinutes(timeSpent),
+        timeSpent: formatMinutesSeconds(timeSpent),
       });
       setIsSubmitted(true);
     } catch (error) {
@@ -172,7 +172,7 @@ export default function QuizView({
           >
             <Clock size={18} />
             <span aria-label="Thời gian còn lại">
-              {formatMinutes(timeLeft)}
+              {formatMinutesSeconds(timeLeft)}
             </span>
           </div>
         </div>

@@ -116,6 +116,15 @@ export default function CourseAssignments({ courseId, token, attemptId, teacher 
       .catch((reason) => { if (alive) setError(reason.message); });
     return () => { alive = false; };
   }, [courseId, token]);
+  useEffect(() => {
+    if (!data || !assignmentId) return;
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(`assignment-${assignmentId}`);
+      element?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      element?.focus?.({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [data, assignmentId]);
   const assignments = data?.assignments?.filter((a) => {
     if (Array.isArray(allowedAssignmentIds) && !allowedAssignmentIds.some((id) => Number(id) === Number(a.assignment_id))) return false;
     if (assignmentId && Number(a.assignment_id) !== Number(assignmentId)) return false;
@@ -149,7 +158,7 @@ export default function CourseAssignments({ courseId, token, attemptId, teacher 
         (!attemptId && latest.status === "GRADED" && latest.outcome === "FAIL");
       const shown = teacher ? versions.filter((v) => !statusFilter || (statusFilter === "pending"
         ? ["SUBMITTED","UNDER_REVIEW"].includes(v.status) : v.status === statusFilter)) : versions;
-      return <article id={`assignment-${assignment.assignment_id}`} className="scroll-mt-24 space-y-3 rounded-lg border p-4" key={assignment.assignment_id}>
+      return <article id={`assignment-${assignment.assignment_id}`} tabIndex={-1} className="scroll-mt-24 space-y-3 rounded-lg border p-4 outline-none focus:ring-2 focus:ring-blue-300" key={assignment.assignment_id}>
         <h3 className="font-bold">{assignment.title}</h3>
         {teacher && <div className="flex gap-2"><button className="rounded-lg border px-3 py-1 text-sm" onClick={() => setEditing(assignment)}>Sửa</button><button className="rounded-lg border border-red-200 px-3 py-1 text-sm text-red-700" onClick={async () => { if (!window.confirm("Lưu trữ bài tập này? Lịch sử bài nộp vẫn được giữ.")) return; try { await api.platform(`/assignments/${assignment.assignment_id}`, token, {}, "DELETE"); await refresh(); } catch (e) { setError(e.message); } }}>Lưu trữ</button></div>}
         <p className="text-sm text-slate-600">{assignment.section_title || "Cuối khóa"} · Đạt từ {assignment.passing_score}/10 và đạt tiêu chí bắt buộc</p>

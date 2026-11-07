@@ -1945,7 +1945,7 @@ function Mining({ auth, act, busy }) {
   );
 }
 
-function FinalEssayTeacherPanel({auth,data,initialCourseId}){
+export function FinalEssayTeacherPanel({auth,data,initialCourseId}){
  const [course,setCourse]=useState(String(initialCourseId||''));
  const [quizzes,setQuizzes]=useState([]);
  const [selected,setSelected]=useState('');
