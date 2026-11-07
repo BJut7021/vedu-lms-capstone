@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Navigate,
-  Link,
   Route,
   Routes,
   useLocation,
@@ -230,7 +229,7 @@ function ClassroomPage({ auth, onEvent, header }) {
 }
 
 
-function SubmittedFinalExamReview({ attemptId, token, showImage }) {
+export function SubmittedFinalExamReview({ attemptId, token, showImage }) {
   const [review, setReview] = useState(null);
   const [reviewError, setReviewError] = useState('');
   const [imageUrl, setImageUrl] = useState(null);

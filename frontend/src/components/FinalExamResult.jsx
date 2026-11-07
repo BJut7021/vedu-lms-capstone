@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Award, BookOpen, CheckCircle2, ChevronDown, ChevronRight,
-  ClipboardList, Clock3, Download, FileText, GraduationCap, HelpCircle,
+  ClipboardList, Clock3, Download, FileText, GraduationCap,
   Home, MessageSquareText, RefreshCw, Trophy, XCircle,
 } from "lucide-react";
 import { api } from "../services/api";

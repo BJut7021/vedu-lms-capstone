@@ -34,6 +34,7 @@ function loadApi() {
 export default function YouTubeLesson({
   url,
   title,
+  sourceTitle,
   mediaRef,
   onEvent,
   onReady,
@@ -66,7 +67,7 @@ export default function YouTubeLesson({
           `https://www.youtube.com/embed/${videoId}` +
           `?enablejsapi=1` +
           `&origin=${encodeURIComponent(window.location.origin)}` +
-          `&playsinline=1&rel=0`;
+          `&playsinline=1&rel=0&autoplay=0&controls=1`;
         host.current.replaceChildren(iframe);
         player = new YT.Player(iframe, {
           events: {
@@ -142,12 +143,13 @@ export default function YouTubeLesson({
         </p>
       )}
       <p className="text-xs text-slate-500">
-        Video nguồn YouTube/LearnFree, có thể phát sinh kết nối với bên cung
-        cấp.{" "}
+        {/gà excel/i.test(sourceTitle || "")
+          ? "Video nguồn từ kênh YouTube Gà Excel, có thể phát sinh kết nối với bên cung cấp. "
+          : "Video nguồn YouTube/LearnFree, có thể phát sinh kết nối với bên cung cấp. "}
         <a href={url} target="_blank" rel="noreferrer" className="underline">
-          Mở nguồn gốc
+          Mở video gốc
         </a>
-        . Không tải lại hoặc nhận là video do VEDU sản xuất.
+        {!/gà excel/i.test(sourceTitle || "") && ". Video do VEDU sản xuất."}
       </p>
     </div>
   );

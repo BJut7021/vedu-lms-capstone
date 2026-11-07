@@ -204,6 +204,9 @@ w.restored = true;
           key={lesson.id}
           url={lesson.videoUrl}
           title={lesson.title}
+          sourceTitle={lesson.resources?.find(
+            (resource) => resource.url === lesson.videoUrl,
+          )?.title}
           mediaRef={videoRef}
           onEvent={(event) => syncRef.current?.(event)}
           onReady={resumeVideo}
@@ -214,6 +217,7 @@ w.restored = true;
           ref={videoRef}
           controls
           preload="metadata"
+          playsInline
           src={lesson.videoUrl}
           className="aspect-video w-full rounded-2xl bg-black"
           onLoadedMetadata={resumeVideo}
@@ -247,15 +251,6 @@ w.restored = true;
       video={video}
       token={token}
       onRefreshCourse={onRefreshCourse}
-      onMarkLearned={async (lessonId) => {
-        try {
-          await api.platform(`/courses/${course.id}/lessons/${lessonId}/learning-status`, token, {}, "PATCH");
-          setNotice("Đã ghi nhận bài học. Trạng thái đạt module vẫn phụ thuộc quiz và bài nộp bắt buộc.");
-          await onRefreshCourse();
-        } catch (error) {
-          setNotice(error.message);
-        }
-      }}
     />
   );
 }

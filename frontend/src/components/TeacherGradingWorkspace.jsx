@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, Clock3, Download, FileText, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, Clock3, Download, FileText, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { api } from "../services/api";
 
 const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
@@ -78,8 +78,18 @@ export default function TeacherGradingWorkspace({ auth, data, initialCourseId = 
     catch (e) { setError(e.message); setPayload(null); }
     finally { setLoading(false); }
   }, [course, token]);
-  useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { setSelected(null); setPage(1); setNotice(""); }, [course, type, status]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSelected(null);
+      setPage(1);
+      setNotice("");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [course, type, status]);
 
   const assignments = useMemo(() => (payload?.assignments || []).filter((a) => type === "final" ? a.section_id == null : a.section_id != null), [payload, type]);
   const byId = useMemo(() => new Map(assignments.map((a) => [Number(a.assignment_id), a])), [assignments]);
