@@ -1,0 +1,178 @@
+name: vedu-lms
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - vedu_postgres_data:/var/lib/postgresql/data
+      - ./database/vedu/vedu_v6.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/vedu/demo_seed.sql:/docker-entrypoint-initdb.d/02-demo-seed.sql:ro
+      - ./database/vedu/portal_demo_seed.sql:/docker-entrypoint-initdb.d/03-portal-demo-seed.sql:ro
+      - ./database/vedu/platform_upgrade.sql:/docker-entrypoint-initdb.d/04-platform-upgrade.sql:ro
+      - ./database/vedu/content_workflow.sql:/docker-entrypoint-initdb.d/05-content-workflow.sql:ro
+      - ./database/vedu/01_essay_migration.sql:/docker-entrypoint-initdb.d/06-final-essay.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - vedu_private
+
+  demo-seed:
+    image: postgres:16-alpine
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_DB}
+    command:
+      - sh
+      - -ec
+      - |
+        until psql -Atqc "SELECT to_regclass('assessment.final_essay_submissions')" 2>/dev/null | grep -q final_essay_submissions; do
+          echo "Waiting for PostgreSQL initialization to finish..."
+          sleep 2
+        done
+        psql -v ON_ERROR_STOP=1 \
+          -f /seed/portal_demo_seed.sql \
+          -f /seed/platform_upgrade.sql \
+          -f /seed/content_workflow.sql \
+          -f /seed/curated_catalog.sql \
+          -f /seed/01_essay_migration.sql \
+          -f /seed/02_seed_16_prompts.sql \
+          -f /seed/03_course_learning_workflow.sql \
+          -f /seed/04_student_workflow_ux.sql \
+          -f /seed/05_oop_demo_refinement.sql \
+          -f /seed/06_oop_lesson_quizzes_and_videos.sql \
+          -f /seed/07_oop_practice_optional.sql \
+          -f /seed/08_unified_student_progress.sql
+    volumes:
+      - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
+      - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
+      - ./database/vedu/content_workflow.sql:/seed/content_workflow.sql:ro
+      - ./database/vedu/curated_catalog.sql:/seed/curated_catalog.sql:ro
+      - ./database/vedu/01_essay_migration.sql:/seed/01_essay_migration.sql:ro
+      - ./database/vedu/02_seed_16_prompts.sql:/seed/02_seed_16_prompts.sql:ro
+      - ./database/vedu/03_course_learning_workflow.sql:/seed/03_course_learning_workflow.sql:ro
+      - ./database/vedu/04_student_workflow_ux.sql:/seed/04_student_workflow_ux.sql:ro
+      - ./database/vedu/05_oop_demo_refinement.sql:/seed/05_oop_demo_refinement.sql:ro
+      - ./database/vedu/06_oop_lesson_quizzes_and_videos.sql:/seed/06_oop_lesson_quizzes_and_videos.sql:ro
+      ./database/vedu/07_oop_practice_optional.sql:/seed/07_oop_practice_optional.sql:ro
+      ./database/vedu/08_unified_student_progress.sql:/seed/08_unified_student_progress.sql:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vedu_private
+
+  course-materials:
+    image: postgres:16-alpine
+    restart: "no"
+    command: ["sh", "-c", "cp -n /catalog/*.pdf /media/"]
+    network_mode: none
+    volumes:
+      - ./data/learning/curated-assets:/catalog:ro
+      - vedu_media:/media
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_DATABASE: ${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      PASSWORD_RESET_DEMO_MODE: ${PASSWORD_RESET_DEMO_MODE:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      CORS_ORIGINS: ${VEDU_CORS_ORIGINS:-http://localhost:8080}
+      NODE_ENV: production
+      WEB_URL: ${VEDU_PUBLIC_URL:-http://localhost:8080}
+      MEDIA_DIR: /app/media
+      ML_SERVICE_URL: http://ml:8001
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-local-vedu-ml-change-me}
+      MOMO_ENV: ${MOMO_ENV:-sandbox}
+      MOMO_PAYMENT_MODE: ${MOMO_PAYMENT_MODE:-personal}
+      MOMO_PARTNER_CODE: ${MOMO_PARTNER_CODE:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      MOMO_IPN_URL: ${MOMO_IPN_URL:-}
+      MOMO_REDIRECT_URL: ${MOMO_REDIRECT_URL:-}
+      PATH_EXPLAIN_PROVIDER: ${PATH_EXPLAIN_PROVIDER:-disabled}
+      PATH_EXPLAIN_URL: ${PATH_EXPLAIN_URL:-}
+      PATH_EXPLAIN_API_KEY: ${PATH_EXPLAIN_API_KEY:-}
+    volumes:
+      - vedu_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      demo-seed:
+        condition: service_completed_successfully
+      course-materials:
+        condition: service_completed_successfully
+      ml:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${VEDU_API_PORT}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - vedu_private
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${VEDU_WEB_PORT}:80"
+    networks:
+      - vedu_private
+
+  ml:
+    build: ./ml-core
+    restart: unless-stopped
+    environment:
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-local-vedu-ml-change-me}
+    volumes:
+      - ./ml-core/data:/data:ro
+      - vedu_ml_artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,os; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8001/health',headers={'X-ML-Token':os.environ.get('ML_INTERNAL_TOKEN','local-vedu-ml-change-me')}),timeout=5)"]
+      interval: 5s
+      timeout: 6s
+      start_period: 20s
+      retries: 20
+    networks:
+      - vedu_private
+
+volumes:
+  vedu_postgres_data:
+  vedu_media:
+  vedu_ml_artifacts:
+
+networks:
+  vedu_private:
+    driver: bridge
