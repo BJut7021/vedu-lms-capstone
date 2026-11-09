@@ -1,0 +1,26 @@
+{
+  "notebook_title": "VEDU 5 Seeds 2 Protocols BPR GRU HUSPM",
+  "notebook_url": "https://www.kaggle.com/code/thienphan0712/vedu-5-seeds-2-protocols-bpr-gru-huspm",
+  "kaggle_run_id": "364776257",
+  "version": 1,
+  "visibility": "private",
+  "status": "successful",
+  "runtime": "10m 14s",
+  "verified_at": "2026-11-09T00:34:00+07:00",
+  "model_rows": 160,
+  "runs": 20,
+  "rank_files": 20,
+  "models_per_run": 8,
+  "zip_sha256": "5023aa66eb792fc9331c1140f4c6825d68acdfbc51af320f85b04bc6d1bff03c",
+  "files_sha256": {
+    "model-results.csv": "a55d30da62255b2c9e639fb3b1e0d09abe63a163805b3d9d2a50debad5460d98",
+    "model-summary.csv": "23add3ae8d65c87e0e5538506bd1ec25719f01b54d1a35eae3ae37b90d98368d",
+    "research-lock.json": "256d596bbfb33075ac066d8a716136b887e4cc24fcecd09a828b1048fb023f42",
+    "paired-significance.csv": "2bd12014cc064f955e39438f724de75029fd83013d2e80284848e88db0416522"
+  },
+  "notes": [
+    "Executed on Kaggle CPU with two public datasets, two temporal protocols and five locked seeds.",
+    "Paired significance was computed after the locked Kaggle run from the 20 saved per-user rank files; it did not retrain or tune a model.",
+    "The external datasets support offline ranking evaluation only and are not represented as real VEDU learner logs."
+  ]
+}

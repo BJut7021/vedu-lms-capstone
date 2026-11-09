@@ -72,7 +72,8 @@ services:
           -f /seed/24_ktlt_8_lessons_80_quiz.sql \
           -f /seed/25_ktlt_videos_selected.sql \
           -f /seed/26_ktlt_video_fix_01_05_06.sql \
-          -f /seed/27_ktlt_pdf_by_lesson.sql
+          -f /seed/27_ktlt_pdf_by_lesson.sql \
+          -f /seed/28_oop_excel_learning_path_skills.sql
     volumes:
       - ./database/vedu/portal_demo_seed.sql:/seed/portal_demo_seed.sql:ro
       - ./database/vedu/platform_upgrade.sql:/seed/platform_upgrade.sql:ro
@@ -105,6 +106,7 @@ services:
       - ./database/vedu/25_ktlt_videos_selected.sql:/seed/25_ktlt_videos_selected.sql:ro
       - ./database/vedu/26_ktlt_video_fix_01_05_06.sql:/seed/26_ktlt_video_fix_01_05_06.sql:ro
       - ./database/vedu/27_ktlt_pdf_by_lesson.sql:/seed/27_ktlt_pdf_by_lesson.sql:ro
+      - ./database/vedu/28_oop_excel_learning_path_skills.sql:/seed/28_oop_excel_learning_path_skills.sql:ro
     depends_on:
       db:
         condition: service_healthy

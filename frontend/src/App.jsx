@@ -16,7 +16,7 @@ import AuthModal from "./components/AuthModal";
 import CourseDetail from "./components/CourseDetail";
 import Classroom from "./components/Classroom";
 import QuizView from "./components/QuizView";
-import LockedFinalExamPage, { isFinalExamPrerequisiteError } from "./components/LockedFinalExamPage";
+import LockedFinalExamPage from "./components/LockedFinalExamPage";
 import CourseAssignments from "./components/CourseAssignments";
 import FinalExamResult from "./components/FinalExamResult";
 import Portal from "./components/Portal";
@@ -41,6 +41,8 @@ const loginDestination = (role, search) =>
     : rolePath[role];
 
 const validQuizId = (id) => /^[1-9]\d*$/.test(String(id ?? ''));
+const isFinalExamPrerequisiteError = (value) =>
+  /cần\s+đạt\s+module\s+trước\s+khi\s+thi/i.test(String(value || ""));
 
 function CoursePage({ auth, header }) {
   const { courseId } = useParams();

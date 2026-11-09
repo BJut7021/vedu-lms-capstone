@@ -11,7 +11,6 @@ import {
   HelpCircle,
   PlayCircle,
   MessageCircle,
-  Clock,
 } from "lucide-react";
 import CourseImage from "./CourseImage";
 import InlineLessonQuiz from "./InlineLessonQuiz";
@@ -244,6 +243,34 @@ export default function ClassroomLayout({
             <p className="mt-2 text-xs text-slate-500">
               {percent}% hoàn thành · {completed}/{study.length} bài
             </p>
+            {!isIntroduction && sectionStudy.length > 0 && (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <strong className="text-slate-700">Tiến độ module hiện tại</strong>
+                  <span className="font-semibold tabular-nums text-blue-700">
+                    {sectionPercent}%
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label="Tiến độ chương hiện tại"
+                  aria-valuenow={sectionPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="mt-2 h-2 overflow-hidden rounded-full bg-blue-50"
+                >
+                  <div
+                    className="h-full rounded-full bg-blue-600"
+                    style={{ width: `${sectionPercent}%` }}
+                  />
+                </div>
+                <div className="mt-3 grid gap-1 text-[11px] text-slate-500">
+                  <span><b className="text-emerald-600">{sectionDone}</b> bài đã hoàn thành</span>
+                  <span><b className="text-blue-600">{sectionCurrent}</b> bài đang học</span>
+                  <span><b className="text-slate-500">{sectionNew}</b> bài chưa học</span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 px-5 pt-5">
     <BookOpen size={20} className="text-blue-600" />

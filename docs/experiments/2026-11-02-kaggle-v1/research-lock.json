@@ -1,0 +1,37 @@
+{
+  "base_commit": "3e31905610af1044e03da27879e8c3fad1fe5141",
+  "environment": "kaggle",
+  "created_at": "2026-11-02T06:20:36.721001+00:00",
+  "python": "3.13.15",
+  "dataset_sha256": {
+    "implicit_ratings_en.csv": "51e2f759745f26ddafc852e62020c21fcb12351346a502a21f5719ee5b667cb2",
+    "items_en.csv": "5861cd72a467ff50db0531098624f9887e920c985b4b8b492ff721f9dc63f862",
+    "student_learning_interaction_dataset.csv": "44008507494f23207b8598f789505d6b6cb9ee6aceac20b79732dd122101cc42"
+  },
+  "source_sha256": {
+    "engine.py": "305591b408db628963648c045cb7f55ec2b8d4878675650928a0499dbbbbdb66",
+    "benchmark.py": "759af5eddd2ecd697260cdb9b09cabc8326dedb3cbd3becd0b9490c910bd009a"
+  },
+  "arguments": {
+    "data": "/kaggle/working/vedu-research/data",
+    "output": "/kaggle/working/results",
+    "epochs": 20,
+    "seeds": [
+      13,
+      21,
+      42,
+      77,
+      101
+    ],
+    "datasets": [
+      "kaggle_logs",
+      "kaggle_recommender"
+    ],
+    "protocols": [
+      "global_temporal",
+      "per_user_temporal"
+    ],
+    "environment": "kaggle"
+  },
+  "device": "CPU; engine does not use CUDA"
+}
